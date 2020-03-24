@@ -378,11 +378,11 @@ public:
     CMathOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00002
-    // iadd r0,r1,r2 : r0=r1+r2
-    // isub r0,r1,r2 : r0=r1-r2
-    // imul r0,r1,r2 : r0=r1*r2
-    // idiv r0,r1,r2 : r0=r1/r2
-    // imod r0,r1,r2 : r0=r1%r2
+    // iadd r0,r1 : r0=r0+r1
+    // isub r0,r1 : r0=r0-r1
+    // imul r0,r1 : r0=r0*r1
+    // idiv r0,r1 : r0=r0/r1
+    // imod r0,r1 : r0=r0%r1
     // ineg r0 : r0=~r0
     // inc r0 : r0++
     // dec r0 : r0--
@@ -391,43 +391,38 @@ public:
         // Single parameter
 
         unsigned short marker = m_Opcode;
-        int step = 4;
+        int step = 3;
 
-        int r1=0, r2=0, r3=0;
+        int r1=0, r2=0;
 
         if (strcmp(_parser_table[_current_parser_offset].m_Value, "iadd") == 0)
         {
-            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r3);
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r1);
-            sscanf(_parser_table[_current_parser_offset+3].m_Value, "r%d", &r2);
+            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
             marker |= 0x0000;
         }
         if (strcmp(_parser_table[_current_parser_offset].m_Value, "isub") == 0)
         {
-            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r3);
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r1);
-            sscanf(_parser_table[_current_parser_offset+3].m_Value, "r%d", &r2);
+            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
             marker |= 0x0010;
         }
         if (strcmp(_parser_table[_current_parser_offset].m_Value, "imul") == 0)
         {
-            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r3);
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r1);
-            sscanf(_parser_table[_current_parser_offset+3].m_Value, "r%d", &r2);
+            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
             marker |= 0x0020;
         }
         if (strcmp(_parser_table[_current_parser_offset].m_Value, "idiv") == 0)
         {
-            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r3);
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r1);
-            sscanf(_parser_table[_current_parser_offset+3].m_Value, "r%d", &r2);
+            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
             marker |= 0x0030;
         }
         if (strcmp(_parser_table[_current_parser_offset].m_Value, "imod") == 0)
         {
-            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r3);
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r1);
-            sscanf(_parser_table[_current_parser_offset+3].m_Value, "r%d", &r2);
+            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
             marker |= 0x0040;
         }
         if (strcmp(_parser_table[_current_parser_offset].m_Value, "ineg") == 0)
@@ -452,7 +447,8 @@ public:
             //printf("decrement register %s\n", _parser_table[_current_parser_offset+1].m_Value);
         }
 
-        unsigned short code = marker | (r1<<7) | (r2<<10) | (r3<<13);
+        unsigned short subop = 0b000;
+        unsigned short code = marker | subop | (r1<<10) | (r2<<13);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
 

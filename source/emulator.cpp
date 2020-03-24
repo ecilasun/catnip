@@ -508,25 +508,25 @@ void CPUMain()
                     case INST_MATH:
                     {
                         uint16_t op = (instruction&0b0000000001110000)>>4; // [6:4]
-                        uint16_t r1 = (instruction&0b0000001110000000)>>7; // [9:7]
-                        uint16_t r2 = (instruction&0b0001110000000000)>>10; // [12:10]
-                        uint16_t r3 = (instruction&0b1110000000000000)>>13; // [15:13]
+                        uint16_t subop = (instruction&0b0000001110000000)>>7; // [9:7]
+                        uint16_t r1 = (instruction&0b0001110000000000)>>10; // [12:10]
+                        uint16_t r2 = (instruction&0b1110000000000000)>>13; // [15:13]
                         switch (op)
                         {
                             case 0: // Iadd
-                                register_file[r3] = register_file[r1] + register_file[r2];
+                                register_file[r1] = register_file[r1] + register_file[r2];
                             break;
                             case 1: // Isub
-                                register_file[r3] = register_file[r1] - register_file[r2];
+                                register_file[r1] = register_file[r1] - register_file[r2];
                             break;
                             case 2: // Imul
-                                register_file[r3] = register_file[r1] * register_file[r2];
+                                register_file[r1] = register_file[r1] * register_file[r2];
                             break;
                             case 3: // Idiv
-                                register_file[r3] = register_file[r1] / register_file[r2];
+                                register_file[r1] = register_file[r1] / register_file[r2];
                             break;
                             case 4: // Imod
-                                register_file[r3] = register_file[r1] % register_file[r2];
+                                register_file[r1] = register_file[r1] % register_file[r2];
                             break;
                             case 5: // Ineg
                                 register_file[r1] = -register_file[r1];

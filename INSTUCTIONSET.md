@@ -99,6 +99,19 @@ To compensate for the missing parts of the image due to this address restriction
  pixels |--------------------------------|
 ```
 
+# Registers
+
+Neko has some GPRs that the user can access and some hidden ones that only the CPU uses to do its bookkeeping.
+* r0..r7 : User accessible, GPR, 16bit wide
+* IP: Internal, Instruction Pointer, 32bit wide
+* SP: Internal, Stack Pointer, 32bit wide
+* FLAGS: Internal, comparison flag registers, 6bit wide
+* CALLSP: Internal, Branch Stack Pointer, 16bits wide
+* CALLSTACK[...]: Internal, Branch Stack (return addresses), 32bits wide per entry
+* TR: Internal, Test Result Register, 1bit wide
+* BRANCHTARGET: Internal, Transient Branch Target Register, 32bits wide
+* TARGETREGISTER: Internal, Transient Target Register Index, Xbits wide (TBD)
+
 # Instruction Encoding
 
 Neko uses very few instruction formats, with all instructions sharing the same base rule: bottom 4 bits denote a 'macro' instruction, whereas the rest of the bits take on different meanings. It's quite common across instructions to encode register indices 0-7 as adjacent 3 bit groups. This gives Neko a limitation of 16 base instruction groups, though inside those groups encodings might differ, and more words might be fetched from memory as required. The longest instruction currently takes up 3 words in memory, which is the branch instruction group. This format contains the initial instruction word followed by two more words for the branch target address.
@@ -267,50 +280,50 @@ Sets the IP to the 2 words following this instruction or the contents of registe
 ---
 ## Integer Math Instruction
 ```
-000 000 000 000 0010
-|   |   |   |   MATHOP
-rC  rB  rA  000:IADD rC,rA,rB (rC=rA+rB)
-            001:ISUB rC,rA,rB (rC=rA-rB)
-            010:IMUL rC,rA,rB (rC=rA*rB)
-            011:IDIV rC,rA,rB (rC=rA/rB)
-            100:IMOD rC,rA,rB (rC=rA%rB)
+000 000 ??? 000 0010
+|   |       |   MATHOP
+rB  rA      000:IADD rC,rA,rB (rA=rA+rB)
+            001:ISUB rC,rA,rB (rA=rA-rB)
+            010:IMUL rC,rA,rB (rA=rA*rB)
+            011:IDIV rC,rA,rB (rA=rA/rB)
+            100:IMOD rC,rA,rB (rA=rA%rB)
             101:INEG rA       (rA=-rA)
             110:INC rA        (rA=rA+1)
             111:DEC rA        (rA=rA-1)
 ```
 
-### IADD rC,rA,rB
-This is an integer add operation which is equivalent to the following code:
+### IADD rA,rB
+This is an integer add between rA and rB where the result is written back to rA, which is equivalent to the following code:
 ```c
-rC = rA+rB;
+rA = rA+rB;
 ```
 NOTE: Overflow is currently not detected and will be ignored, which might give wrong results.
 
-### ISUB rC,rA,rB
-This is an integer subtraction operation which is equivalent to the following code:
+### ISUB rA,rB
+This is an integer subtraction between rA and rB where the result is written back to rA, which is equivalent to the following code:
 ```c
-rC = rA-rB;
+rA = rA-rB;
 ```
 NOTE: Overflow is currently not detected and will be ignored, which might give wrong results.
 
-### IMUL rC,rA,rB
-This is an integer multiplication operation which is equivalent to the following code:
+### IMUL rA,rB
+This is an integer multiplication between rA and rB where the result is written back to rA, which is equivalent to the following code:
 ```c
-rC = rA*rB;
+rA = rA*rB;
 ```
 NOTE: Overflow is currently not detected and will be ignored, which might give wrong results.
 
-### IDIV rC,rA,rB
-This is an integer division operation which is equivalent to the following code:
+### IDIV rA,rB
+This is an integer division between rA and rB where the result is written back to rA, which is equivalent to the following code:
 ```c
-rC = rA/rB;
+rA = rA/rB;
 ```
 NOTE: Overflow or division by zero is currently not detected and will be ignored, which might give wrong results.
 
-### IMOD rC,rA,rB
-This is an integer modulo operation which is equivalent to the following code:
+### IMOD rA,rB
+This is an integer modulo between rA and rB where the result is written back to rA, which is equivalent to the following code:
 ```c
-rC = rA%rB;
+rA = rA%rB;
 ```
 NOTE: Mod operations where rB==0 are currently not detected and will be ignored, which might give wrong results.
 

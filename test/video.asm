@@ -59,9 +59,9 @@ mov r7, 0x0080          # Y=128
     pop r6                  # restore X position
     pop r7                  # restore Y position
     pop r2                  # restore step counter Y
-    iadd r7,r7,r2           # inc Y by step
+    iadd r7,r2              # inc Y by step
     pop r1                  # restore step counter X
-    iadd r6,r6,r1           # inc X by step
+    iadd r6,r1              # inc X by step
     ineg r2                 # negate sign of Y step
     pop r0                  # restore loop counter
     dec r0
@@ -119,8 +119,8 @@ pop r0                  # X
 pop r1                  # Y
 pop r2                  # Color
 mov r3, 0x0140          # Row pitch (320)
-imul r3, r1, r3         # Y*320
-iadd r0, r3, r0         # X+Y*320
+imul r1, r3             # Y*320
+iadd r0, r1             # X+Y*320
 mov r1, 0x8000          # 0x8000:(X+Y*320) == VRAM address
 bmov [r1:r0], r2
 ret
@@ -134,15 +134,15 @@ ret
 pop r0                  # X
 pop r1                  # Y
 
-mov r2, 0x0140          # Row pitch (320)                                       
-imul r2, r1, r2         # Y*320                                                 
-iadd r0, r2, r0         # X+Y*320                                               
-mov r1, 0x8000          # 0x8000:(X+Y*320) == VRAM address                      
+mov r2, 0x0140          # Row pitch (320)
+imul r1, r2             # Y*320
+iadd r0, r1             # X+Y*320
+mov r1, 0x8000          # 0x8000:(X+Y*320) == VRAM address
 
-mov r2, 0x0400          # [r3:r2] sprite in ROM at this address (0000:0400)     
-mov r3, 0x0000                                                                  
+mov r2, 0x0400          # [r3:r2] sprite in ROM at this address (0000:0400)
+mov r3, 0x0000
 mov r4, 0x0011          # column counter (sprite is 17 pixels wide, but has 18 pixel stride)
-mov r5, 0x0017          # row counter (23 pixels)                               
+mov r5, 0x0017          # row counter (23 pixels)
 
 @LABEL INNERLOOP
     # for each column
@@ -164,7 +164,7 @@ mov r5, 0x0017          # row counter (23 pixels)
     inc r2                  # skip the unused pixel at the end (18th pixel)
     mov r4, 0x0011          # reset column counter back to 17
     mov r7, 0x012F          # set row stride (320-17==303)
-    iadd r0, r0, r7         # move to next scanline
+    iadd r0, r7             # move to next scanline
     dec r5
     cmp r5, r5
     test notzero
@@ -173,8 +173,7 @@ jmpif INNERLOOP         # for each row
 ret
 
 @LABEL SetBorderColor
-mov r1, 0x8000
-mov r0, 0xFF00          # [r1:r0] Border color (8000:FF00)                      
+ldat r1:r0, BORDERCOLOR # [r1:r0] Border color (8000:FF00)
 pop r2
 bmov [r1:r0], r2
 ret
@@ -208,6 +207,8 @@ ret
 @DW 0x0028 0x0016
 @LABEL VRAMSTART
 @DW 0x8000 0x0000
+@LABEL BORDERCOLOR
+@DW 0x8000 0xFF00
 
 # Sprite data (17x23 just to make it difficult)
 @ORG 0x0400
