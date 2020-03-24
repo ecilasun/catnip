@@ -168,7 +168,7 @@ The instruction encoding for the LOGICOP base instruction is as follows
 ```
 000 000 ??? 000 0000
 |   |       |   LOGICOP
-rB  rA      000:OR rA,rB (Default NOOP instruction encoding when rA/rB/rC is all r0 maps to '0')
+rB  rA      000:OR rA,rB (Default NOOP instruction encoding when rA rB are both equal to `r0`, maps to byte code '0')
             001:AND rA,rB
             010:XOR rA,rB
             011:NOT rA
