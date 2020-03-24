@@ -9,8 +9,8 @@ If you're using Visual Studio Code, this folder contains a .vscode directory wit
 
 * Start Visual Studio Code
 * Open the root folder of CatNip
-* First time around, use Ctrl+Shift+B and select 'Configure' from the menu
-* For first time around, and all subsequent builds related to any code change, use Ctrl+Shift+B and select 'Build' from the menu
+* First time around, use Ctrl+Shift+B and select 'configure' from the menu
+* For first time around, and all subsequent builds related to any code change, use Ctrl+Shift+B and select 'build' from the menu
 
 ### Command line
 WAF (the build system) is included with this release. To build CatNip from command line, run these from the root directory on the command line:

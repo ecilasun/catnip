@@ -128,14 +128,13 @@ public:
     // SUBINSTRUCTION: 0x0000
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int r1=0, r2=0, r3=0;
-        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r3);
+        int r1=0, r2=0;
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-        sscanf(_parser_table[_current_parser_offset+3].m_Value, "r%d", &r1);
-        unsigned short code = m_Opcode | 0x0000 | (r1<<7) | (r2<<10) | (r3<<13);
+        unsigned short code = m_Opcode | 0x0000 | (r1<<10) | (r2<<13);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
-        return 4;
+        return 3;
     }
 };
 
@@ -148,14 +147,13 @@ public:
     // SUBINSTRUCTION: 0x0010
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int r1=0, r2=0, r3=0;
-        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r3);
+        int r1=0, r2=0;
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-        sscanf(_parser_table[_current_parser_offset+3].m_Value, "r%d", &r1);
-        unsigned short code = m_Opcode | 0x0010 | (r1<<7) | (r2<<10) | (r3<<13);
+        unsigned short code = m_Opcode | 0x0010 | (r1<<10) | (r2<<13);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
-        return 4;
+        return 3;
     }
 };
 
@@ -168,14 +166,13 @@ public:
     // SUBINSTRUCTION: 0x0020
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int r1=0, r2=0, r3=0;
-        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r3);
+        int r1=0, r2=0;
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-        sscanf(_parser_table[_current_parser_offset+3].m_Value, "r%d", &r1);
-        unsigned short code = m_Opcode | 0x0020 | (r1<<7) | (r2<<10) | (r3<<13);
+        unsigned short code = m_Opcode | 0x0020 | (r1<<10) | (r2<<13);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
-        return 4;
+        return 3;
     }
 };
 
@@ -188,10 +185,10 @@ public:
     // SUBINSTRUCTION: 0x0030
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int r1=0, r2=0, r3=0;
-        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r3);
-        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r1);
-        unsigned short code = m_Opcode | 0x0030 | (r1<<7) | (r2<<10) | (r3<<13);
+        int r1=0, r2=0;
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
+        unsigned short code = m_Opcode | 0x0030 | (r1<<10) | (r2<<13);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
         return 3;
@@ -207,14 +204,13 @@ public:
     // SUBINSTRUCTION: 0x0040
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int r1=0, r2=0, r3=0;
-        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r3);
-        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r1);
-        sscanf(_parser_table[_current_parser_offset+3].m_Value, "r%d", &r2);
-        unsigned short code = m_Opcode | 0x0040 | (r1<<7) | (r2<<10) | (r3<<13);
+        int r1=0, r2=0;
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
+        unsigned short code = m_Opcode | 0x0040 | (r1<<10) | (r2<<13);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
-        return 4;
+        return 3;
     }
 };
 
@@ -227,14 +223,13 @@ public:
     // SUBINSTRUCTION: 0x0050
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int r1=0, r2=0, r3=0;
-        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r3);
-        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r1);
-        sscanf(_parser_table[_current_parser_offset+3].m_Value, "r%d", &r2);
-        unsigned short code = m_Opcode | 0x0050 | (r1<<7) | (r2<<10) | (r3<<13);
+        int r1=0, r2=0;
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
+        unsigned short code = m_Opcode | 0x0050 | (r1<<10) | (r2<<13);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
-        return 4;
+        return 3;
     }
 };
 
@@ -247,10 +242,10 @@ public:
     // SUBINSTRUCTION: 0x0060
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int r1=0, r2=0, r3=0;
+        int r1=0, r2=0;
         sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
-        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r3);
-        unsigned short code = m_Opcode | 0x0060 | (r1<<7) | (r2<<10) | (r3<<13);
+        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
+        unsigned short code = m_Opcode | 0x0060 | (r1<<10) | (r2<<13);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
         return 3;

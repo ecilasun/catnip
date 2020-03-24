@@ -390,34 +390,34 @@ void CPUMain()
                 case INST_LOGIC:
                 {
                     uint16_t op = (instruction&0b0000000001110000)>>4; // [6:4]
-                    uint16_t r1 = (instruction&0b0000001110000000)>>7; // [9:7]
-                    uint16_t r2 = (instruction&0b0001110000000000)>>10; // [12:10]
-                    uint16_t r3 = (instruction&0b1110000000000000)>>13; // [15:13]
+                    uint16_t subop = (instruction&0b0000001110000000)>>7; // [9:7]
+                    uint16_t r1 = (instruction&0b0001110000000000)>>10; // [12:10]
+                    uint16_t r2 = (instruction&0b1110000000000000)>>13; // [15:13]
                     switch (op)
                     {
                         case 0: // Or
-                            register_file[r3] = register_file[r1] | register_file[r2];
+                            register_file[r1] = register_file[r1] | register_file[r2];
                         break;
                         case 1: // And
-                            register_file[r3] = register_file[r1] & register_file[r2];
+                            register_file[r1] = register_file[r1] & register_file[r2];
                         break;
                         case 2: // Xor
-                            register_file[r3] = register_file[r1] ^ register_file[r2];
+                            register_file[r1] = register_file[r1] ^ register_file[r2];
                         break;
                         case 3: // Not
-                            register_file[r3] = ~register_file[r1];
+                            register_file[r1] = ~register_file[r1];
                         break;
                         case 4: // BSL
-                            register_file[r3] = register_file[r1] << register_file[r2];
+                            register_file[r1] = register_file[r1] << register_file[r2];
                         break;
                         case 5: // BSR
-                            register_file[r3] = register_file[r1] >> register_file[r2];
+                            register_file[r1] = register_file[r1] >> register_file[r2];
                         break;
                         case 6: // BSWAP
                         {
-                            uint16_t lower8 = register_file[r1]&0x00FF;
-                            uint16_t upper8 = (register_file[r1]&0xFF00)>>8;
-                            register_file[r3] = upper8 | (lower8<<8);
+                            uint16_t lower8 = register_file[r2]&0x00FF;
+                            uint16_t upper8 = (register_file[r2]&0xFF00)>>8;
+                            register_file[r1] = upper8 | (lower8<<8);
                         }
                         break;
                         case 7: // unused

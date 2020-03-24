@@ -153,15 +153,15 @@ ldat r1:r0, VRAMSTART
 
 The instruction encoding for the LOGICOP base instruction is as follows
 ```
-000 000 000 000 0000
-|   |   |   |   LOGICOP
-rC  rB  rA  000:OR rC,rA,rB (Default NOOP instruction encoding when rA/rB/rC is all r0 maps to '0')
-            001:AND rC,rA,rB
-            010:XOR rC,rA,rB
+000 000 ??? 000 0000
+|   |       |   LOGICOP
+rB  rA      000:OR rA,rB (Default NOOP instruction encoding when rA/rB/rC is all r0 maps to '0')
+            001:AND rA,rB
+            010:XOR rA,rB
             011:NOT rA
-            100:BSL rC,rA,rB
-            101:BSR rC,rA,rB
-            110:BSWAP rC, rA
+            100:BSL rA,rB
+            101:BSR rA,rB
+            110:BSWAP rA, rB
             111:reserved
 ```
 
@@ -181,54 +181,54 @@ bswap r1,r0
 // value of r1 after call: 0xCDAB
 ```
 
-### OR rC, rA, rB
-The format of this instruction is `or rA,rB,rC' and is equivalent to:
+### OR rA, rB
+This instruction applies bitwise or between rA and rB and writes the result back to rA, and is equivalent to:
 ```c
-rC = rA|rB;
+rA = rA|rB;
 ```
 
 ### NOOP
-The format of this instruction is `noop` and is equivalent to the `or` instruction:
+The format of this instruction is `noop` and is equivalent to the following `or` instruction which encodes into a bit pattern of 0x0000:
 ```c
-or r0,r0,r0;
+or r0,r0;
 ```
 
-### AND rC, rA, rB
-The format of this instruction is `and rA,rB,rC' and is equivalent to:
+### AND rA, rB
+This instruction applies bitwise and between rA and rB and writes the result back to rA, and is equivalent to:
 ```c
-rC = rA&rB;
+rA = rA&rB;
 ```
 
-### XOR rC, rA, rB
-The format of this instruction is `xor rA,rB,rC' and is equivalent to:
+### XOR rA, rB
+This instruction applies bitwise xor between rA and rB and writes the result back to rA, and is equivalent to:
 ```c
-rC = rA^rB;
+rA = rA^rB;
 ```
 
-### NOT rC, rA
-The format of this instruction is `not rA' and is equivalent to:
+### NOT rA, rB
+This instruction negates all bits of rB and writes the output to rA, and is equivalent to:
 ```c
-rC = ~rA;
+rA = ~rB;
 ```
 
-### BSL rC, rA, rB
-The format of this instruction is `bsl rA,rB' and is equivalent to:
+### BSL rA, rB
+This instruction shifts bits of rA by rB positions and writes the output back to rA, and is equivalent to:
 ```c
-rC = rA<<rB;
+rA = rA<<rB;
 ```
 
-### BSR rC, rA, rB
-The format of this instruction is `bsr rA,rB' and is equivalent to:
+### BSR rA, rB
+This instruction shifts bits of rA by rB positions and writes the output back to rA, and is equivalent to:
 ```c
-rC = rA>>rB;
+rA = rA>>rB;
 ```
 
-### BSWAP rC, rA
-Swaps the lower 8 bits of the 16 bit value in register rA with the higher 8 bits and writes the output to rC. rA remains untouched unless it's also the target register. This is equivalent to:
+### BSWAP rA, rB
+Swaps the lower 8 bits of the 16 bit value in register rB with the higher 8 bits and writes the output to rA. rB remains untouched unless it's also the target register. This is equivalent to:
 ```c
-upper = (rA&0xFF00)>>8;
-lower = rA&0x00FF;
-rC = (lower<<8)|upper;
+upper = (rB&0xFF00)>>8;
+lower = rB&0x00FF;
+rA = (lower<<8)|upper;
 ```
 
 ---
