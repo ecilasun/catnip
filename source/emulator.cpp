@@ -22,7 +22,7 @@
 #define CPU_HALT						0b0100
 #define CPU_FETCH_INSTRUCTION			0b0101
 #define CPU_EXECUTE_INSTRUCTION			0b0110
-#define CPU_UNUSED                      0b0111
+#define CPU_READ_DATAH                  0b0111
 #define CPU_STATE_PRE_RUN				0b1000
 #define CPU_READ_DATA					0b1001
 #define CPU_WRITE_DATA					0b1010
@@ -58,6 +58,7 @@ uint16_t instruction;           // Current instruction
 uint16_t register_file[8];	    // Array of 8 16bit registers
 uint16_t flags_register;	   	// Flag registers [ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL]
 uint16_t target_register;	    // Target for some memory read operations
+uint16_t target_registerH;	    // Target for some memory read operations (high word)
 uint16_t cpu_state = CPU_INIT;	// Default state to boot from
 uint16_t TR;					// Test register, holds result of TEST
 uint16_t CALLSP;				// Branch stack pointer
@@ -277,6 +278,7 @@ void CPUMain()
             CALLSP = 0;
 
             target_register = 0;
+            target_registerH = 0;
             BRANCHTARGET = 0;
 
             // Clear status flags and Test register
@@ -599,9 +601,14 @@ void CPUMain()
                                 IP = IP + 4; // Skip the WORD we read plus the instruction
                                 cpu_state = CPU_READ_DATA;
                             break;
-                            case 4: // unused
-                                IP = IP + 2;
-                                cpu_state = CPU_SET_INSTRUCTION_POINTER;
+                            case 4: // dword2regs
+                                target_register = r2;
+                                target_registerH = r1;
+                                sram_enable_byteaddress = 0;
+                                sram_addr = IP + 2;
+                                sram_read_req = 1;
+                                IP = IP + 6; // Skip the WORDs we read plus the instruction
+                                cpu_state = CPU_READ_DATAH;
                             break;
                             case 5: // unused
                                 IP = IP + 2;
@@ -815,6 +822,12 @@ void CPUMain()
             }
             break;
 
+            case CPU_READ_DATAH:
+                register_file[target_registerH] = sram_rdata; // Copy read data to target register
+                sram_addr = sram_addr + 2;
+                cpu_state = CPU_READ_DATA;
+            break;
+
             case CPU_READ_DATA:
                 register_file[target_register] = sram_rdata; // Copy read data to target register
                 sram_read_req = 0; // Stop read request and resume
@@ -836,11 +849,6 @@ void CPUMain()
             case CPU_WAIT_VSYNC:
                 if(scanline>=239) // TODO: Video out is not really precise in the emulator
                     cpu_state = CPU_SET_INSTRUCTION_POINTER;
-            break;
-
-            case CPU_UNUSED:
-                IP = IP + 2;
-                cpu_state = CPU_SET_INSTRUCTION_POINTER;
             break;
 
             default:

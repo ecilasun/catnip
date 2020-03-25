@@ -144,22 +144,6 @@ lea r7:r6, SPRITEPOSDATA
 @DW 0xFFFF 0xFFE0 0xE000
 ```
 
-# LDAT: Load Data At Address
-
-The LDAT intrinsic generates two `mov` instructions which load the two consequitive words at a matching `@LABEL` into a register pair.
-
-Example:
-```c
-ldat r1:r0, VRAMSTART
-// which is equivalent to a load of the value at the given label, resulting in the following code:
-// mov r1, 0x8000 
-// mov r6, 0x0000
-
-@ORG 0x0300
-@LABEL VRAMSTART
-@DW 0x8000 0x0000
-```
-
 # Instruction Set
 
 ## Logic Operations
@@ -353,12 +337,12 @@ There are two variants for memory access instructions: word access and byte acce
 For word access, use:
 ```
 000 000 000 000 0011
-|   |   |   |   MOV.WORD
+|   |   |   |   MOV (WORD / DWORD)
 rC  rB  rA  000:REG2MEM [rB:rA], rC
             001:MEM2REG rC, [rB:rA]
             010:REG2REG rA, rB
-            011:WORD2REG rA, [IP+1] (16 bit constant at IP+1)
-            100:reserved
+            011:WORD2REG rA, [IP+1] (16 bit constant starting at IP+1)
+            100:DWORD2REGS rA:rB, [IP+1:IP+2] (32 bit constant address starting at IP+1)
             101:reserved
             110:reserved
             111:reserved
@@ -366,7 +350,7 @@ rC  rB  rA  000:REG2MEM [rB:rA], rC
 For byte access, use:
 ```
 000 000 000 000 1001
-|   |   |   |   MOV.BYTE
+|   |   |   |   MOV (BYTE)
 rC  rB  rA  000:REG2MEM [rA:rB], rC
             001:MEM2REG rC, [rB:rA]
             010:REG2REG rA, rB
@@ -402,6 +386,21 @@ bmov [r1:r0], r2
 would set the register pair r1:r0 to the VRAM start address, 0x80000000, and r2 to 0x00FF, then write the lower 8 bits of r2 to that address.
 
 NOTE: The byte access form only works on the lower 8 bits of registers.
+
+### DMOV rA:rB, {dword_mem_address}
+Stores the contents of the DWORD address following this instruction in register pair rA:rB. rA receives the high word whereas register rB receives the low word of the DWORD.
+
+Example:
+```c
+dmov r1:r0, VRAMSTART
+// which is equivalent to a load of the value at the given label, resulting in the following register state:
+// r1==0x8000 
+// r6==0x0000
+
+@ORG 0x0300
+@LABEL VRAMSTART
+@DW 0x8000 0x0000
+```
 
 ---
 ## Return / Halt

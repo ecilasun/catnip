@@ -510,10 +510,10 @@ public:
     }
 };
 
-class CLdatOp : public CAssemblerTokenCompiler
+class CMovDWordOp : public CAssemblerTokenCompiler
 {
 public:
-    CLdatOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CMovDWordOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
 
     // Not a real instruction
     // Decodes into two individual MOV instuctions
@@ -537,7 +537,7 @@ public:
                     {
                         labelfound = true;
                         SLEAResolvePair postResolve;
-                        postResolve.m_PatchAddressPointer = _current_binary_offset+2; // and also +6
+                        postResolve.m_PatchAddressPointer = _current_binary_offset+2; // and also +4
                         postResolve.m_LabelToResolve = &_parser_table[i];
                         m_LDATResolves.emplace_back(postResolve);
                     }
@@ -547,16 +547,13 @@ public:
                 printf("ERROR: label not found for LEA intrinsic.\n");
         }
 
-        unsigned int code = 0x03; // W2R
+        unsigned int code = 0x04; // DW2Rs
         unsigned short gencode;
         gencode = m_Opcode | (code<<4) | (r1<<7);
         _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = gencode&0x00FF;
         _binary_output[_current_binary_offset++] = (extra_dword&0xFF000000)>>24;
         _binary_output[_current_binary_offset++] = (extra_dword&0x00FF0000)>>16;
-        gencode = m_Opcode | (code<<4) | (r2<<7);
-        _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
-        _binary_output[_current_binary_offset++] = gencode&0x00FF;
         _binary_output[_current_binary_offset++] = (extra_dword&0x0000FF00)>>8;
         _binary_output[_current_binary_offset++] = (extra_dword&0x000000FF);
 
@@ -1000,7 +997,7 @@ CBranchOp s_branchop("jmp", 0x0001);
 CMathOp s_mathop("add", 0x0002);
 CMovOp s_movop("mov", 0x0003);
 CLeaOp s_leaop("lea", 0x0003); // Not a real instruction!
-CLdatOp s_ldatop("ldat", 0x0003); // Not a real instruction!
+CMovDWordOp s_dmovop("dmov", 0x0003); // Not a real instruction!
 CRetHaltOp s_rethaltop("ret", 0x0004);
 CStackOp s_stackop("push", 0x0005);
 CTestOp s_testop("test", 0x0006);
@@ -1047,7 +1044,7 @@ const SAssemblerPair keywords[] =
     {{"mov"}, &s_movop},
     {{"bmov"}, &s_bmovop},
     {{"lea"}, &s_leaop},
-    {{"ldat"}, &s_ldatop},
+    {{"dmov"}, &s_dmovop},
 
     {{"ret"}, &s_rethaltop},
     {{"halt"}, &s_rethaltop},
@@ -1213,8 +1210,8 @@ int parse_nip(const char *_inputtext)
         uint16_t d3 = s_binary_output[labeladdress+3];
         s_binary_output[patch.m_PatchAddressPointer+0] = d0;
         s_binary_output[patch.m_PatchAddressPointer+1] = d1;
-        s_binary_output[patch.m_PatchAddressPointer+4] = d2;
-        s_binary_output[patch.m_PatchAddressPointer+5] = d3;
+        s_binary_output[patch.m_PatchAddressPointer+2] = d2;
+        s_binary_output[patch.m_PatchAddressPointer+3] = d3;
     }
 
     return 0;

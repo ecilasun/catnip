@@ -173,7 +173,7 @@ jmpif INNERLOOP         # for each row
 ret
 
 @LABEL SetBorderColor
-ldat r1:r0, BORDERCOLOR # [r1:r0] Border color (8000:FF00)
+dmov r1:r0, BORDERCOLOR # [r1:r0] Border color (8000:FF00)
 pop r2
 bmov [r1:r0], r2
 ret
@@ -184,7 +184,7 @@ push r0
 push r1
 push r2
 push r3
-ldat r1:r0, VRAMSTART   # Load data at VRAMSTART into r1:r0 which is the VRAM start address DWORD
+dmov r1:r0, VRAMSTART   # Load data at VRAMSTART into r1:r0 which is the VRAM start address DWORD
 mov r2, 0xFF00          # 320x204 pixels
 mov r3, 0x00FF          # Clear color: White
 @LABEL CLEARLOOP
