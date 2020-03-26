@@ -783,7 +783,7 @@ void CPUMain()
                                 cpu_state = CPU_READ_DATA_BYTE;
                             break;
                             case 2: // reg2reg
-                                register_file[r1] = register_file[r2];
+                                register_file[r1] = (register_file[r1]&0xFF00) | register_file[r2];
                                 IP = IP + 2;
                                 cpu_state = CPU_SET_INSTRUCTION_POINTER;
                             break;
@@ -839,7 +839,6 @@ void CPUMain()
             break;
 
             case CPU_READ_DATA_BYTE:
-                //register_file[target_register][7:0] <= sram_rdata[7:0]; // Copy read data to target register
                 register_file[target_register] = (register_file[target_register]&0xFF00) | sram_rdata&0x00FF; // No C equivalent to partially assign
                 sram_read_req = 0; // Stop read request and resume
                 cpu_state = CPU_SET_INSTRUCTION_POINTER;
