@@ -1,18 +1,23 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <thread>
+//#include <thread>
 #include "../SDL/SDL.h"
 #include "emulator.h"
 
 // Neko emulator
 
-// Video
-// CPU clock(50Mhz) is twice as fast as VGA clock(25Mhz)
-// Each horizontal scan is 800 VGA clocks
-// This means CPU has taken 1600 clocks until the end of one scanline
-// However since out video unit ticks at half the rate, we can count 800 of these
-#define HSYNC_TICKS 800
+// VGA timings
+#define H_FRONT_PORCH 16
+#define H_SYNC 64
+#define H_BACK_PORCH 80
+#define H_ACTIVE 640
+#define H_SYNC_TICKS (H_FRONT_PORCH+H_SYNC+H_BACK_PORCH+H_ACTIVE)
+#define V_FRONT_PORCH 3
+#define V_SYNC 4
+#define V_BACK_PORCH 16
+#define V_ACTIVE 480
+#define V_SYNC_TICKS (V_FRONT_PORCH+V_SYNC+V_BACK_PORCH+V_ACTIVE)
 
 // CPU state machine
 #define CPU_INIT						0b0000
@@ -94,15 +99,20 @@ SDL_Window *s_Window;
 SDL_Surface *s_Surface;
 
 // Global clock
-uint64_t s_GlobalClock = 0;
+uint32_t s_SystemClock = 0;
+uint32_t s_SystemClockRisingEdge = 0;
+uint32_t s_SystemClockFallingEdge = 0;
+uint32_t s_VGAClock = 0;
+uint32_t s_VGAClockRisingEdge = 0;
+uint32_t s_VGAClockFallingEdge = 0;
 
 // CPU emulation
-std::thread *s_CPUThread;
-bool s_CPUDone = false;
+//std::thread *s_CPUThread;
+//bool s_CPUDone = false;
 
 // Video emulation
-int video_refresh_ticks = 0;
-uint32_t scanline = 0;
+int vga_x = 0;
+int vga_y = 0;
 
 const char *s_state_string[]={
     "CPU_INIT",
@@ -123,118 +133,26 @@ const char *s_state_string[]={
     "CPU_SET_BRANCH_ADDRESSB"
 };
 
-// NOTE: Return 'true' for 'still running'
-bool StepEmulator()
-{
-    s_GlobalClock++;
-
-    video_refresh_ticks += s_GlobalClock%2 == 0 ? 1 : 0;
-
-    // --------------------------------------------------------------
-    // Video output: processed every HSYNC_TICKS clock cycles
-    // --------------------------------------------------------------
-
-    if (video_refresh_ticks>HSYNC_TICKS)
-    {
-        video_refresh_ticks -= HSYNC_TICKS;
-
-        uint8_t* pixels = (uint8_t*)s_Surface->pixels;
-
-        // VRAM section
-        if (scanline>=18 && scanline<222)
-        {
-            //for (uint32_t y=0;y<204;++y)
-            uint32_t y = scanline-18;
-            {
-                for (uint32_t x=0;x<320;++x)
-                {
-                    uint32_t vram_out = x + y*320;
-                    uint8_t vram_val = VRAM[vram_out];
-                    uint8_t R = vram_val&0x07;
-                    uint8_t G = (vram_val>>3)&0x07;
-                    uint8_t B = (vram_val>>6)&0x03;
-                    pixels[4*((y+18)*s_Surface->w+x)+0] = B*(256/3);
-                    pixels[4*((y+18)*s_Surface->w+x)+1] = G*(256/7);
-                    pixels[4*((y+18)*s_Surface->w+x)+2] = R*(256/7);
-                    pixels[4*((y+18)*s_Surface->w+x)+3] = 255;
-                }
-            }
-        }
-
-        // Top border color
-        if (scanline<18)
-        {
-            //for (uint32_t y=0;y<18;++y)
-            uint32_t y = scanline;
-            {
-                for (uint32_t x=0;x<320;++x)
-                {
-                    uint32_t R = VRAM[0xFF00]&0x07;
-                    uint32_t G = (VRAM[0xFF00]>>3)&0x07;
-                    uint32_t B = (VRAM[0xFF00]>>6)&0x03;
-                    pixels[4*(y*s_Surface->w+x)+0] = B*(256/3);
-                    pixels[4*(y*s_Surface->w+x)+1] = G*(256/7);
-                    pixels[4*(y*s_Surface->w+x)+2] = R*(256/7);
-                    pixels[4*(y*s_Surface->w+x)+3] = 255;
-                }
-            }
-        }
-
-        // Bottom border color
-        if (scanline>=222)
-        {
-            //for (uint32_t y=222;y<240;++y)
-            uint32_t y = scanline;
-            {
-                for (uint32_t x=0;x<320;++x)
-                {
-                    uint32_t R = VRAM[0xFF00]&0x07;
-                    uint32_t G = (VRAM[0xFF00]>>3)&0x07;
-                    uint32_t B = (VRAM[0xFF00]>>6)&0x03;
-                    pixels[4*(y*s_Surface->w+x)+0] = B*(256/3);
-                    pixels[4*(y*s_Surface->w+x)+1] = G*(256/7);
-                    pixels[4*(y*s_Surface->w+x)+2] = R*(256/7);
-                    pixels[4*(y*s_Surface->w+x)+3] = 255;
-                }
-            }
-        }
-
-        ++scanline;
-
-        if (scanline >= 240)
-        {
-            //SDL_PumpEvents();
-
-            SDL_Event event;
-            while(SDL_PollEvent(&event))
-            {
-                if(event.type == SDL_QUIT)
-                    return false;
-                if(event.type == SDL_KEYUP)
-                {
-                    if(event.key.keysym.sym == SDLK_SPACE)
-                        cpu_state = CPU_INIT;
-                    if(event.key.keysym.sym == SDLK_ESCAPE)
-                        return false;
-                }
-            }
-
-            SDL_UpdateWindowSurface(s_Window);
-            scanline = 0;
-        }
-    }
-
-    return true; // Still alive
-}
-
 void CPUMain()
 {
     // --------------------------------------------------------------
     // CPU State Machine (same code as hardware device)
     // --------------------------------------------------------------
 
-    while (!s_CPUDone)
-    {
+    uint32_t oldclock = s_SystemClock;
+    uint32_t oldvgaclock = s_VGAClock;
+    s_SystemClock = (s_SystemClock<<1) | (s_SystemClock>>(32-1));
+    s_VGAClock = (s_VGAClock<<1) | (s_VGAClock>>(32-1));
+
+    s_SystemClockRisingEdge = (!(oldclock&0x80000000)) && ((s_SystemClock&0x80000000));
+    s_SystemClockFallingEdge = ((oldclock&0x80000000)) && (!(s_SystemClock&0x80000000));
+
+    s_VGAClockRisingEdge = (!(oldvgaclock&0x80000000)) && ((s_VGAClock&0x80000000));
+    s_VGAClockFallingEdge = ((oldvgaclock&0x80000000)) && (!(s_VGAClock&0x80000000));
+
+    if (!s_SystemClockRisingEdge)
+        return;
+
     switch (cpu_state)
     {
         case CPU_INIT:
@@ -850,7 +768,7 @@ void CPUMain()
             break;
             
             case CPU_WAIT_VSYNC:
-                if(scanline>=239) // TODO: Video out is not really precise in the emulator
+                //if(scanline>=600) // TODO: Video out is not really precise in the emulator
                     cpu_state = CPU_SET_INSTRUCTION_POINTER;
             break;
 
@@ -888,17 +806,143 @@ void CPUMain()
             }
         }
 
-        // VRAM write access
-        if (framebuffer_writeena)
-            VRAM[framebuffer_address] = framebuffer_data;
+    // VRAM write access
+    if (framebuffer_writeena)
+        VRAM[framebuffer_address] = framebuffer_data;
+}
+
+void VideoMain()
+{
+    if (!s_VGAClockRisingEdge)
+        return;
+
+    if (vga_x>=H_SYNC_TICKS)
+    {
+        vga_x = 0;
+        vga_y++;
     }
+    else
+        vga_x++;
+    if (vga_y>=V_SYNC_TICKS)
+    {
+        vga_y = 0;
+        vga_x = 0;
+    }
+
+    int32_t scanline = vga_y-(V_FRONT_PORCH+V_SYNC+V_BACK_PORCH);
+
+    if (vga_x>H_FRONT_PORCH+H_SYNC+H_BACK_PORCH && vga_y>V_FRONT_PORCH+V_SYNC+V_BACK_PORCH) // Inside active region
+    {
+        uint8_t* pixels = (uint8_t*)s_Surface->pixels;
+
+        // VRAM section
+        if (scanline>=36 && scanline<444)
+        {
+            //for (uint32_t y=0;y<204;++y)
+            int32_t y = scanline-36;
+            int32_t actual_scanline = scanline>>1;
+            int32_t actual_y = actual_scanline-18;
+            {
+                //for (uint32_t x=0;x<640;++x)
+                uint32_t x = vga_x-(H_FRONT_PORCH+H_SYNC+H_BACK_PORCH);
+                {
+                    uint32_t vram_out = (x>>1) + actual_y*320;
+                    uint8_t vram_val = VRAM[vram_out];
+                    uint8_t R = vram_val&0x07;
+                    uint8_t G = (vram_val>>3)&0x07;
+                    uint8_t B = (vram_val>>6)&0x03;
+                    pixels[4*((y+36)*s_Surface->w+x)+0] = B*(256/3);
+                    pixels[4*((y+36)*s_Surface->w+x)+1] = G*(256/7);
+                    pixels[4*((y+36)*s_Surface->w+x)+2] = R*(256/7);
+                    pixels[4*((y+36)*s_Surface->w+x)+3] = 255;
+                }
+            }
+        }
+
+        // Top border color
+        if (scanline<=36)
+        {
+            int32_t y = scanline;
+            int32_t x = vga_x-(H_FRONT_PORCH+H_SYNC+H_BACK_PORCH);
+            if (x<640)
+            {
+                uint32_t R = VRAM[0xFF00]&0x07;
+                uint32_t G = (VRAM[0xFF00]>>3)&0x07;
+                uint32_t B = (VRAM[0xFF00]>>6)&0x03;
+                pixels[4*(y*s_Surface->w+x)+0] = B*(256/3);
+                pixels[4*(y*s_Surface->w+x)+1] = G*(256/7);
+                pixels[4*(y*s_Surface->w+x)+2] = R*(256/7);
+                pixels[4*(y*s_Surface->w+x)+3] = 255;
+            }
+        }
+
+        // Bottom border color
+        if (scanline>=444 && scanline<480)
+        {
+            uint32_t y = scanline;
+            int32_t x = vga_x-(H_FRONT_PORCH+H_SYNC+H_BACK_PORCH);
+            if (x<640)
+            {
+                uint32_t R = VRAM[0xFF00]&0x07;
+                uint32_t G = (VRAM[0xFF00]>>3)&0x07;
+                uint32_t B = (VRAM[0xFF00]>>6)&0x03;
+                pixels[4*(y*s_Surface->w+x)+0] = B*(256/3);
+                pixels[4*(y*s_Surface->w+x)+1] = G*(256/7);
+                pixels[4*(y*s_Surface->w+x)+2] = R*(256/7);
+                pixels[4*(y*s_Surface->w+x)+3] = 255;
+            }
+        }
+    }
+
+    if (vga_x==0 && vga_y==0)
+    {
+        SDL_UpdateWindowSurface(s_Window);
+        /*SDL_Rect scanlinerect;
+        scanlinerect.x=0;
+        scanlinerect.y=scanline;
+        scanlinerect.w=640;
+        scanlinerect.h=1;
+        SDL_UpdateWindowSurfaceRects(s_Window, &scanlinerect, 1);*/
+        scanline = 0;
+    }
+}
+
+// NOTE: Return 'true' for 'still running'
+bool StepEmulator()
+{
+    CPUMain();
+    VideoMain();
+
+    if (vga_y == 502)
+    {
+        SDL_Event event;
+        while(SDL_PollEvent(&event))
+        {
+            if(event.type == SDL_QUIT)
+                return false;
+            if(event.type == SDL_KEYUP)
+            {
+                if(event.key.keysym.sym == SDLK_SPACE)
+                    cpu_state = CPU_INIT;
+                if(event.key.keysym.sym == SDLK_ESCAPE)
+                    return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 bool InitEmulator(uint16_t *_rom_binary)
 {
-    s_GlobalClock = 0;
-    video_refresh_ticks = 0;
-    scanline = 0;
+    s_SystemClock = 0b10101010101010101010101010101010;
+    s_SystemClockRisingEdge = 0;
+    s_SystemClockFallingEdge = 0;
+    s_VGAClock = 0b00110011001100110011001100110011;
+    s_VGAClockRisingEdge = 0;
+    s_VGAClockFallingEdge = 0;
+    vga_x = 0;
+    vga_y = 0;
 
     // Initialize NEKO cpu, framebuffer and other devices
     VRAM = new uint8_t[FRAME_WIDTH*FRAME_HEIGHT];
@@ -926,7 +970,7 @@ bool InitEmulator(uint16_t *_rom_binary)
     }
     else
     {
-        s_Window = SDL_CreateWindow("Neko", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 320, 240, SDL_WINDOW_SHOWN);
+        s_Window = SDL_CreateWindow("Neko", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_SHOWN);
         if (s_Window != nullptr)
             s_Surface = SDL_GetWindowSurface(s_Window);
         else
@@ -938,17 +982,17 @@ bool InitEmulator(uint16_t *_rom_binary)
 
     // Start CPU thread
     // Video code stays on main thread async to CPU execution
-    s_CPUThread = new std::thread(CPUMain);
-    s_CPUThread->detach();
+    //s_CPUThread = new std::thread(CPUMain);
+    //s_CPUThread->detach();
 
     return true;
 }
 
 void TerminateEmulator()
 {
-    s_CPUDone = true;
+    //s_CPUDone = true;
     //s_CPUThread->join();
-    delete s_CPUThread;
+    //delete s_CPUThread;
 
     SDL_FreeSurface(s_Surface);
     SDL_DestroyWindow(s_Window);

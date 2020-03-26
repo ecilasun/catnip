@@ -98,11 +98,11 @@ ld.w r0, 0x0040          # 64 pixels
     test notzero
 jmpif LINELOOP
 
-# Set border color to orange - JMP test
-ld.w r5, 0xFF1F          # White / Orange
+# Set border color to orange - Test for quickest memory write in a loop
+ld.w r5, 0x001F          # Orange as start color
+ld.d r1:r0, BORDERCOLOR # [r1:r0] Border color (8000:FF00)
 @LABEL BORDERLOOP
-    push r5
-    branch SetBorderColor
+    st.b [r1:r0], r5
     inc r5
     # vsync
 jmp BORDERLOOP
@@ -170,12 +170,6 @@ ld.w r5, 0x0017          # row counter (23 pixels)
     test notzero
 jmpif INNERLOOP                 # for each row
 
-ret
-
-@LABEL SetBorderColor
-ld.d r1:r0, BORDERCOLOR # [r1:r0] Border color (8000:FF00)
-pop r2
-st.b [r1:r0], r2
 ret
 
 @LABEL ClearVRAM
