@@ -133,12 +133,8 @@ const char *s_state_string[]={
     "CPU_SET_BRANCH_ADDRESSB"
 };
 
-void CPUMain()
+void ClockMain()
 {
-    // --------------------------------------------------------------
-    // CPU State Machine (same code as hardware device)
-    // --------------------------------------------------------------
-
     uint32_t oldclock = s_SystemClock;
     uint32_t oldvgaclock = s_VGAClock;
     s_SystemClock = (s_SystemClock<<1) | (s_SystemClock>>(32-1));
@@ -149,6 +145,13 @@ void CPUMain()
 
     s_VGAClockRisingEdge = (!(oldvgaclock&0x80000000)) && ((s_VGAClock&0x80000000));
     s_VGAClockFallingEdge = ((oldvgaclock&0x80000000)) && (!(s_VGAClock&0x80000000));
+}
+
+void CPUMain()
+{
+    // --------------------------------------------------------------
+    // CPU State Machine (same code as hardware device)
+    // --------------------------------------------------------------
 
     if (!s_SystemClockRisingEdge)
         return;
@@ -910,6 +913,7 @@ void VideoMain()
 // NOTE: Return 'true' for 'still running'
 bool StepEmulator()
 {
+    ClockMain();
     CPUMain();
     VideoMain();
 
