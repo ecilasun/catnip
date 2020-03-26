@@ -38,7 +38,8 @@ struct SLEAResolvePair
 
 std::vector<SBranchResolvePair> m_branchResolves;
 std::vector<SLEAResolvePair> m_LEAResolves;
-std::vector<SLEAResolvePair> m_LDATResolves;
+std::vector<SLEAResolvePair> m_LDDResolves;
+std::vector<SLEAResolvePair> m_LDWResolves;
 
 SParserItem *s_parser_table;
 unsigned int s_num_parser_entries;
@@ -58,7 +59,6 @@ public:
     // _current_binary_offset: write cursor for current instruction word sequence
     virtual int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) = 0;
 
-    const char *m_Token;
     unsigned short m_Opcode;
 };
 
@@ -67,7 +67,7 @@ public:
 class COriginOp : public CAssemblerTokenCompiler
 {
 public:
-    COriginOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    COriginOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: NONE - @ORG 0xHHHHH
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
@@ -83,7 +83,7 @@ public:
 class CDataWordOp : public CAssemblerTokenCompiler
 {
 public:
-    CDataWordOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CDataWordOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: NONE - @DW [0xHHHH 0xHHHH ...]
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
@@ -106,7 +106,7 @@ public:
 class CLabelOp : public CAssemblerTokenCompiler
 {
 public:
-    CLabelOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CLabelOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: NONE - @LABEL labelname
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
@@ -122,7 +122,7 @@ public:
 class CLogicOpOr : public CAssemblerTokenCompiler
 {
 public:
-    CLogicOpOr(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CLogicOpOr(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00000
     // SUBINSTRUCTION: 0x0000
@@ -141,7 +141,7 @@ public:
 class CLogicOpAnd : public CAssemblerTokenCompiler
 {
 public:
-    CLogicOpAnd(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CLogicOpAnd(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00000
     // SUBINSTRUCTION: 0x0010
@@ -160,7 +160,7 @@ public:
 class CLogicOpXor : public CAssemblerTokenCompiler
 {
 public:
-    CLogicOpXor(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CLogicOpXor(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00000
     // SUBINSTRUCTION: 0x0020
@@ -179,7 +179,7 @@ public:
 class CLogicOpNot : public CAssemblerTokenCompiler
 {
 public:
-    CLogicOpNot(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CLogicOpNot(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00000
     // SUBINSTRUCTION: 0x0030
@@ -198,7 +198,7 @@ public:
 class CLogicOpBsl : public CAssemblerTokenCompiler
 {
 public:
-    CLogicOpBsl(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CLogicOpBsl(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00000
     // SUBINSTRUCTION: 0x0040
@@ -217,7 +217,7 @@ public:
 class CLogicOpBsr : public CAssemblerTokenCompiler
 {
 public:
-    CLogicOpBsr(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CLogicOpBsr(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00000
     // SUBINSTRUCTION: 0x0050
@@ -236,7 +236,7 @@ public:
 class CLogicOpBswap : public CAssemblerTokenCompiler
 {
 public:
-    CLogicOpBswap(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CLogicOpBswap(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00000
     // SUBINSTRUCTION: 0x0060
@@ -255,7 +255,7 @@ public:
 class CLogicOpNoop : public CAssemblerTokenCompiler
 {
 public:
-    CLogicOpNoop(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CLogicOpNoop(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00000
     // SUBINSTRUCTION: 0x0000 (equal to or r0,r0,r0)
@@ -271,7 +271,7 @@ public:
 class CBranchOp : public CAssemblerTokenCompiler
 {
 public:
-    CBranchOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CBranchOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00001
     // jmp 0x0000 : short jump to label address in IP+1
@@ -375,7 +375,7 @@ public:
 class CMathOp : public CAssemblerTokenCompiler
 {
 public:
-    CMathOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CMathOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00002
     // iadd r0,r1 : r0=r0+r1
@@ -459,10 +459,10 @@ public:
 class CLeaOp : public CAssemblerTokenCompiler
 {
 public:
-    CLeaOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CLeaOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // Not a real instruction
-    // Decodes into two individual MOV instuctions
+    // Decodes into two individual LD.W instuctions
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
         int r1=0, r2=0;
@@ -510,21 +510,19 @@ public:
     }
 };
 
-class CMovDWordOp : public CAssemblerTokenCompiler
+class CLDDOp : public CAssemblerTokenCompiler
 {
 public:
-    CMovDWordOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CLDDOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
-    // Not a real instruction
-    // Decodes into two individual MOV instuctions
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
         int r1=0, r2=0;
         sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d:r%d", &r1,&r2);
         uint32_t extra_dword = 0;
-        if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))
+        if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))                  // R1 <- IMMEDIATE(DWORD)
             sscanf(_parser_table[_current_parser_offset+2].m_Value, "%x", &extra_dword);
-        else
+        else                                                                                // R1 <- *LABEL
         {
             extra_dword = 0xFFFFFFFF; // To be patched later.
 
@@ -539,12 +537,12 @@ public:
                         SLEAResolvePair postResolve;
                         postResolve.m_PatchAddressPointer = _current_binary_offset+2; // and also +4
                         postResolve.m_LabelToResolve = &_parser_table[i];
-                        m_LDATResolves.emplace_back(postResolve);
+                        m_LDDResolves.emplace_back(postResolve);
                     }
                 }
             }
             if (labelfound == false)
-                printf("ERROR: label not found for LEA intrinsic.\n");
+                printf("ERROR: label not found for ld.d instruction.\n");
         }
 
         unsigned int code = 0x04; // DW2Rs
@@ -561,223 +559,221 @@ public:
     }
 };
 
-// Memory/register move operations
-class CMovOp : public CAssemblerTokenCompiler
+class CLDWOp : public CAssemblerTokenCompiler
 {
 public:
-    CMovOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CLDWOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
-    // INSTRUCTION: 0x00003
-    // mov [r1:r2], r0 : write the contents of register r0 to address r1:r2
-    // mov r0, r1 : write the contents of r0 to register r1
-    // mov r0, [r1:r2] : write the contents of memory at r1:r2 to register r0
-    // mov r0, 0x0000 : write the immediate data at IP+1 to r0
-    // mov [r1:r2], IP : write the contents of memory at r1:r2 to IP (instruction pointer)
-    // mov IP+1, [r1:r2] : write the contents of IP+1 to address r1:r2 (return address)
-    // unused0
-    // unused1
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int retcount = 0;
+        int r1 = 0, r2 = 0, r3 = 0;
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+        uint32_t extra_dword = 0;
+        if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))                  // R1 <- IMMEDIATE(WORD)
+            sscanf(_parser_table[_current_parser_offset+2].m_Value, "%x", &extra_dword);
+        else if (strstr(_parser_table[_current_parser_offset+2].m_Value, "["))              // R1 <- WORD [R2:R3]
+        {
+            sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d:r%d]", &r2, &r3);
+            unsigned int code = 0x01; // M2R
+            unsigned short gencode;
+            gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10) | (r3<<13);
+            _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
+            _binary_output[_current_binary_offset++] = gencode&0x00FF;
+            return 3;
+        }
+        else                                                                                // R1 <- *LABEL
+        {
+            extra_dword = 0xFFFFFFFF; // To be patched later.
 
-        if (_parser_table[_current_parser_offset+1].m_Index != -1)
-        {
-            printf("ERROR: Mov instruction expects a non-reserved keyword\n");
-            return -1;
-        }
-
-        // int r1=0, r2=0, r3=0;
-        // sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
-
-        int dest = 0;
-        int source = 0;
-        int r1=0, r2=0, r3=0;
-
-        // Destination
-        if (_parser_table[_current_parser_offset+1].m_Value[0] == 'r')
-        {
-            dest = 0;
-            //printf("move to register %s ", _parser_table[_current_parser_offset+1].m_Value);
-        }
-        if (_parser_table[_current_parser_offset+1].m_Value[0] == '[')
-        {
-            dest = 1;
-            //printf("move to address %s ", _parser_table[_current_parser_offset+1].m_Value);
-        }
-        if (_parser_table[_current_parser_offset+1].m_Value[0] == '0' && _parser_table[_current_parser_offset+1].m_Value[1] == 'x')
-        {
-            //dest = 2;
-            printf("ERROR: Mov instruction does not accept a literal as destination operand\n");
-            return -1;
-        }
-        // if (_parser_table[_current_parser_offset+1].m_Value[0] == 'I') // IP
-        //     dest = 3;
-
-        // Source
-        if (_parser_table[_current_parser_offset+2].m_Value[0] == 'r')
-        {
-            source = 0;
-            //printf("from register %s ", _parser_table[_current_parser_offset+2].m_Value);
-        }
-        if (_parser_table[_current_parser_offset+2].m_Value[0] == '[')
-        {
-            source = 1;
-            //printf("from address %s ", _parser_table[_current_parser_offset+2].m_Value);
-        }
-        if (_parser_table[_current_parser_offset+2].m_Value[0] == '0' && _parser_table[_current_parser_offset+2].m_Value[1] == 'x')
-        {
-            source = 2;
-            //printf("from literal %s ", _parser_table[_current_parser_offset+2].m_Value);
-        }
-        // if (_parser_table[_current_parser_offset+2].m_Value[0] == 'I') // IP
-        //     source = 3;
-
-        // R2M
-        unsigned int code = 0;
-        if (source==0 && dest==1)
-        {
-            sscanf(_parser_table[_current_parser_offset+1].m_Value, "[r%d:r%d]", &r2,&r1);
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r3);
-            code = 0x00;
-        }
-        // M2R
-        if (source==1 && dest==0)
-        {
-            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r3);
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d:r%d]", &r2,&r1);
-            code = 0x01;
-        }
-        // R2R
-        if (source==0 && dest==0)
-        {
-            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-            code = 0x02;
-        }
-        // W2R
-        if (source==2 && dest==0)
-        {
-            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
-            code = 0x03;
+            bool labelfound = false;
+            for (unsigned int i=0; i<s_num_parser_entries; ++i)
+            {
+                if (strcmp(_parser_table[i].m_Value, "@LABEL") == 0 && i!=_current_parser_offset)
+                {
+                    if (strcmp(_parser_table[i+1].m_Value, _parser_table[_current_parser_offset+2].m_Value)==0)
+                    {
+                        labelfound = true;
+                        SLEAResolvePair postResolve;
+                        postResolve.m_PatchAddressPointer = _current_binary_offset+2;
+                        postResolve.m_LabelToResolve = &_parser_table[i];
+                        m_LDWResolves.emplace_back(postResolve);
+                    }
+                }
+            }
+            if (labelfound == false)
+                printf("ERROR: label not found for ld.w instruction.\n");
         }
 
-        // //R2IP
-        // if (source==0 && dest==3)
-        // {
-        //     sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
-        //     sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-        //     code = 0x04;
-        // }
-        // //(IP+1)2R
-        // if (source==3 && dest==0)
-        // {
-        //     sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r1);
-        //     sscanf(_parser_table[_current_parser_offset+3].m_Value, "r%d", &r2);
-        //     code = 0x05;
-        // }
-
-        unsigned short gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10) | (r3<<13);
+        unsigned int code = 0x03; // W2R
+        unsigned short gencode;
+        gencode = m_Opcode | (code<<4) | (r1<<7);
         _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = gencode&0x00FF;
-        if (code == 0x03)
-        {
-            unsigned int extraword = 0;
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "%x", &extraword);
-            _binary_output[_current_binary_offset++] = (extraword&0xFF00)>>8;
-            _binary_output[_current_binary_offset++] = extraword&0x00FF;
-        }
+        _binary_output[_current_binary_offset++] = (extra_dword&0x0000FF00)>>8;
+        _binary_output[_current_binary_offset++] = (extra_dword&0x000000FF);
 
-        //printf("\n");
         return 3;
     }
 };
 
-// Memory/register move operations
-class CMovByteOp : public CAssemblerTokenCompiler
+class CLDBOp : public CAssemblerTokenCompiler
 {
 public:
-    CMovByteOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CLDBOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
-    // INSTRUCTION: 0x00008
-    // movb [r1:r2], r0 : write the contents of register r0 to address r1:r2
-    // movb r0, r1 : write the contents of r0 to register r1
-    // movb r0, [r1:r2] : write the contents of memory at r1:r2 to register r0
-    // unused0
-    // unused1
-    // unused2
-    // unused3
-    // unused4
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int retcount = 0;
+        int r1 = 0, r2 = 0, r3 = 0;
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+        uint32_t extra_dword = 0;
+        if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))                  // R1 <- IMMEDIATE(BYTE - lower byte of following WORD)
+            sscanf(_parser_table[_current_parser_offset+2].m_Value, "%x", &extra_dword);
+        else if (strstr(_parser_table[_current_parser_offset+2].m_Value, "["))              // R1 <- BYTE [R2:R3]
+        {
+            sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d:r%d]", &r2, &r3);
+            unsigned int code = 0x01; // M2R
+            unsigned short gencode;
+            gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10) | (r3<<13);
+            _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
+            _binary_output[_current_binary_offset++] = gencode&0x00FF;
+            return 3;
+        }
+        else                                                                                // R1 <- *LABEL
+        {
+            extra_dword = 0xFFFFFFFF; // To be patched later.
 
-        if (_parser_table[_current_parser_offset+1].m_Index != -1)
-        {
-            printf("ERROR: Bmov instruction expects a non-reserved keyword\n");
-            return -1;
-        }
-
-        int dest = 0;
-        int source = 0;
-        int r1=0, r2=0, r3=0;
-
-        // Destination
-        if (_parser_table[_current_parser_offset+1].m_Value[0] == 'r')
-        {
-            dest = 0;
-            //printf("move to register %s ", _parser_table[_current_parser_offset+1].m_Value);
-        }
-        if (_parser_table[_current_parser_offset+1].m_Value[0] == '[')
-        {
-            dest = 1;
-            //printf("move to address %s ", _parser_table[_current_parser_offset+1].m_Value);
-        }
-        if (_parser_table[_current_parser_offset+1].m_Value[0] == '0' && _parser_table[_current_parser_offset+1].m_Value[1] == 'x')
-        {
-            //dest = 2;
-            printf("ERROR: Bmov instruction does not accept a literal as destination operand\n");
-            return -1;
-        }
-
-        // Source
-        if (_parser_table[_current_parser_offset+2].m_Value[0] == 'r')
-        {
-            source = 0;
-            //printf("from register %s ", _parser_table[_current_parser_offset+2].m_Value);
-        }
-        if (_parser_table[_current_parser_offset+2].m_Value[0] == '[')
-        {
-            source = 1;
-            //printf("from address %s ", _parser_table[_current_parser_offset+2].m_Value);
+            bool labelfound = false;
+            for (unsigned int i=0; i<s_num_parser_entries; ++i)
+            {
+                if (strcmp(_parser_table[i].m_Value, "@LABEL") == 0 && i!=_current_parser_offset)
+                {
+                    if (strcmp(_parser_table[i+1].m_Value, _parser_table[_current_parser_offset+2].m_Value)==0)
+                    {
+                        labelfound = true;
+                        SLEAResolvePair postResolve;
+                        postResolve.m_PatchAddressPointer = _current_binary_offset+2;
+                        postResolve.m_LabelToResolve = &_parser_table[i];
+                        m_LDWResolves.emplace_back(postResolve);
+                    }
+                }
+            }
+            if (labelfound == false)
+                printf("ERROR: label not found for ld.b instruction.\n");
         }
 
-        // R2M
-        unsigned int code = 0;
-        if (source==0 && dest==1)
-        {
-            sscanf(_parser_table[_current_parser_offset+1].m_Value, "[r%d:r%d]", &r2,&r1);
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r3);
-            code = 0x00;
-        }
-        // M2R
-        if (source==1 && dest==0)
-        {
-            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r3);
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d:r%d]", &r2,&r1);
-            code = 0x01;
-        }
-        // R2R
-        if (source==0 && dest==0)
-        {
-            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-            code = 0x02;
-        }
-
-        unsigned short gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10) | (r3<<13);
+        unsigned int code = 0x01; // B2R
+        unsigned short gencode;
+        gencode = m_Opcode | (code<<4) | (r1<<7);
         _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = gencode&0x00FF;
+        _binary_output[_current_binary_offset++] = (extra_dword&0x0000FF00)>>8;
+        _binary_output[_current_binary_offset++] = (extra_dword&0x000000FF);
 
+        return 3;
+    }
+};
+
+/*class CSTDOp : public CAssemblerTokenCompiler
+{
+public:
+    CSTDOp(const unsigned short _opcode) { m_Opcode = _opcode; }
+
+    int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
+    {
+        int r1 = 0, r2 = 0, r3 = 0;
+
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "[r%d:r%d]", &r1, &r2);
+        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r3);
+
+        unsigned int code = 0x00; // DW2M
+        unsigned short gencode;
+        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10) | (r3<<13);
+        _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
+        _binary_output[_current_binary_offset++] = gencode&0x00FF;
+        return 3;
+    }
+};*/
+
+class CSTWOp : public CAssemblerTokenCompiler
+{
+public:
+    CSTWOp(const unsigned short _opcode) { m_Opcode = _opcode; }
+
+    int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
+    {
+        int r1 = 0, r2 = 0, r3 = 0;
+
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "[r%d:r%d]", &r1, &r2);
+        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r3);
+
+        unsigned int code = 0x00; // W2M
+        unsigned short gencode;
+        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10) | (r3<<13);
+        _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
+        _binary_output[_current_binary_offset++] = gencode&0x00FF;
+        return 3;
+    }
+};
+
+class CSTBOp : public CAssemblerTokenCompiler
+{
+public:
+    CSTBOp(const unsigned short _opcode) { m_Opcode = _opcode; }
+
+    int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
+    {
+        int r1 = 0, r2 = 0, r3 = 0;
+
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "[r%d:r%d]", &r1, &r2);
+        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r3);
+
+        unsigned int code = 0x00; // B2M
+        unsigned short gencode;
+        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10) | (r3<<13);
+        _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
+        _binary_output[_current_binary_offset++] = gencode&0x00FF;
+        return 3;
+    }
+};
+
+class CCPWOp : public CAssemblerTokenCompiler
+{
+public:
+    CCPWOp(const unsigned short _opcode) { m_Opcode = _opcode; }
+
+    int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
+    {
+        int r1 = 0, r2 = 0;
+
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
+
+        unsigned int code = 0x02; // R2R
+        unsigned short gencode;
+        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10);
+        _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
+        _binary_output[_current_binary_offset++] = gencode&0x00FF;
+        return 3;
+    }
+};
+
+class CCPBOp : public CAssemblerTokenCompiler
+{
+public:
+    CCPBOp(const unsigned short _opcode) { m_Opcode = _opcode; }
+
+    int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
+    {
+        int r1 = 0, r2 = 0;
+
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
+
+        unsigned int code = 0x02; // R2R
+        unsigned short gencode;
+        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10);
+        _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
+        _binary_output[_current_binary_offset++] = gencode&0x00FF;
         return 3;
     }
 };
@@ -786,7 +782,7 @@ public:
 class CRetHaltOp : public CAssemblerTokenCompiler
 {
 public:
-    CRetHaltOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CRetHaltOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00004
     // ret : return to caller
@@ -816,7 +812,7 @@ public:
 class CStackOp : public CAssemblerTokenCompiler
 {
 public:
-    CStackOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CStackOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00005
     // push r0 : write r0 to SP, decrement SP
@@ -850,7 +846,7 @@ public:
 class CTestOp : public CAssemblerTokenCompiler
 {
 public:
-    CTestOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CTestOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00006
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
@@ -890,7 +886,7 @@ public:
 class CCompareOp : public CAssemblerTokenCompiler
 {
 public:
-    CCompareOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CCompareOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00007
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
@@ -919,7 +915,7 @@ public:
 class CIOOp : public CAssemblerTokenCompiler
 {
 public:
-    CIOOp(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CIOOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     // INSTRUCTION: 0x00008
     // vsync : halt the CPU until the vsync is tiggered on the video output hardware
@@ -972,7 +968,7 @@ public:
 class CNil : public CAssemblerTokenCompiler
 {
 public:
-    CNil(const char *_token, const unsigned short _opcode) { m_Token = _token; m_Opcode = _opcode; }
+    CNil(const unsigned short _opcode) { m_Opcode = _opcode; }
 
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
@@ -982,29 +978,34 @@ public:
 };
 
 // Instruction generators / parsers
-COriginOp s_originop("@ORG", 0x0);
-CDataWordOp s_datawordop("@DW", 0x0);
-CLabelOp s_labelop("@LABEL", 0x0);
-CLogicOpOr s_logicop_or("or", 0x0000);
-CLogicOpAnd s_logicop_and("and", 0x0000);
-CLogicOpXor s_logicop_xor("xor", 0x0000);
-CLogicOpNot s_logicop_not("not", 0x0000);
-CLogicOpBsl s_logicop_bsl("bsl", 0x0000);
-CLogicOpBsr s_logicop_bsr("bsr", 0x0000);
-CLogicOpBswap s_logicop_bswap("bswap", 0x0000);
-CLogicOpNoop s_logicop_noop("noop", 0x0000);
-CBranchOp s_branchop("jmp", 0x0001);
-CMathOp s_mathop("add", 0x0002);
-CMovOp s_movop("mov", 0x0003);
-CLeaOp s_leaop("lea", 0x0003); // Not a real instruction!
-CMovDWordOp s_dmovop("dmov", 0x0003); // Not a real instruction!
-CRetHaltOp s_rethaltop("ret", 0x0004);
-CStackOp s_stackop("push", 0x0005);
-CTestOp s_testop("test", 0x0006);
-CCompareOp s_cmpop("cmp", 0x0007);
-CIOOp s_ioop("vsync", 0x0008);
-CMovByteOp s_bmovop("bmov", 0x0009);
-CNil s_nilop("nil", 0x0000); // 0x0009...0x000F
+COriginOp s_originop(0x0);
+CDataWordOp s_datawordop(0x0);
+CLabelOp s_labelop(0x0);
+CLogicOpOr s_logicop_or(0x0000);
+CLogicOpAnd s_logicop_and(0x0000);
+CLogicOpXor s_logicop_xor(0x0000);
+CLogicOpNot s_logicop_not(0x0000);
+CLogicOpBsl s_logicop_bsl(0x0000);
+CLogicOpBsr s_logicop_bsr(0x0000);
+CLogicOpBswap s_logicop_bswap(0x0000);
+CLogicOpNoop s_logicop_noop(0x0000);
+CBranchOp s_branchop(0x0001);
+CMathOp s_mathop(0x0002);
+CLeaOp s_leaop(0x0003); // Not a real instruction!
+CLDBOp s_ldbop(0x0009);
+CSTBOp s_stbop(0x0009);
+CLDDOp s_lddop(0x0003);
+//CSTDOp s_stdop(0x0003);
+CLDWOp s_ldwop(0x0003);
+CSTWOp s_stwop(0x0003);
+CCPWOp s_cpwop(0x0003);
+CCPBOp s_cpbop(0x0009);
+CRetHaltOp s_rethaltop(0x0004);
+CStackOp s_stackop(0x0005);
+CTestOp s_testop(0x0006);
+CCompareOp s_cmpop(0x0007);
+CIOOp s_ioop(0x0008);
+CNil s_nilop(0x0000); // 0x0009...0x000F
 
 struct SAssemblerPair
 {
@@ -1041,10 +1042,16 @@ const SAssemblerPair keywords[] =
     {{"inc"}, &s_mathop},
     {{"dec"}, &s_mathop},
 
-    {{"mov"}, &s_movop},
-    {{"bmov"}, &s_bmovop},
+    {{"ld.b"}, &s_ldbop},
+    {{"ld.w"}, &s_ldwop},
+    {{"ld.d"}, &s_lddop},
+    {{"st.b"}, &s_stbop},
+    {{"st.w"}, &s_stwop},
+    //{{"st.d"}, &s_stdop},
+    {{"cp.b"}, &s_cpbop},
+    {{"cp.w"}, &s_cpwop},
+    //{{"cp.d"}, &s_stbop},
     {{"lea"}, &s_leaop},
-    {{"dmov"}, &s_dmovop},
 
     {{"ret"}, &s_rethaltop},
     {{"halt"}, &s_rethaltop},
@@ -1200,7 +1207,7 @@ int parse_nip(const char *_inputtext)
         s_binary_output[patch.m_PatchAddressPointer+5] = (labeladdress&0x000000FF);
     }
 
-    for (auto &patch : m_LDATResolves)
+    for (auto &patch : m_LDDResolves) // Set the DWORD value of LD.D to DWORD at address of label
     {
         SParserItem *itm = patch.m_LabelToResolve;
         uint32_t labeladdress = itm->m_LabelMemoryOffset;
@@ -1212,6 +1219,16 @@ int parse_nip(const char *_inputtext)
         s_binary_output[patch.m_PatchAddressPointer+1] = d1;
         s_binary_output[patch.m_PatchAddressPointer+2] = d2;
         s_binary_output[patch.m_PatchAddressPointer+3] = d3;
+    }
+
+    for (auto &patch : m_LDWResolves) // Set the WORD value of LD.W to WORD at address of label
+    {
+        SParserItem *itm = patch.m_LabelToResolve;
+        uint32_t labeladdress = itm->m_LabelMemoryOffset;
+        uint16_t d0 = s_binary_output[labeladdress];
+        uint16_t d1 = s_binary_output[labeladdress+1];
+        s_binary_output[patch.m_PatchAddressPointer+0] = d0;
+        s_binary_output[patch.m_PatchAddressPointer+1] = d1;
     }
 
     return 0;

@@ -338,11 +338,11 @@ For word access, use:
 ```
 000 000 000 000 0011
 |   |   |   |   MOV (WORD / DWORD)
-rC  rB  rA  000:REG2MEM [rB:rA], rC
-            001:MEM2REG rC, [rB:rA]
-            010:REG2REG rA, rB
-            011:WORD2REG rA, [IP+1] (16 bit constant starting at IP+1)
-            100:DWORD2REGS rA:rB, [IP+1:IP+2] (32 bit constant address starting at IP+1)
+rC  rB  rA  000:REG2MEM [rB:rA], rC - st.w
+            001:MEM2REG rA, [rB:rC] - ld.w
+            010:REG2REG rA, rB - cp.w
+            011:WORD2REG rA, [IP+1] (16 bit constant starting at IP+1) - ld.w
+            100:DWORD2REGS rA:rB, [IP+1:IP+2] (32 bit constant address starting at IP+1) - ld.d
             101:reserved
             110:reserved
             111:reserved
@@ -351,48 +351,55 @@ For byte access, use:
 ```
 000 000 000 000 1001
 |   |   |   |   MOV (BYTE)
-rC  rB  rA  000:REG2MEM [rA:rB], rC
-            001:MEM2REG rC, [rB:rA]
-            010:REG2REG rA, rB
-            011:reserved
+rC  rB  rA  000:REG2MEM [rA:rB], rC - st.b
+            001:MEM2REG rA, [rB:rC] - ld.b
+            010:REG2REG rA, rB - cp.b
+            011:BYTE2REG rA, [IP+1] (low 8 bit constant starting at IP+1) - ld.b
             100:reserved
             101:reserved
             110:reserved
             111:reserved
 ```
 
-### MOV [rB:rA], rC / BMOV [rB:rA], rC
-Stores the 16 bit value in register rC at memory pointed by rB:rA register pair. For `BMOV`, the byte value at the memory address is copied to the lower 8 bits of the register rC.
+### ST.W [rA:rB], rC / ST.B [rA:rB], rC
+Stores the 16 bit value in register rC at memory pointed by rA:rB register pair. For `ST.B`, the byte value at the memory address is copied to the lower 8 bits of the register rA.
 
-### MOV rC, [rB:rA] / BMOV rC, [rB:rA]
-Stores the 16 bit value at memory pointed by rB:rA to register rC. For `BMOV`, based on the last bit off the address, it loads either the even or the odd byte onto the lower 8 bits of the register rC.
+### LD.W rA, [rB:rC] / LD.B rA, [rB:rC]
+Stores the 16 bit value at memory pointed by rB:rC to register rA. For `LD.B`, based on the last bit off the address, it loads either the even or the odd byte onto the lower 8 bits of the register rA.
 
-### MOV rA, rB / BMOV rA, rB
-Stores the 16 bit value of register rB in register rA. For `BMOV`, only the lower 8 bits are copied across registers. For example:
+### CP.W rA, rB / CP.B rA, rB
+Stores the 16 bit value of register rB in register rA. For `CP.B`, only the lower 8 bits are copied across registers. For example:
 ```c
-bmov r1,r0
+cp.b r1, r0
 ```
 would copy only the lower 8 bits of r0 onto r1, keeping the upper 8 bits intact.
 
-### MOV rA, {word_constant}
+### LD.B rA, {word_constant}
+Stores the low byte of the WORD following this instruction in low byte of register rA while keeping the high byte intact. For example:
+```c
+// After the following instruction r1 will contain 0x??BB
+ld.b r1, 0xAABB
+```
+
+### LD.W rA, {word_constant}
 Stores the WORD following this instruction in register rA. For example:
 ```c
 // Write a white pixel at first VRAM address
-mov r1, 0x8000
-mov r0, 0x0000
-mov r2, 0x00FF // White
-bmov [r1:r0], r2
+ld.w r1, 0x8000
+ld.w r0, 0x0000
+ld.w r2, 0x00FF // White
+st.b [r1:r0], r2
 ```
 would set the register pair r1:r0 to the VRAM start address, 0x80000000, and r2 to 0x00FF, then write the lower 8 bits of r2 to that address.
 
 NOTE: The byte access form only works on the lower 8 bits of registers.
 
-### DMOV rA:rB, {dword_mem_address}
+### LD.D rA:rB, {dword_mem_address}
 Stores the contents of the DWORD address following this instruction in register pair rA:rB. rA receives the high word whereas register rB receives the low word of the DWORD.
 
 Example:
 ```c
-dmov r1:r0, VRAMSTART
+ld.d r1:r0, VRAMSTART
 // which is equivalent to a load of the value at the given label, resulting in the following register state:
 // r1==0x8000 
 // r6==0x0000

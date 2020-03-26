@@ -31,12 +31,12 @@ def build(ctx):
     win_sdk_include_path_shared = '$(ProgramFiles)/Windows Kits/10/Include/10.0.18362.0/shared'
 
     # RELEASE
-    compile_flags = ['/permissive-', '/arch:AVX', '/GL', '/WX', '/Ox', '/Ot', '/Oy', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/EHsc', '/FS', '/D_SECURE_SCL 0']
-    linker_flags = ['/LTCG', '/RELEASE']
+    # compile_flags = ['/permissive-', '/arch:AVX', '/GL', '/WX', '/Ox', '/Ot', '/Oy', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/EHsc', '/FS', '/D_SECURE_SCL 0']
+    # linker_flags = ['/LTCG', '/RELEASE']
 
     # DEBUG
-    # compile_flags = ['/permissive-', '/arch:AVX', '/GL', '/WX', '/Od', '/DDEBUG', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/Gs', '/EHsc', '/FS']
-    # linker_flags = ['/DEBUG']
+    compile_flags = ['/permissive-', '/arch:AVX', '/GL', '/WX', '/Od', '/DDEBUG', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/Gs', '/EHsc', '/FS']
+    linker_flags = ['/DEBUG']
 
     # compile_flags = ['-std=c++17']
     # linker_flags = []

@@ -555,12 +555,12 @@ void CPUMain()
                         {
                             case 0: // reg2mem
                             {
-                                bool is_vram_address = (register_file[r2]&0b1000000000000000)>>15 ? true:false;
+                                bool is_vram_address = (register_file[r1]&0b1000000000000000)>>15 ? true:false;
                                 if (is_vram_address) // VRAM write (address>=0x80000000)
                                 {
                                     // NOTE: VRAM ends at 0xFF00 but we need to be able to address the rest for
                                     // other attributes such as border color, sprite tables and such
-                                    framebuffer_address = register_file[r1];
+                                    framebuffer_address = register_file[r2];
                                     framebuffer_writeena = 1;
                                     // TODO: Somehow need to implement a WORD mov to VRAM
                                     framebuffer_data = uint8_t(register_file[r3]&0x00FF);
@@ -571,7 +571,7 @@ void CPUMain()
                                 {
                                     // SRAM
                                     sram_enable_byteaddress = 0;
-                                    sram_addr = ((register_file[r2]&0x0003)<<16) | register_file[r1]; // SRAM write
+                                    sram_addr = ((register_file[r1]&0x0003)<<16) | register_file[r2]; // SRAM write
                                     sram_wdata = register_file[r3];
                                     sram_write_req = 1;
                                     IP = IP + 2;
@@ -582,8 +582,8 @@ void CPUMain()
                             case 1: // mem2reg
                                 // NOTE: VRAM reads are not possible at the moment
                                 sram_enable_byteaddress = 0;
-                                sram_addr = ((register_file[r2]&0x0003)<<16) | register_file[r1];
-                                target_register = r3;
+                                sram_addr = ((register_file[r2]&0x0003)<<16) | register_file[r3];
+                                target_register = r1;
                                 sram_read_req = 1;
                                 IP = IP + 2;
                                 cpu_state = CPU_READ_DATA;
@@ -745,16 +745,16 @@ void CPUMain()
                         uint16_t r1 = (instruction&0b0000001110000000)>>7; // [9:7]
                         uint16_t r2 = (instruction&0b0001110000000000)>>10; // [12:10]
                         uint16_t r3 = (instruction&0b1110000000000000)>>13; // [15:13]
-                        switch(op)
+                        switch (op)
                         {
                             case 0: // reg2mem
                             {
-                                bool is_vram_address = (register_file[r2]&0b1000000000000000)>>15 ? true:false;
+                                bool is_vram_address = (register_file[r1]&0b1000000000000000)>>15 ? true:false;
                                 if (is_vram_address) // VRAM write (address>=0x80000000)
                                 {
                                     // NOTE: VRAM ends at 0xFF00 but we need to be able to address the rest for
                                     // other attributes such as border color, sprite tables and such
-                                    framebuffer_address = register_file[r1];
+                                    framebuffer_address = register_file[r2];
                                     framebuffer_writeena = 1;
                                     // TODO: Somehow need to implement a WORD mov to VRAM
                                     framebuffer_data = uint8_t(register_file[r3]&0x00FF);
@@ -765,7 +765,7 @@ void CPUMain()
                                 {
                                     // SRAM
                                     sram_enable_byteaddress = 1;
-                                    sram_addr = ((register_file[r2]&0x0003)<<16) | register_file[r1]; // SRAM write
+                                    sram_addr = ((register_file[r1]&0x0003)<<16) | register_file[r2]; // SRAM write
                                     sram_wdata = register_file[r3]&0x00FF;
                                     sram_write_req = 1;
                                     IP = IP + 2;
@@ -776,8 +776,8 @@ void CPUMain()
                             case 1: // mem2reg
                                 // NOTE: VRAM reads are not possible at the moment
                                 sram_enable_byteaddress = 1;
-                                sram_addr = ((register_file[r2]&0x0003)<<16) | register_file[r1];
-                                target_register = r3;
+                                sram_addr = ((register_file[r2]&0x0003)<<16) | register_file[r3];
+                                target_register = r1;
                                 sram_read_req = 1;
                                 IP = IP + 2;
                                 cpu_state = CPU_READ_DATA_BYTE;
@@ -787,9 +787,13 @@ void CPUMain()
                                 IP = IP + 2;
                                 cpu_state = CPU_SET_INSTRUCTION_POINTER;
                             break;
-                            case 3: // unused
-                                IP = IP + 2;
-                                cpu_state = CPU_SET_INSTRUCTION_POINTER;
+                            case 3: // byte2reg
+                                target_register = r1;
+                                sram_enable_byteaddress = 1;
+                                sram_addr = IP + 2;
+                                sram_read_req = 1;
+                                IP = IP + 4; // Skip the WORD we read plus the instruction
+                                cpu_state = CPU_READ_DATA_BYTE;
                             break;
                             case 4: // unused
                                 IP = IP + 2;

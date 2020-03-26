@@ -22,8 +22,8 @@ branch ClearVRAM
 
 # Load parameters directly into registers
 # The disadvantage is that the parameters are hard to change due to no known address / gaps in between
-mov r6, 0x0008          # X=8
-mov r7, 0x000C          # Y=12
+ld.w r6, 0x0008         # X=8
+ld.w r7, 0x000C         # Y=12
 push r7                 # NOTE: Push parameters in reverse order
 push r6
 branch DrawSprite
@@ -32,21 +32,21 @@ branch DrawSprite
 # The advantage is that the parameters in memory can be changed and kept around
 # or simply a pointer at the parameters can be sent to the function
 lea r7:r6, SPRITEPOSDATA  # X/Y positions at 0000:0200 and 0000:0202
-mov r0, [r7:r6]
+ld.w r0, [r7:r6]
 inc r6
 inc r6
-mov r1, [r7:r6]
+ld.w r1, [r7:r6]
 push r1
 push r0
 branch DrawSprite
 
 # Test loop/neg/push/pop by copying the sprite 13 times with 21 pixel X and 2 pixel Y offsets
 # Uses direct register parameters
-mov r0, 0x000D          # copies
-mov r1, 0x0015          # X step
-mov r2, 0x0002          # Y step
-mov r6, 0x0017          # X=23
-mov r7, 0x0080          # Y=128
+ld.w r0, 0x000D          # copies
+ld.w r1, 0x0015          # X step
+ld.w r2, 0x0002          # Y step
+ld.w r6, 0x0017          # X=23
+ld.w r7, 0x0080          # Y=128
 @LABEL MANYSPRITES
     push r0                 # save our loop counter
     push r1                 # save step counter X
@@ -70,36 +70,36 @@ mov r7, 0x0080          # Y=128
 jmpif MANYSPRITES
 
 # Test some integer math by calculating memory address and plotting a pixel
-mov r5, 0x00A0          # X=160
-mov r6, 0x0066          # Y=102
-mov r7, 0x0038          # Color=Green
+ld.w r5, 0x00A0          # X=160
+ld.w r6, 0x0066          # Y=102
+ld.w r7, 0x0038          # Color=Green
 push r7
 push r6
 push r5
 branch DrawPixel
 
 # Test integer math / push / pop inside loop by drawing a diagonal line
-mov r5, 0x0080          # X=128
-mov r6, 0x0040          # Y=64
-mov r7, 0x07C0          # Color=Red/Blue
-mov r0, 0x0040          # 64 pixels
+ld.w r5, 0x0080          # X=128
+ld.w r6, 0x0040          # Y=64
+ld.w r7, 0x07C0          # Color=Red/Blue
+ld.w r0, 0x0040          # 64 pixels
 @LABEL LINELOOP
-    push r0             # save our counter (DrawPixel overwrites r0)
-    push r7             # push parameters
+    push r0              # save our counter (DrawPixel overwrites r0)
+    push r7              # push parameters
     push r6
     push r5
     branch DrawPixel
-    pop r0              # restore our counter
-    inc r5              # step X
-    inc r6              # step Y
-    bswap r7,r7         # switch to next color for next pixel
+    pop r0               # restore our counter
+    inc r5               # step X
+    inc r6               # step Y
+    bswap r7,r7          # switch to next color for next pixel
     dec r0
     cmp r0,r0
     test notzero
 jmpif LINELOOP
 
 # Set border color to orange - JMP test
-mov r5, 0xFF1F          # White / Orange
+ld.w r5, 0xFF1F          # White / Orange
 @LABEL BORDERLOOP
     push r5
     branch SetBorderColor
@@ -115,14 +115,14 @@ halt
 # -------------------------------------------------------
 
 @LABEL DrawPixel
-pop r0                  # X
-pop r1                  # Y
-pop r2                  # Color
-mov r3, 0x0140          # Row pitch (320)
-imul r1, r3             # Y*320
-iadd r0, r1             # X+Y*320
-mov r1, 0x8000          # 0x8000:(X+Y*320) == VRAM address
-bmov [r1:r0], r2
+pop r0                   # X
+pop r1                   # Y
+pop r2                   # Color
+ld.w r3, 0x0140          # Row pitch (320)
+imul r1, r3              # Y*320
+iadd r0, r1              # X+Y*320
+ld.w r1, 0x8000          # 0x8000:(X+Y*320) == VRAM address
+st.b [r1:r0], r2
 ret
 
 # -------------------------------------------------------
@@ -131,51 +131,51 @@ ret
 
 @LABEL DrawSprite
 
-pop r0                  # X
-pop r1                  # Y
+pop r0                   # X
+pop r1                   # Y
 
-mov r2, 0x0140          # Row pitch (320)
-imul r1, r2             # Y*320
-iadd r0, r1             # X+Y*320
-mov r1, 0x8000          # 0x8000:(X+Y*320) == VRAM address
+ld.w r2, 0x0140          # Row pitch (320)
+imul r1, r2              # Y*320
+iadd r0, r1              # X+Y*320
+ld.w r1, 0x8000          # 0x8000:(X+Y*320) == VRAM address
 
-mov r2, 0x0400          # [r3:r2] sprite in ROM at this address (0000:0400)
-mov r3, 0x0000
-mov r4, 0x0011          # column counter (sprite is 17 pixels wide, but has 18 pixel stride)
-mov r5, 0x0017          # row counter (23 pixels)
+ld.w r2, 0x0400          # [r3:r2] sprite in ROM at this address (0000:0400)
+ld.w r3, 0x0000
+ld.w r4, 0x0011          # column counter (sprite is 17 pixels wide, but has 18 pixel stride)
+ld.w r5, 0x0017          # row counter (23 pixels)
 
 @LABEL INNERLOOP
     # for each column
-        bmov r6, [r3:r2]        # read from current pattern buffer location
-        # mov r7, 0x00FF        # Skip masked pixels
+        ld.b r6, [r3:r2]        # read from current pattern buffer location
+        # ld.w r7, 0x00FF       # Skip masked pixels
         # cmp r6,r7
         # test equal
         # jmpif SKIPWRITE
-        bmov [r1:r0], r6	   	# write to current VRAM location
+        st.b [r1:r0], r6	   	# write to current VRAM location
     # @LABEL SKIPWRITE
         inc r0	    	    	# increment VRAM pointer
         inc r2                  # increment pattern pointer
         dec r4		        	# decrement scanline counter
         cmp r4, r4 			    # compare r4 to r4 (used to trigger 'zero' check)
         test notzero	        # true if r4 is not equal to zero                       
-    jmpif INNERLOOP 	    # short jump to start of loop (at 0x0008) while true    
+    jmpif INNERLOOP 	        # short jump to start of loop (at 0x0008) while true    
 
     # for each row
-    inc r2                  # skip the unused pixel at the end (18th pixel)
-    mov r4, 0x0011          # reset column counter back to 17
-    mov r7, 0x012F          # set row stride (320-17==303)
-    iadd r0, r7             # move to next scanline
+    inc r2                      # skip the unused pixel at the end (18th pixel)
+    ld.w r4, 0x0011             # reset column counter back to 17
+    ld.w r7, 0x012F             # set row stride (320-17==303)
+    iadd r0, r7                 # move to next scanline
     dec r5
     cmp r5, r5
     test notzero
-jmpif INNERLOOP         # for each row
+jmpif INNERLOOP                 # for each row
 
 ret
 
 @LABEL SetBorderColor
-dmov r1:r0, BORDERCOLOR # [r1:r0] Border color (8000:FF00)
+ld.d r1:r0, BORDERCOLOR # [r1:r0] Border color (8000:FF00)
 pop r2
-bmov [r1:r0], r2
+st.b [r1:r0], r2
 ret
 
 @LABEL ClearVRAM
@@ -184,11 +184,11 @@ push r0
 push r1
 push r2
 push r3
-dmov r1:r0, VRAMSTART   # Load data at VRAMSTART into r1:r0 which is the VRAM start address DWORD
-mov r2, 0xFF00          # 320x204 pixels
-mov r3, 0x00FF          # Clear color: White
+ld.d r1:r0, VRAMSTART    # Load data at VRAMSTART into r1:r0 which is the VRAM start address DWORD
+ld.w r2, 0xFF00          # 320x204 pixels
+ld.w r3, 0x00FF          # Clear color: White
 @LABEL CLEARLOOP
-    bmov [r1:r0], r3
+    st.b [r1:r0], r3
     inc r0
     dec r2
     cmp r2,r2
