@@ -356,8 +356,8 @@ void CPUMain()
                     uint16_t typ = (instruction&0b0100000000000000)>>14; // [14]
                     uint16_t immed = (instruction&0b1000000000000000)>>15; // [15]
                     uint16_t si = (instruction&0b0000000000110000)>>4; // [5:4]
-                    uint16_t r1 = (instruction&0b0011100000000000)>>11; // [13:11]
-                    uint16_t r2 = (instruction&0b0000011100000000)>>8; // [10:8]
+                    uint16_t r1 = (instruction&0b0000011100000000)>>8; // [10:8]
+                    uint16_t r2 = (instruction&0b0011100000000000)>>11; // [13:11]
 
                     // NOTE: BRANCH and JMP share the same logic except the stack bit
                     {
@@ -380,7 +380,7 @@ void CPUMain()
                                 else
                                 {
                                     // Use address in register pair inside instruction
-                                    IP = ((register_file[r1]&0x0003)<<16) | register_file[r2]; // CALL [R1:R2]
+                                    IP = ((register_file[r2]&0x0003)<<16) | register_file[r1]; // CALL [R1:R2]
                                     cpu_state = CPU_SET_INSTRUCTION_POINTER;
                                 }
                             break;
@@ -395,7 +395,7 @@ void CPUMain()
                                         }
                                         else
                                         {
-                                            IP = ((register_file[r1]&0x0003)<<16) | register_file[r2]; // CALL [R1:R2]
+                                            IP = ((register_file[r2]&0x0003)<<16) | register_file[r1]; // CALL [R1:R2]
                                             cpu_state = CPU_SET_INSTRUCTION_POINTER;
                                         }
                                     }

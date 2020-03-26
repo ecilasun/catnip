@@ -245,21 +245,21 @@ Branch instruction is a bit special since it needs to read two extra WORDs from 
 1:Jump via address at [IP+1:IP+2] (32 bits, 18 bits addressable (absolute))
 ```
 
-### BRANCH {address} / BRANCH rB, rA
+### BRANCH {address} / BRANCH rB:rA
 
-Pushes the next instuction's address onto the branch stack and sets the IP to the 2 words following this instruction or the contents of registers A and B.
+Pushes the next instuction's address onto the branch stack and sets the IP to the 2 words following this instruction or the contents of registers rA and rB.
 
-### BRANCHIF {address} / BRANCHIF rB, rA
+### BRANCHIF {address} / BRANCHIF rB:rA
 
-Pushes the next instuction's address onto the branch stack and sets the IP to the 2 words following this instruction or the contents of registers A and B if the TR register is set.
+Pushes the next instuction's address onto the branch stack and sets the IP to the 2 words following this instruction or the contents of registers rA and rB if the TR register is set.
 
-### JMP {address} / JMP rB, rA
+### JMP {address} / JMP rB:rA
 
-Sets the IP to the 2 words following this instruction or the contents of registers A and B.
+Sets the IP to the 2 words following this instruction or the contents of registers rA and rB.
 
-### JMPIF {address} / JMPIF rB, rA
+### JMPIF {address} / JMPIF rB:rA
 
-Sets the IP to the 2 words following this instruction or the contents of registers A and B if the TR register is set.
+Sets the IP to the 2 words following this instruction or the contents of registers rA and rB if the TR register is set.
 
 ---
 ## Integer Math Instruction
