@@ -266,14 +266,14 @@ Sets the IP to the 2 words following this instruction or the contents of registe
 ```
 000 000 ??? 000 0010
 |   |       |   MATHOP
-rB  rA      000:IADD rC,rA,rB (rA=rA+rB)
-            001:ISUB rC,rA,rB (rA=rA-rB)
-            010:IMUL rC,rA,rB (rA=rA*rB)
-            011:IDIV rC,rA,rB (rA=rA/rB)
-            100:IMOD rC,rA,rB (rA=rA%rB)
-            101:INEG rA       (rA=-rA)
-            110:INC rA        (rA=rA+1)
-            111:DEC rA        (rA=rA-1)
+rB  rA      000:IADD rA,rB (rA=rA+rB)
+            001:ISUB rA,rB (rA=rA-rB)
+            010:IMUL rA,rB (rA=rA*rB)
+            011:IDIV rA,rB (rA=rA/rB)
+            100:IMOD rA,rB (rA=rA%rB)
+            101:INEG rA    (rA=-rA)
+            110:INC rA     (rA=rA+1)
+            111:DEC rA     (rA=rA-1)
 ```
 
 ### IADD rA,rB
@@ -338,7 +338,7 @@ For word access, use:
 ```
 000 000 000 000 0011
 |   |   |   |   MOV (WORD / DWORD)
-rC  rB  rA  000:REG2MEM [rB:rA], rC - st.w
+rC  rB  rA  000:REG2MEM [rA:rB], rC - st.w
             001:MEM2REG rA, [rB:rC] - ld.w
             010:REG2REG rA, rB - cp.w
             011:WORD2REG rA, [IP+1] (16 bit constant starting at IP+1) - ld.w

@@ -179,7 +179,7 @@ void CPUMain()
             register_file[5] = 0x0000;
             register_file[6] = 0x0000;
             register_file[7] = 0x0000;
-            
+
             CALLSTACK[0] = 0;
             CALLSTACK[1] = 0;
             CALLSTACK[2] = 0;

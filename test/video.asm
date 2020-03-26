@@ -23,7 +23,7 @@ branch ClearVRAM
 # Load parameters directly into registers
 # The disadvantage is that the parameters are hard to change due to no known address / gaps in between
 ld.w r6, 0x0008         # X=8
-ld.w r7, 0x000C         # Y=12
+cp.w r7, r6             # Y=X=8
 push r7                 # NOTE: Push parameters in reverse order
 push r6
 branch DrawSprite
