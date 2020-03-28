@@ -602,7 +602,7 @@ void CPUMain()
 
                     case INST_TEST:
                     {
-                        // [ZERO:NOTEQUAL:CARRY:LESS:GREATER:EQUAL] & FLAG_MASK
+                        // [ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL] & FLAG_MASK
                         uint16_t flg = (flags_register&0b0000000000111111); // [5:0]
                         uint16_t msk = (instruction&0b0000001111110000)>>4; // [9:4]
                         TR = flg&msk ? 1:0; // At least one bit out of the masked bits passed test against mask or no bits passed
@@ -616,12 +616,12 @@ void CPUMain()
                         uint16_t r1 = (instruction&0b0000000001110000)>>4; // [6:4]
                         uint16_t r2 = (instruction&0b0000001110000000)>>7; // [9:7]
                         flags_register = 0;
-                        flags_register |= register_file[r2] == register_file[r1] ? 1 : 0; // EQUAL
-                        flags_register |= register_file[r2] > register_file[r1] ? 2 : 0; // GREATER
-                        flags_register |= register_file[r2] < register_file[r1] ? 4 : 0; // LESS
-                        flags_register |= register_file[r2] != 0 ? 8 : 0; // NOTZERO
-                        flags_register |= register_file[r2] != register_file[r1] ? 16 : 0; // NOTEQUAL
-                        flags_register |= register_file[r2] == 0 ? 32 : 0; // ZERO
+                        flags_register |= (register_file[r1] == register_file[r2]) ? 1 : 0; // EQUAL
+                        flags_register |= (register_file[r1] > register_file[r2]) ? 2 : 0; // GREATER
+                        flags_register |= (register_file[r1] < register_file[r2]) ? 4 : 0; // LESS
+                        flags_register |= (register_file[r1] != 0) ? 8 : 0; // NOTZERO
+                        flags_register |= (register_file[r1] != register_file[r2]) ? 16 : 0; // NOTEQUAL
+                        flags_register |= (register_file[r1] == 0) ? 32 : 0; // ZERO
                         IP = IP + 2;
                         cpu_state = CPU_SET_INSTRUCTION_POINTER;
                     }
@@ -779,7 +779,8 @@ void CPUMain()
             break;
             
             case CPU_WAIT_VSYNC:
-                if (vga_y>=V_FRONT_PORCH && vga_y<(V_FRONT_PORCH+V_SYNC))
+                //if (vga_y>=V_FRONT_PORCH && vga_y<(V_FRONT_PORCH+V_SYNC))
+                if (vga_y==0) // Wait for beam to reach top of horizontal pass
                     cpu_state = CPU_SET_INSTRUCTION_POINTER;
             break;
 
@@ -827,6 +828,14 @@ void VideoMain()
     if (!s_VGAClockRisingEdge)
         return;
 
+    static int K = 0;
+    K++;
+    if (K>0xFF00)
+    {
+        K=0;
+        SDL_UpdateWindowSurface(s_Window);
+    }
+
     if (vga_x>=H_SYNC_TICKS)
     {
         vga_x = 0;
@@ -849,25 +858,19 @@ void VideoMain()
         // VRAM section
         if (scanline>=36 && scanline<444)
         {
-            //for (uint32_t y=0;y<204;++y)
             int32_t y = scanline-36;
             int32_t actual_scanline = scanline>>1;
             int32_t actual_y = actual_scanline-18;
-            {
-                //for (uint32_t x=0;x<640;++x)
-                uint32_t x = vga_x-(H_FRONT_PORCH+H_SYNC+H_BACK_PORCH);
-                {
-                    uint32_t vram_out = (x>>1) + actual_y*320;
-                    uint8_t vram_val = VRAM[framebuffer_select*0xFFFF+vram_out];
-                    uint8_t R = vram_val&0x07;
-                    uint8_t G = (vram_val>>3)&0x07;
-                    uint8_t B = (vram_val>>6)&0x03;
-                    pixels[4*((y+36)*s_Surface->w+x)+0] = B*(256/3);
-                    pixels[4*((y+36)*s_Surface->w+x)+1] = G*(256/7);
-                    pixels[4*((y+36)*s_Surface->w+x)+2] = R*(256/7);
-                    pixels[4*((y+36)*s_Surface->w+x)+3] = 255;
-                }
-            }
+            uint32_t x = vga_x-(H_FRONT_PORCH+H_SYNC+H_BACK_PORCH);
+            uint32_t vram_out = (x>>1) + actual_y*320;
+            uint8_t vram_val = VRAM[framebuffer_select*0xFFFF+vram_out];
+            uint8_t R = vram_val&0x07;
+            uint8_t G = (vram_val>>3)&0x07;
+            uint8_t B = (vram_val>>6)&0x03;
+            pixels[4*((y+36)*s_Surface->w+x)+0] = B*(256/3);
+            pixels[4*((y+36)*s_Surface->w+x)+1] = G*(256/7);
+            pixels[4*((y+36)*s_Surface->w+x)+2] = R*(256/7);
+            pixels[4*((y+36)*s_Surface->w+x)+3] = 255;
         }
 
         // Top border color
@@ -903,18 +906,6 @@ void VideoMain()
                 pixels[4*(y*s_Surface->w+x)+3] = 255;
             }
         }
-    }
-
-    if (vga_x==0 && vga_y==0)
-    {
-        SDL_UpdateWindowSurface(s_Window);
-        /*SDL_Rect scanlinerect;
-        scanlinerect.x=0;
-        scanlinerect.y=scanline;
-        scanlinerect.w=640;
-        scanlinerect.h=1;
-        SDL_UpdateWindowSurfaceRects(s_Window, &scanlinerect, 1);*/
-        scanline = 0;
     }
 }
 

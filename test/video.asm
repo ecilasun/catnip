@@ -21,7 +21,7 @@
 ld.w r0, 0x1
 fsel r0
 branch ClearVRAM
-ld.w r0, 0x0
+dec r0
 fsel r0
 branch ClearVRAM
 
@@ -44,6 +44,9 @@ ld.w r1, [r7:r6]
 push r1
 push r0
 branch DrawSprite
+
+ld.w r0, 0x1
+fsel r0
 
 # Test loop/neg/push/pop by copying the sprite 13 times with 21 pixel X and 2 pixel Y offsets
 # Uses direct register parameters
@@ -73,6 +76,37 @@ ld.w r7, 0x0080          # Y=128
     cmp r0,r0
     test notzero
 jmpif MANYSPRITES
+
+ld.w r0, 0x0
+fsel r0
+
+ld.w r0, 0x000D          # copies
+ld.w r1, 0x0015          # X step
+ld.w r2, 0x0002          # Y step
+ld.w r6, 0x0017          # X=23
+ld.w r7, 0x0080          # Y=128
+ineg r2
+@LABEL MANYSPRITESTWO
+    push r0                 # save our loop counter
+    push r1                 # save step counter X
+    push r2                 # save step counter Y
+    push r7                 # save a copy of Y position
+    push r6                 # save a copy of X position
+    push r7                 # push parameters
+    push r6
+    branch DrawSprite
+    pop r6                  # restore X position
+    pop r7                  # restore Y position
+    pop r2                  # restore step counter Y
+    iadd r7,r2              # inc Y by step
+    pop r1                  # restore step counter X
+    iadd r6,r1              # inc X by step
+    ineg r2                 # negate sign of Y step
+    pop r0                  # restore loop counter
+    dec r0
+    cmp r0,r0
+    test notzero
+jmpif MANYSPRITESTWO
 
 # Test some integer math by calculating memory address and plotting a pixel
 ld.w r5, 0x00A0          # X=160
@@ -104,13 +138,40 @@ ld.w r0, 0x0040          # 64 pixels
 jmpif LINELOOP
 
 # Set border color to orange - Test for quickest memory write in a loop
-ld.w r5, 0x001F          # Orange as start color
-ld.d r1:r0, BORDERCOLOR # [r1:r0] Border color (8000:FF00)
-
+ld.w r5, 0x0000
+ld.w r3, 0x0001
+ld.w r4, 0x0001
 ld.w r2, 0x0000
 @LABEL BORDERLOOP
+
+    lea r7:r6, SPRITEPOSDATA  # X/Y positions at 0000:0200 and 0000:0202
+    ld.w r0, [r7:r6]
+    inc r6
+    inc r6
+    ld.w r1, [r7:r6]
+    iadd r1, r3
+    push r4
+    push r3
+    push r2
+    push r1
+    push r0
+    branch DrawSprite
+    pop r2
+    pop r3
+    pop r4
+
+    iadd r3, r4
+    ld.w r1, 0x040
+    cmp r3, r1
+    test less
+    jmpif SKIPIF
+    ineg r4
+@LABEL SKIPIF
+
+    ld.d r1:r0, BORDERCOLOR # [r1:r0] Border color (8000:FF00)
     st.b [r1:r0], r5
     inc r5
+
     inc r2
     vsync
     fsel r2
