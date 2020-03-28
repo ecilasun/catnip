@@ -84,6 +84,7 @@ static const int FRAME_WIDTH = 320;
 static const int FRAME_HEIGHT = 204;
 static uint8_t *VRAM; // Larger than FRAME_HEIGHT, including top and bottom borders
 
+uint16_t framebuffer_select;
 uint16_t framebuffer_address;
 uint16_t framebuffer_writeena;
 uint8_t framebuffer_data;
@@ -163,6 +164,7 @@ void CPUMain()
             SP = 0x7FFFE;
             
             // Reset write cursor for framebuffer
+            framebuffer_select = 0;
             framebuffer_address = 0000;
             framebuffer_writeena = 0;
             framebuffer_data = 0;
@@ -628,6 +630,7 @@ void CPUMain()
                     case INST_IO:
                     {
                         uint16_t sub = (instruction&0b0000000001110000)>>4; // [6:4]
+                        uint16_t r1 = (instruction&0b0000001110000000)>>7; // [9:7]
                         switch(sub)
                         {
                             case 0b000: // VSYNC
@@ -653,6 +656,11 @@ void CPUMain()
                                 IP = IP + 2;
                                 cpu_state = CPU_SET_INSTRUCTION_POINTER;
                             }
+                            break;
+                            case 0b011: // FSEL
+                                framebuffer_select = register_file[r1]&0x0001;
+                                IP = IP + 2;
+                                cpu_state = CPU_SET_INSTRUCTION_POINTER;
                             break;
                             default:
                             break;
@@ -771,7 +779,7 @@ void CPUMain()
             break;
             
             case CPU_WAIT_VSYNC:
-                //if(scanline>=600) // TODO: Video out is not really precise in the emulator
+                if (vga_y>=V_FRONT_PORCH && vga_y<(V_FRONT_PORCH+V_SYNC))
                     cpu_state = CPU_SET_INSTRUCTION_POINTER;
             break;
 
@@ -811,7 +819,7 @@ void CPUMain()
 
     // VRAM write access
     if (framebuffer_writeena)
-        VRAM[framebuffer_address] = framebuffer_data;
+        VRAM[framebuffer_select*0xFFFF+framebuffer_address] = framebuffer_data;
 }
 
 void VideoMain()
@@ -850,7 +858,7 @@ void VideoMain()
                 uint32_t x = vga_x-(H_FRONT_PORCH+H_SYNC+H_BACK_PORCH);
                 {
                     uint32_t vram_out = (x>>1) + actual_y*320;
-                    uint8_t vram_val = VRAM[vram_out];
+                    uint8_t vram_val = VRAM[framebuffer_select*0xFFFF+vram_out];
                     uint8_t R = vram_val&0x07;
                     uint8_t G = (vram_val>>3)&0x07;
                     uint8_t B = (vram_val>>6)&0x03;
@@ -869,9 +877,9 @@ void VideoMain()
             int32_t x = vga_x-(H_FRONT_PORCH+H_SYNC+H_BACK_PORCH);
             if (x<640)
             {
-                uint32_t R = VRAM[0xFF00]&0x07;
-                uint32_t G = (VRAM[0xFF00]>>3)&0x07;
-                uint32_t B = (VRAM[0xFF00]>>6)&0x03;
+                uint32_t R = VRAM[framebuffer_select*0xFFFF+0xFF00]&0x07;
+                uint32_t G = (VRAM[framebuffer_select*0xFFFF+0xFF00]>>3)&0x07;
+                uint32_t B = (VRAM[framebuffer_select*0xFFFF+0xFF00]>>6)&0x03;
                 pixels[4*(y*s_Surface->w+x)+0] = B*(256/3);
                 pixels[4*(y*s_Surface->w+x)+1] = G*(256/7);
                 pixels[4*(y*s_Surface->w+x)+2] = R*(256/7);
@@ -886,9 +894,9 @@ void VideoMain()
             int32_t x = vga_x-(H_FRONT_PORCH+H_SYNC+H_BACK_PORCH);
             if (x<640)
             {
-                uint32_t R = VRAM[0xFF00]&0x07;
-                uint32_t G = (VRAM[0xFF00]>>3)&0x07;
-                uint32_t B = (VRAM[0xFF00]>>6)&0x03;
+                uint32_t R = VRAM[framebuffer_select*0xFFFF+0xFF00]&0x07;
+                uint32_t G = (VRAM[framebuffer_select*0xFFFF+0xFF00]>>3)&0x07;
+                uint32_t B = (VRAM[framebuffer_select*0xFFFF+0xFF00]>>6)&0x03;
                 pixels[4*(y*s_Surface->w+x)+0] = B*(256/3);
                 pixels[4*(y*s_Surface->w+x)+1] = G*(256/7);
                 pixels[4*(y*s_Surface->w+x)+2] = R*(256/7);
@@ -949,8 +957,8 @@ bool InitEmulator(uint16_t *_rom_binary)
     vga_y = 0;
 
     // Initialize NEKO cpu, framebuffer and other devices
-    VRAM = new uint8_t[FRAME_WIDTH*FRAME_HEIGHT];
-    for (uint32_t i=0;i<FRAME_WIDTH*FRAME_HEIGHT;++i)
+    VRAM = new uint8_t[0xFFFF * 2];
+    for (uint32_t i=0;i<0xFFFF * 2;++i)
         VRAM[i] = RGBCOLOR(0,0,0);
 
     SRAM = new uint8_t[0x7FFFF];

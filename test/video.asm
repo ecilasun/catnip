@@ -18,6 +18,11 @@
 @ORG 0x0000         # Always has to be at 0
 @LABEL Main
 
+ld.w r0, 0x1
+fsel r0
+branch ClearVRAM
+ld.w r0, 0x0
+fsel r0
 branch ClearVRAM
 
 # Load parameters directly into registers
@@ -101,10 +106,14 @@ jmpif LINELOOP
 # Set border color to orange - Test for quickest memory write in a loop
 ld.w r5, 0x001F          # Orange as start color
 ld.d r1:r0, BORDERCOLOR # [r1:r0] Border color (8000:FF00)
+
+ld.w r2, 0x0000
 @LABEL BORDERLOOP
     st.b [r1:r0], r5
     inc r5
-    # vsync
+    inc r2
+    vsync
+    fsel r2
 jmp BORDERLOOP
 
 # Stop the CPU so we don't fall through to the code following Main

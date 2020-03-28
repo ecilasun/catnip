@@ -507,7 +507,7 @@ test greater equal
        rA  000:VSYNC
            001:IN rA PORTADDRESS(next WORD in memory)
            010:OUT rA PORTADDRESS(next WORD in memory)
-           011:reserved
+           011:FSEL rA
            100:reserved
            101:reserved
            110:reserved
@@ -522,6 +522,17 @@ Reads the input from device at port address and write the data into register rA.
 
 ### OUT rA PORTADDRESS
 Reads the intput from register rA and write the data to device at port address.
+
+### FSEL rA
+Selects the framebuffer index as mentioned in register rA. Only the last bit of rA (0 or 1) is used as framebuffer index, therefore simply incrementing rA will flip between two available buffers.
+
+Example:
+```c
+// This is one valid way to wait for vertical scan then switch to the next frame buffer, i.e. 'flip'
+inc rA
+vsync
+fsel rA
+```
 
 ---
 ## Reserved

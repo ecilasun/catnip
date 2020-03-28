@@ -931,6 +931,16 @@ public:
             return 1;
         }
 
+        if(strcmp(_parser_table[_current_parser_offset].m_Value, "fsel") == 0)
+        {
+            int portaddress, r1;
+            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+            unsigned short code = m_Opcode | 0x0030 | (r1<<7);
+            _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
+            _binary_output[_current_binary_offset++] = code&0x00FF;
+            return 2;
+        }
+
         if(strcmp(_parser_table[_current_parser_offset].m_Value, "in") == 0)
         {
             int portaddress, r1;
@@ -942,7 +952,7 @@ public:
             _binary_output[_current_binary_offset++] = code&0x00FF;
             _binary_output[_current_binary_offset++] = (portaddress&0xFF00)>>8;
             _binary_output[_current_binary_offset++] = portaddress&0x00FF;
-            return 2;
+            return 3;
         }
 
         if(strcmp(_parser_table[_current_parser_offset].m_Value, "out") == 0)
@@ -956,7 +966,7 @@ public:
             _binary_output[_current_binary_offset++] = code&0x00FF;
             _binary_output[_current_binary_offset++] = (portaddress&0xFF00)>>8;
             _binary_output[_current_binary_offset++] = portaddress&0x00FF;
-            return 2;
+            return 3;
         }
 
         printf("ERROR: Unknown variant in CIOOp class of instructions\n");
@@ -1066,6 +1076,7 @@ const SAssemblerPair keywords[] =
     {{"vsync"}, &s_ioop},
     {{"in"}, &s_ioop},
     {{"out"}, &s_ioop},
+    {{"fsel"}, &s_ioop},
 
     {{"unused1"}, &s_nilop},
     {{"unused2"}, &s_nilop},
