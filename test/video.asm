@@ -139,17 +139,20 @@ jmpif LINELOOP
 
 # Set border color to orange - Test for quickest memory write in a loop
 ld.w r5, 0x0000
-ld.w r3, 0x0001
+ld.w r3, 0x0000
 ld.w r4, 0x0001
 ld.w r2, 0x0000
+fsel r2
 @LABEL BORDERLOOP
 
     lea r7:r6, SPRITEPOSDATA  # X/Y positions at 0000:0200 and 0000:0202
     ld.w r0, [r7:r6]
+    iadd r0, r3
     inc r6
     inc r6
     ld.w r1, [r7:r6]
     iadd r1, r3
+    push r5
     push r4
     push r3
     push r2
@@ -159,6 +162,7 @@ ld.w r2, 0x0000
     pop r2
     pop r3
     pop r4
+    pop r5
 
     iadd r3, r4
     ld.w r1, 0x040
