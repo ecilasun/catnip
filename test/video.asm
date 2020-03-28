@@ -162,8 +162,8 @@ ld.w r2, 0x0000
 
     iadd r3, r4
     ld.w r1, 0x040
-    cmp r3, r1
-    test less
+    cmp r3, r1          # when r3 turns negative, we're suddenly 'greater' as integer comparison and this loop
+    test less           # will 'negate' r4 both when r3>r1 and when r3<0 :)
     jmpif SKIPIF
     ineg r4
 @LABEL SKIPIF
