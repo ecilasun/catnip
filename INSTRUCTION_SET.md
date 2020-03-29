@@ -508,7 +508,7 @@ test greater equal
            001:IN rA PORTADDRESS(next WORD in memory)
            010:OUT rA PORTADDRESS(next WORD in memory)
            011:FSEL rA
-           100:reserved
+           100:CLS rA
            101:reserved
            110:reserved
            111:reserved
@@ -525,6 +525,9 @@ Reads the intput from register rA and write the data to device at port address.
 
 ### FSEL rA
 Selects the displayed framebuffer index as mentioned in register rA. Only the last bit of rA (0 or 1) is used as framebuffer index, therefore simply incrementing rA will flip between two available buffers. All writes are routed towards the 'other' framebuffer address in this state.
+
+### CLF rA
+Clears the framebuffer that currently has write access to the value supplied in low byte of rA.
 
 Example:
 ```c

@@ -10,14 +10,16 @@
 # Clear display and set up border color for both VRAM pages
 ld.w r0, 0x0000
 fsel r0
-branch ClearVRAM
+ld.w r7, 0x00E0
+clf r7
 ld.w r5, 0x00B6
 ld.d r1:r0, BORDERCOLOR
 st.b [r1:r0], r5
 
 ld.w r0, 0x0001
 fsel r0
-branch ClearVRAM
+ld.w r7, 0x00E0
+clf r7
 ld.w r5, 0x00B6
 ld.d r1:r0, BORDERCOLOR
 st.b [r1:r0], r5
@@ -29,6 +31,10 @@ fsel r0
 @LABEL ANIMATIONLOOP
 # Save our vram output index
 push r0
+
+# Clear framebuffer
+ld.w r7, 0x00E0
+clf r7
 
 # Set up tile entry count
 lea r7:r6, TILE_HEADER
@@ -73,8 +79,6 @@ st.w [r7:r6], r5
 pop r0
 inc r0
 fsel r0
-
-# branch ClearVRAM
 
 jmp ANIMATIONLOOP
 
@@ -151,29 +155,6 @@ pop r2
 pop r1
 pop r0
 
-ret
-
-@LABEL ClearVRAM
-# preserve the registers we're going to destroy
-push r0
-push r1
-push r2
-push r3
-ld.d r1:r0, VRAMSTART    # Load data at VRAMSTART into r1:r0 which is the VRAM start address DWORD
-ld.w r2, 0xFF00          # 320x204 pixels
-ld.w r3, 0x00E0          # Clear color
-@LABEL CLEARLOOP
-    st.b [r1:r0], r3
-    inc r0
-    dec r2
-    cmp r2,r2
-    test notzero
-jmpif CLEARLOOP
-# restore the registers we've destroyed
-pop r3
-pop r2
-pop r1
-pop r0
 ret
 
 # Some tables and other entries

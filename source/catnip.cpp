@@ -941,6 +941,16 @@ public:
             return 2;
         }
 
+        if(strcmp(_parser_table[_current_parser_offset].m_Value, "clf") == 0)
+        {
+            int portaddress, r1;
+            sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+            unsigned short code = m_Opcode | 0x0040 | (r1<<7);
+            _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
+            _binary_output[_current_binary_offset++] = code&0x00FF;
+            return 2;
+        }
+
         if(strcmp(_parser_table[_current_parser_offset].m_Value, "in") == 0)
         {
             int portaddress, r1;
@@ -1077,6 +1087,7 @@ const SAssemblerPair keywords[] =
     {{"in"}, &s_ioop},
     {{"out"}, &s_ioop},
     {{"fsel"}, &s_ioop},
+    {{"clf"}, &s_ioop},
 
     {{"unused1"}, &s_nilop},
     {{"unused2"}, &s_nilop},

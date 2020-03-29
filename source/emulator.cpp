@@ -24,7 +24,7 @@
 #define CPU_ROM_STEP					0b0001
 #define CPU_ROM_FETCH					0b0010
 #define CPU_SET_INSTRUCTION_POINTER		0b0011
-#define CPU_HALT						0b0100
+#define CPU_CLEARVRAM					0b0100
 #define CPU_FETCH_INSTRUCTION			0b0101
 #define CPU_EXECUTE_INSTRUCTION			0b0110
 #define CPU_READ_DATAH                  0b0111
@@ -120,7 +120,7 @@ const char *s_state_string[]={
     "CPU_ROM_STEP",
     "CPU_ROM_FETCH",
     "CPU_SET_INSTRUCTION_POINTER",
-    "CPU_HALT",
+    "CPU_CLEARVRAM",
     "CPU_FETCH_INSTRUCTION",
     "CPU_EXECUTE_INSTRUCTION",
     "CPU_UNUSED",
@@ -254,22 +254,12 @@ void CPUMain()
             cpu_state = CPU_SET_INSTRUCTION_POINTER;
         break;
 
-        case CPU_HALT:
-            // Does nothing
-            // At a CPU halt time, We're supposed to sit here and wait for a hard reset
-            // Loop back to our own tail
-            framebuffer_writeena = 0; // Stop VRAM writes from previous instruction
-            sram_write_req = 0;
-            sram_read_req = 0;
-            cpu_state = CPU_HALT;
-        break;
-
         case CPU_SET_INSTRUCTION_POINTER:
             framebuffer_writeena = 0; // Stop VRAM writes from previous instruction
             // Halt the CPU if we are going past the end of memory (last 16 bytes of memory are inaccessible for this purpose)
             if (IP == 0x7FFFF)
             {
-                cpu_state = CPU_HALT;
+                cpu_state = CPU_SET_INSTRUCTION_POINTER; // Spin here
             }
             else
             {
@@ -554,7 +544,8 @@ void CPUMain()
                         uint16_t op = (instruction&0b0000000000010000)>>4; // [4]
                         if (op == 1) // HALT
                         {
-                            cpu_state = CPU_HALT;
+							IP = 0x7FFFF;
+							cpu_state = CPU_SET_INSTRUCTION_POINTER;
                         }
                         else
                         {
@@ -662,7 +653,15 @@ void CPUMain()
                                 IP = IP + 2;
                                 cpu_state = CPU_SET_INSTRUCTION_POINTER;
                             break;
-                            default:
+                            case 0b100: // CLF
+								framebuffer_address = 0x0000;
+								framebuffer_data = register_file[r1]&0x00FF;
+								IP = IP + 2;
+								cpu_state = CPU_CLEARVRAM;
+                            break;
+                            default: // Reserved
+                                IP = IP + 2;
+                                cpu_state = CPU_SET_INSTRUCTION_POINTER;
                             break;
                         };
                     }
@@ -783,6 +782,22 @@ void CPUMain()
                 //if (vga_y>=V_FRONT_PORCH && vga_y<(V_FRONT_PORCH+V_SYNC))
                 if (vga_y==0) // Wait for beam to reach top of horizontal pass
                     cpu_state = CPU_SET_INSTRUCTION_POINTER;
+            break;
+
+			case CPU_CLEARVRAM:
+            {
+				if (framebuffer_address != 0xFF00)
+                {
+					framebuffer_writeena = 1;
+					framebuffer_address = framebuffer_address+1;
+                }
+				else
+                {
+					// IP = IP + 19'd2;
+					framebuffer_writeena = 0;
+					cpu_state = CPU_SET_INSTRUCTION_POINTER;
+                }
+			}
             break;
 
             default:
