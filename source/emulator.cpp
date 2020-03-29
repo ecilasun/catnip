@@ -83,6 +83,7 @@ uint16_t sram_enable_byteaddress;
 static const int FRAME_WIDTH = 320;
 static const int FRAME_HEIGHT = 204;
 static uint8_t *VRAM; // Larger than FRAME_HEIGHT, including top and bottom borders
+static int flip_invoked = 0;
 
 uint16_t framebuffer_select;
 uint16_t framebuffer_address;
@@ -652,6 +653,8 @@ void CPUMain()
                                 framebuffer_select = register_file[r1]&0x0001;
                                 IP = IP + 2;
                                 cpu_state = CPU_SET_INSTRUCTION_POINTER;
+                                // NOTE: Emulator only
+                                flip_invoked = 1;
                             break;
                             case 0b100: // CLF
 								framebuffer_address = 0x0000;
@@ -850,11 +853,9 @@ void VideoMain()
     if (!s_VGAClockRisingEdge)
         return;
 
-    static int K = 0;
-    K++;
-    if (K>0xFF00)
+    if (flip_invoked)
     {
-        K=0;
+        flip_invoked = 0;
         SDL_UpdateWindowSurface(s_Window);
     }
 
@@ -969,6 +970,7 @@ bool InitEmulator(uint16_t *_rom_binary)
     s_VGAClockFallingEdge    = 0;
     vga_x = 0;
     vga_y = 0;
+    flip_invoked = 0;
 
     // Initialize NEKO cpu, framebuffer and other devices
     VRAM = new uint8_t[0xFFFF * 2];
