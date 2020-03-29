@@ -5,23 +5,30 @@
 @ORG 0x0000
 @LABEL main
 
-# By default initial output buffer is #0 and writes go to buffer #1
-# This is equivalent to the following code
-# ld.w r0, 0x0000
-# fsel r0
+# By default initial output VRAM page is #0 and writes go to VRAM page #1
 
-# Set up border color
-ld.w r5, 0x0001
+# Clear display and set up border color for both VRAM pages
+ld.w r0, 0x0000
+fsel r0
+branch ClearVRAM
+ld.w r5, 0x00B6
 ld.d r1:r0, BORDERCOLOR
 st.b [r1:r0], r5
 
-# Clear both VRAM pages
-ld.w r0, 0x1
+ld.w r0, 0x0001
 fsel r0
 branch ClearVRAM
-dec r0
+ld.w r5, 0x00B6
+ld.d r1:r0, BORDERCOLOR
+st.b [r1:r0], r5
+
+# Set video display to show VRAM page 0
+ld.w r0, 0x0000
 fsel r0
-branch ClearVRAM
+
+@LABEL ANIMATIONLOOP
+# Save our vram output index
+push r0
 
 # Set up tile entry count
 lea r7:r6, TILE_HEADER
@@ -48,9 +55,26 @@ lea r7:r6, TILE_DATA
     test notzero
 jmpif DRAWTILESET
 
-# Show the backbuffer #1 (all writes now go to #0)
-ld.w r0, 0x0001
+# Step animated tile positions for next time
+lea r7:r6, ANIMATED_TILES
+ld.w r5, [r7:r6]
+inc r5
+st.w [r7:r6], r5
+ld.w r5, 0x0006
+iadd r6,r5
+ld.w r5, [r7:r6]
+inc r5
+st.w [r7:r6], r5
+
+# Restore our VRAM page index
+# Increment by one so that we show the page we just produced
+pop r0
+inc r0
 fsel r0
+
+branch ClearVRAM
+
+jmp ANIMATIONLOOP
 
 # Done, we can stop now
 halt
@@ -90,12 +114,11 @@ ld.w r5, 0x0010          # row counter (16 pixels)
 
 @LABEL INNERLOOP
     # for each column
-        # ld.b r7, [r1:r0]	   	# read from current VRAM location
         ld.b r6, [r3:r2]        # read from current pattern buffer location
-        ld.w r7, 0x00FF
+        ld.w r7, 0x00FF         # compare sprite color with 0xFF (mask color)
         cmp r6, r7
         test equal
-        jmpif SKIPWRITE
+        jmpif SKIPWRITE         # ignore writes if it's the mask color
         st.b [r1:r0], r6	   	# write back to current VRAM location
         @LABEL SKIPWRITE
 
@@ -135,7 +158,7 @@ push r2
 push r3
 ld.d r1:r0, VRAMSTART    # Load data at VRAMSTART into r1:r0 which is the VRAM start address DWORD
 ld.w r2, 0xFF00          # 320x204 pixels
-ld.w r3, 0x0013          # Clear color
+ld.w r3, 0x00E0          # Clear color
 @LABEL CLEARLOOP
     st.b [r1:r0], r3
     inc r0
@@ -167,6 +190,7 @@ ret
 @DW 0x0010 0x0000 0x0001
 @DW 0x0000 0x0010 0x0002
 @DW 0x0010 0x0010 0x0003
+@LABEL ANIMATED_TILES
 @DW 0x000F 0x0015 0x0004
 @DW 0x001F 0x0015 0x0005
 
