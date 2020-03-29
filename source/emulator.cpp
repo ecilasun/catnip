@@ -853,12 +853,6 @@ void VideoMain()
     if (!s_VGAClockRisingEdge)
         return;
 
-    if (flip_invoked)
-    {
-        flip_invoked = 0;
-        SDL_UpdateWindowSurface(s_Window);
-    }
-
     if (vga_x>=H_SYNC_TICKS)
     {
         vga_x = 0;
@@ -939,6 +933,12 @@ bool StepEmulator()
     CPUMain();      // CPU state machine
     VideoMain();    // Video scan out (to tie it with 'read old data' in dualport VRAM in hardware)
     MemoryMain();   // Update all memory (SRAM/VRAM) after video data is processed
+
+    if (flip_invoked)
+    {
+        flip_invoked = 0;
+        SDL_UpdateWindowSurface(s_Window);
+    }
 
     if (vga_y == 502)
     {

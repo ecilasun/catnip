@@ -41,23 +41,23 @@ lea r7:r6, TILE_HEADER
 ld.w r5, [r7:r6]
 # Set up tile data pointer
 lea r7:r6, TILE_DATA
+ld.w r4, 0x0002
 # Walk over each tile data entry and draw its sprite
 @LABEL DRAWTILESET
     push r5
+    push r4
     ld.w r0, [r7:r6]
     push r0 # Y
-    inc r6
-    inc r6
+    iadd r6, r4
     ld.w r0, [r7:r6]
     push r0 # X
-    inc r6
-    inc r6
+    iadd r6, r4
     ld.w r0, [r7:r6]
     push r0 # Sprite#
     branch DrawSprite
+    pop r4
     pop r5
-    inc r6
-    inc r6
+    iadd r6, r4
     dec r5
     cmp r5, r5
     test notzero
