@@ -9,7 +9,7 @@
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/release/catnip.exe",
-            "args": ["${workspaceFolder}/test/video.rom"],
+            "args": ["${workspaceFolder}/test/simpletileset.rom"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build/release/",
             "symbolSearchPath": "${workspaceFolder}/build/release/",

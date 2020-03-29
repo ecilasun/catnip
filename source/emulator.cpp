@@ -768,7 +768,8 @@ void CPUMain()
             break;
 
             case CPU_READ_DATA_BYTE:
-                register_file[target_register] = (register_file[target_register]&0xFF00) | sram_rdata&0x00FF; // No C equivalent to partially assign
+                // register_file[target_register] = (register_file[target_register]&0xFF00) | sram_rdata&0x00FF; // No C equivalent to partially assign
+                register_file[target_register] = sram_rdata&0x00FF;
                 sram_read_req = 0; // Stop read request and resume
                 cpu_state = CPU_SET_INSTRUCTION_POINTER;
             break;
@@ -787,40 +788,46 @@ void CPUMain()
             default:
             break;
         }
+}
 
-        // --------------------------------------------------------------
-        // Update ROM/SRAM/VRAM memory access for next pass
-        // --------------------------------------------------------------
+void MemoryMain()
+{
+    if (!s_SystemClockRisingEdge)
+        return;
 
-        // ROM read access
-        if (rom_addrs<0x7FFFF && rom_read_enable)
-            rom_out = ROM[rom_addrs];
+    // --------------------------------------------------------------
+    // Update ROM/SRAM/VRAM memory access for next pass
+    // --------------------------------------------------------------
 
-        // SRAM read/write (byte or word) access
-        if (sram_addr<0x7FFFF && (sram_write_req || sram_read_req))
+    // ROM read access
+    if (rom_addrs<0x7FFFF && rom_read_enable)
+        rom_out = ROM[rom_addrs];
+
+    // SRAM read/write (byte or word) access
+    if (sram_addr<0x7FFFF && (sram_write_req || sram_read_req))
+    {
+        if (sram_enable_byteaddress)
         {
-            if (sram_enable_byteaddress)
-            {
-                uint16_t *sramasword = (uint16_t *)SRAM;
-                uint16_t val = sramasword[sram_addr>>1];
-                if (sram_write_req == 0) // Read SRAM
-                    sram_rdata = (sram_addr&1) ? val&0x00FF : (val&0xFF00)>>8;
-                else
-                    SRAM[sram_addr] = sram_wdata&0x00FF;
-            }
+            uint16_t *sramasword = (uint16_t *)SRAM;
+            uint16_t val = sramasword[sram_addr>>1];
+            if (sram_write_req == 0) // Read SRAM
+                sram_rdata = (sram_addr&1) ? val&0x00FF : (val&0xFF00)>>8;
             else
-            {
-                uint16_t *wordsram = (uint16_t *)&SRAM[sram_addr];
-                if (sram_write_req == 0) // Read SRAM
-                    sram_rdata = *wordsram;
-                else
-                    *wordsram = sram_wdata;
-            }
+                SRAM[sram_addr] = sram_wdata&0x00FF;
         }
+        else
+        {
+            uint16_t *wordsram = (uint16_t *)&SRAM[sram_addr];
+            if (sram_write_req == 0) // Read SRAM
+                sram_rdata = *wordsram;
+            else
+                *wordsram = sram_wdata;
+        }
+    }
 
     // VRAM write access
     if (framebuffer_writeena)
-        VRAM[framebuffer_select*0xFFFF+framebuffer_address] = framebuffer_data;
+        VRAM[framebuffer_select*0xFFFF+framebuffer_address] = framebuffer_data;    
 }
 
 void VideoMain()
@@ -912,9 +919,10 @@ void VideoMain()
 // NOTE: Return 'true' for 'still running'
 bool StepEmulator()
 {
-    ClockMain();
-    CPUMain();
-    VideoMain();
+    ClockMain();    // Clock ticks first (rising/falling edge)
+    CPUMain();      // CPU state machine
+    VideoMain();    // Video scan out (to tie it with 'read old data' in dualport VRAM in hardware)
+    MemoryMain();   // Update all memory (SRAM/VRAM) after video data is processed
 
     if (vga_y == 502)
     {
@@ -938,12 +946,12 @@ bool StepEmulator()
 
 bool InitEmulator(uint16_t *_rom_binary)
 {
-    s_SystemClock = 0b10101010101010101010101010101010;
-    s_SystemClockRisingEdge = 0;
+    s_SystemClock = 0b10101010101010101010101010101010;    // 50Mhz corresponds to this bit frequency
+    s_VGAClock    = 0b00110011001100110011001100110011;    // 25Mhz corresponds to this bit frequency
+    s_SystemClockRisingEdge  = 0;
     s_SystemClockFallingEdge = 0;
-    s_VGAClock = 0b00110011001100110011001100110011;
-    s_VGAClockRisingEdge = 0;
-    s_VGAClockFallingEdge = 0;
+    s_VGAClockRisingEdge     = 0;
+    s_VGAClockFallingEdge    = 0;
     vga_x = 0;
     vga_y = 0;
 
