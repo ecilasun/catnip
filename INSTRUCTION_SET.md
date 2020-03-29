@@ -524,7 +524,7 @@ Reads the input from device at port address and write the data into register rA.
 Reads the intput from register rA and write the data to device at port address.
 
 ### FSEL rA
-Selects the framebuffer index as mentioned in register rA. Only the last bit of rA (0 or 1) is used as framebuffer index, therefore simply incrementing rA will flip between two available buffers.
+Selects the displayed framebuffer index as mentioned in register rA. Only the last bit of rA (0 or 1) is used as framebuffer index, therefore simply incrementing rA will flip between two available buffers. All writes are routed towards the 'other' framebuffer address in this state.
 
 Example:
 ```c

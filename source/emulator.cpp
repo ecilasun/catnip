@@ -827,7 +827,7 @@ void MemoryMain()
 
     // VRAM write access
     if (framebuffer_writeena)
-        VRAM[framebuffer_select*0xFFFF+framebuffer_address] = framebuffer_data;    
+        VRAM[(1-framebuffer_select)*0xFFFF+framebuffer_address] = framebuffer_data;    
 }
 
 void VideoMain()

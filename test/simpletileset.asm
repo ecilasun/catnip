@@ -5,6 +5,11 @@
 @ORG 0x0000
 @LABEL main
 
+# By default initial output buffer is #0 and writes go to buffer #1
+# This is equivalent to the following code
+# ld.w r0, 0x0000
+# fsel r0
+
 # Set up border color
 ld.w r5, 0x0001
 ld.d r1:r0, BORDERCOLOR
@@ -42,6 +47,10 @@ lea r7:r6, TILE_DATA
     cmp r5, r5
     test notzero
 jmpif DRAWTILESET
+
+# Show the backbuffer #1 (all writes now go to #0)
+ld.w r0, 0x0001
+fsel r0
 
 # Done, we can stop now
 halt
