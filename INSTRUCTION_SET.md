@@ -1,7 +1,7 @@
 # Project Neko Instruction Set Manual
 
 Project Neko is a small game console aimed at FPGAs.
-It has a 16 bit CPU, and has access to 512Kbytes of SRAM. The VRAM is made up of on-chip dual port block memory and delivers an image at 320x204 resolution and 8bpp.
+It has a 16 bit CPU, and has access to 512Kbytes of SRAM. The VRAM is made up of on-chip dual port block memory and delivers an image at 256x192 resolution and 8bpp.
 
 The architecture is currently implemented on the [Terasic Cyclone V GX Starter Kit](https://www.terasic.com.tw/cgi-bin/page/archive.pl?Language=English&CategoryNo=167&No=830) and uses up about 6 to 7 percent of the resources available on the FPGA.
 
@@ -26,13 +26,13 @@ Here is a brief list of the architecture details of Neko V3
     * Simplifies the CPU by requiring almost no caching
       * SRAM access is at CPU speed
       * Incurs 1 cycle read/write penalty (on top of instruction cycle cost)
-  * 320 x 204 x 8bpp VRAM
+  * 256 x 192 x 8bpp VRAM
     * VRAM can only be accessed as bytes
     * VRAM starts at memory address 0x8000:0000
     * Each byte is packed as 2:3:3 bits (B:G:R)
     * There are two 18 pixel borders at the top and bottom of the screen
-      * This keeps VRAM addresses in the 0x8000:0000-0x8000:FF00 range so access fits into a single WORD
-      * Border color can be changed by setting byte at 0x8000:FF00 to a 2:3:3 color
+      * This keeps VRAM addresses in the 0x8000:0000-0x8000:C000 range so access fits into a single WORD
+      * Border color can be changed by setting byte at 0x8000:C000 to a 2:3:3 color
     * There is currently no hardware unit drawing onto the screen except the CPU
       * A 2D SRAM->VRAM DMA is being planned (sprites/bitmaps/text output)
       * In addition, a BVH8 voxel rasterization unit is being planned
@@ -53,51 +53,61 @@ Here is a brief list of the architecture details of Neko V3
 |                |
 |      VRAM      |
 |                |
-|----------------|  0x8000FF00
+|----------------|  0x8000C000
 |                |
 | DEVICE CONTROL |
 |                |
-|----------------|  0x8000FFFF
+|----------------|  0x8000D000
 ```
 The working memory starts at address 0x00000000 and continues up to 0x7FFFFFFF, out of which currently only 512Kbytes is actual physical memory.
 Instructions are often considered to start at even address boundaries to simplify the hardware access pattern and reduce access times.
 Starting at 0x80000000 resides the VRAM which only allows for byte access, and ends at address 0x8000FEFF.
-At the addresses from 0x8000FF00 to 0x8000FFFF lives a variety of device control bytes.
+At the addresses from 0x8000FF00 to 0x8000D000 lives a variety of device control bytes.
 Following diagram shows the uses of each byte starting at the device control address
 ```
 |----------------| 
-| BORDER COLOR   | 0x8000FF00
+| BORDER COLOR   | 0x8000C000
 |----------------| 
-| TBD            | 0x8000FF01
+| TBD            | 0x8000C001
 |----------------| 
-| TBD            | 0x8000FF02
+| TBD            | 0x8000C002
 |----------------| 
-| TBD            | 0x8000FF03
+| TBD            | 0x8000C003
 |----------------| 
-| TBD            | 0x8000FF04
+| TBD            | 0x8000C004
 ~                ~
 |----------------| 
-| TBD            | 0x8000FFFF
+| TBD            | 0x8000D000
 ```
 
 # Video output
-The actual video output resolution in hardware is set to 640x480 @60Hz. Since the video memory is much smaller than this, each pixel is magnified to 2 times the size in both the horizontal and vertical directions giving an effective resolution of 320x240 pixels.
+The actual video output resolution in hardware is set to 640x480 @60Hz. Since the video memory is much smaller than this, each pixel is magnified to 2 times the size in both the horizontal and vertical directions, and centered inside a border region, giving an effective resolution of 256x192 pixels.
 
-However, video memory addresseses are kept within 16 bit range for convenience. This is so that the caller may modify one register to scan the entire VRAM by using only one `INC` instruction on the lower address register out of a register pair. This results in an actual video region of 204 pixels in height.
+However, video memory addresseses are kept within 16 bit range for convenience, where the X coordinate occupies the lower 8 bits. This is merely for convenience where address calculations may follow the form:
+
+```c
+VRAM_ADDRESS = (0x8000<<16) | (x | y<<8);
+```
 
 To compensate for the missing parts of the image due to this address restriction, the video output looks like the following diagram:
 ```
-                     320 pixels
-    18  |--------------------------------|
+                     256 pixels
+    24  |--------------------------------|
  pixels |           Border               |
         |--------------------------------| 0x8000 0000 (VRAM start)
-    204 |                                |
+    192 |                                |
  pixels |         Video Area             |
         |                                |
-        |--------------------------------| 0x8000 FEFF (last pixel, inclusive)
-    18  |           Border               |
+        |--------------------------------| 0x8000 BFFF (last pixel, inclusive)
+    24  |           Border               |
  pixels |--------------------------------|
 ```
+
+NOTE:
+
+The video hardware actually splits this 192 pixel region into 12 bands, 256*16 pixels each. There is also an extra (13th) band starting at address 0xC000 which is the video attributes memory (including the border color) and is not part of the video output logic.
+
+The reason for the banded approach is simply for fast clears; each band in hardware is enabled for writes simultaneously using a lane mask, and only 0x1000 writes are made instead of 0xC000 writes giving a speedup of x12 for a single color VRAM clear operation. In the future the bands might be promoted to tiles for other neat tricks such as smooth scrolling or polygon rasterization.
 
 # Registers
 

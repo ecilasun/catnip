@@ -80,8 +80,8 @@ uint16_t sram_enable_byteaddress;
 
 // Video unit
 #define RGBCOLOR(_r,_g,_b) (_r | (_g<<3) | (_b<<6))
-static const int FRAME_WIDTH = 320;
-static const int FRAME_HEIGHT = 204;
+static const int FRAME_WIDTH = 256;
+static const int FRAME_HEIGHT = 192;
 static uint8_t *VRAM; // Larger than FRAME_HEIGHT, including top and bottom borders
 static int flip_invoked = 0;
 
@@ -472,7 +472,7 @@ void CPUMain()
                                 bool is_vram_address = (register_file[r1]&0b1000000000000000)>>15 ? true:false;
                                 if (is_vram_address) // VRAM write (address>=0x80000000)
                                 {
-                                    // NOTE: VRAM ends at 0xFF00 but we need to be able to address the rest for
+                                    // NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
                                     // other attributes such as border color, sprite tables and such
                                     framebuffer_address = register_file[r2];
                                     framebuffer_writeena = 1;
@@ -683,7 +683,7 @@ void CPUMain()
                                 bool is_vram_address = (register_file[r1]&0b1000000000000000)>>15 ? true:false;
                                 if (is_vram_address) // VRAM write (address>=0x80000000)
                                 {
-                                    // NOTE: VRAM ends at 0xFF00 but we need to be able to address the rest for
+                                    // NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
                                     // other attributes such as border color, sprite tables and such
                                     framebuffer_address = register_file[r2];
                                     framebuffer_writeena = 1;
@@ -789,16 +789,17 @@ void CPUMain()
 
 			case CPU_CLEARVRAM:
             {
-				if (framebuffer_address != 0xFF00)
-                {
-					framebuffer_writeena = 1;
-					framebuffer_address = framebuffer_address+1;
-                }
-				else
+                // NOTE: This is completely different than how the parallel nature of the hardware works
+				if (framebuffer_address == 0xBFFF)
                 {
 					// IP = IP + 19'd2;
 					framebuffer_writeena = 0;
 					cpu_state = CPU_SET_INSTRUCTION_POINTER;
+                }
+				else
+                {
+					framebuffer_writeena = 1;
+					framebuffer_address = framebuffer_address+1;
                 }
 			}
             break;
@@ -868,62 +869,44 @@ void VideoMain()
 
     int32_t scanline = vga_y-(V_FRONT_PORCH+V_SYNC+V_BACK_PORCH);
 
-    if (vga_x>H_FRONT_PORCH+H_SYNC+H_BACK_PORCH && vga_y>V_FRONT_PORCH+V_SYNC+V_BACK_PORCH) // Inside active region
+    if (vga_x>=H_FRONT_PORCH+H_SYNC+H_BACK_PORCH+64 && vga_x<H_SYNC_TICKS-64 && vga_y>=V_FRONT_PORCH+V_SYNC+V_BACK_PORCH+48 && vga_y<V_SYNC_TICKS-60) // Inside active region
     {
         uint8_t* pixels = (uint8_t*)s_Surface->pixels;
 
         // VRAM section
-        if (scanline>=36 && scanline<444)
-        {
-            int32_t y = scanline-36;
-            int32_t actual_scanline = scanline>>1;
-            int32_t actual_y = actual_scanline-18;
-            uint32_t x = vga_x-(H_FRONT_PORCH+H_SYNC+H_BACK_PORCH);
-            uint32_t vram_out = (x>>1) + actual_y*320;
-            uint8_t vram_val = VRAM[framebuffer_select*0xFFFF+vram_out];
-            uint8_t R = vram_val&0x07;
-            uint8_t G = (vram_val>>3)&0x07;
-            uint8_t B = (vram_val>>6)&0x03;
-            pixels[4*((y+36)*s_Surface->w+x)+0] = B*(256/3);
-            pixels[4*((y+36)*s_Surface->w+x)+1] = G*(256/7);
-            pixels[4*((y+36)*s_Surface->w+x)+2] = R*(256/7);
-            pixels[4*((y+36)*s_Surface->w+x)+3] = 255;
-        }
+        int32_t y = scanline-48;
+        int32_t actual_scanline = scanline>>1;
+        int32_t actual_y = actual_scanline-18;
+        uint32_t x = vga_x-(H_FRONT_PORCH+H_SYNC+H_BACK_PORCH);
+        int32_t actual_x = x-64;
+        uint32_t vram_out = (actual_x>>1) | (actual_y<<8);
+        uint8_t vram_val = VRAM[framebuffer_select*0xFFFF+vram_out];
+        uint8_t R = vram_val&0x07;
+        uint8_t G = (vram_val>>3)&0x07;
+        uint8_t B = (vram_val>>6)&0x03;
+        pixels[4*((y+48)*s_Surface->w+x)+0] = B*(256/3);
+        pixels[4*((y+48)*s_Surface->w+x)+1] = G*(256/7);
+        pixels[4*((y+48)*s_Surface->w+x)+2] = R*(256/7);
+        pixels[4*((y+48)*s_Surface->w+x)+3] = 255;
+    }
+    else
+    {
+        uint8_t* pixels = (uint8_t*)s_Surface->pixels;
 
-        // Top border color
-        if (scanline<=36)
+        int32_t y = scanline;
+        int32_t x = vga_x-(H_FRONT_PORCH+H_SYNC+H_BACK_PORCH);
+        if (x<640 && y<480 && x>=0 && y>=0)
         {
-            int32_t y = scanline;
-            int32_t x = vga_x-(H_FRONT_PORCH+H_SYNC+H_BACK_PORCH);
-            if (x<640)
-            {
-                uint32_t R = VRAM[framebuffer_select*0xFFFF+0xFF00]&0x07;
-                uint32_t G = (VRAM[framebuffer_select*0xFFFF+0xFF00]>>3)&0x07;
-                uint32_t B = (VRAM[framebuffer_select*0xFFFF+0xFF00]>>6)&0x03;
-                pixels[4*(y*s_Surface->w+x)+0] = B*(256/3);
-                pixels[4*(y*s_Surface->w+x)+1] = G*(256/7);
-                pixels[4*(y*s_Surface->w+x)+2] = R*(256/7);
-                pixels[4*(y*s_Surface->w+x)+3] = 255;
-            }
-        }
-
-        // Bottom border color
-        if (scanline>=444 && scanline<480)
-        {
-            uint32_t y = scanline;
-            int32_t x = vga_x-(H_FRONT_PORCH+H_SYNC+H_BACK_PORCH);
-            if (x<640)
-            {
-                uint32_t R = VRAM[framebuffer_select*0xFFFF+0xFF00]&0x07;
-                uint32_t G = (VRAM[framebuffer_select*0xFFFF+0xFF00]>>3)&0x07;
-                uint32_t B = (VRAM[framebuffer_select*0xFFFF+0xFF00]>>6)&0x03;
-                pixels[4*(y*s_Surface->w+x)+0] = B*(256/3);
-                pixels[4*(y*s_Surface->w+x)+1] = G*(256/7);
-                pixels[4*(y*s_Surface->w+x)+2] = R*(256/7);
-                pixels[4*(y*s_Surface->w+x)+3] = 255;
-            }
+            uint32_t R = VRAM[framebuffer_select*0xFFFF+0xC000]&0x07;
+            uint32_t G = (VRAM[framebuffer_select*0xFFFF+0xC000]>>3)&0x07;
+            uint32_t B = (VRAM[framebuffer_select*0xFFFF+0xC000]>>6)&0x03;
+            pixels[4*(y*s_Surface->w+x)+0] = B*(256/3);
+            pixels[4*(y*s_Surface->w+x)+1] = G*(256/7);
+            pixels[4*(y*s_Surface->w+x)+2] = R*(256/7);
+            pixels[4*(y*s_Surface->w+x)+3] = 255;
         }
     }
+    
 }
 
 // NOTE: Return 'true' for 'still running'

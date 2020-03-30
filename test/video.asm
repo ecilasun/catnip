@@ -20,10 +20,12 @@
 
 ld.w r0, 0x1
 fsel r0
-branch ClearVRAM
+ld.w r7, 0x00FF
+clf r7
 dec r0
 fsel r0
-branch ClearVRAM
+ld.w r7, 0x00FF
+clf r7
 
 # Load parameters directly into registers
 # The disadvantage is that the parameters are hard to change due to no known address / gaps in between
@@ -172,7 +174,7 @@ fsel r2
     ineg r4
 @LABEL SKIPIF
 
-    ld.d r1:r0, BORDERCOLOR # [r1:r0] Border color (8000:FF00)
+    ld.d r1:r0, BORDERCOLOR # [r1:r0] Border color (8000:C000)
     st.b [r1:r0], r5
     inc r5
 
@@ -192,10 +194,10 @@ halt
 pop r0                   # X
 pop r1                   # Y
 pop r2                   # Color
-ld.w r3, 0x0140          # Row pitch (320)
-imul r1, r3              # Y*320
-iadd r0, r1              # X+Y*320
-ld.w r1, 0x8000          # 0x8000:(X+Y*320) == VRAM address
+ld.w r3, 0x0100          # Row pitch (256)
+imul r1, r3              # Y*256
+iadd r0, r1              # X+Y*256
+ld.w r1, 0x8000          # 0x8000:(X+Y*256) == VRAM address
 st.b [r1:r0], r2
 ret
 
@@ -208,10 +210,10 @@ ret
 pop r0                   # X
 pop r1                   # Y
 
-ld.w r2, 0x0140          # Row pitch (320)
-imul r1, r2              # Y*320
-iadd r0, r1              # X+Y*320
-ld.w r1, 0x8000          # 0x8000:(X+Y*320) == VRAM address
+ld.w r2, 0x0100          # Row pitch (256)
+imul r1, r2              # Y*256
+iadd r0, r1              # X+Y*256
+ld.w r1, 0x8000          # 0x8000:(X+Y*256) == VRAM address
 
 ld.w r2, 0x0400          # [r3:r2] sprite in ROM at this address (0000:0400)
 ld.w r3, 0x0000
@@ -221,12 +223,13 @@ ld.w r5, 0x0017          # row counter (23 pixels)
 @LABEL INNERLOOP
     # for each column
         ld.b r6, [r3:r2]        # read from current pattern buffer location
-        # ld.w r7, 0x00FF       # Skip masked pixels
-        # cmp r6,r7
-        # test equal
-        # jmpif SKIPWRITE
+        ld.w r7, 0x00FF         # compare sprite color with 0xFF (mask color)
+        cmp r6, r7
+        test equal
+        jmpif SKIPWRITE         # ignore writes if it's the mask color
         st.b [r1:r0], r6	   	# write to current VRAM location
-    # @LABEL SKIPWRITE
+        @LABEL SKIPWRITE
+
         inc r0	    	    	# increment VRAM pointer
         inc r2                  # increment pattern pointer
         dec r4		        	# decrement scanline counter
@@ -237,36 +240,13 @@ ld.w r5, 0x0017          # row counter (23 pixels)
     # for each row
     inc r2                      # skip the unused pixel at the end (18th pixel)
     ld.w r4, 0x0011             # reset column counter back to 17
-    ld.w r7, 0x012F             # set row stride (320-17==303)
+    ld.w r7, 0x00EF             # set row stride (256-17==239)
     iadd r0, r7                 # move to next scanline
     dec r5
     cmp r5, r5
     test notzero
 jmpif INNERLOOP                 # for each row
 
-ret
-
-@LABEL ClearVRAM
-# preserve the registers we're going to destroy
-push r0
-push r1
-push r2
-push r3
-ld.d r1:r0, VRAMSTART    # Load data at VRAMSTART into r1:r0 which is the VRAM start address DWORD
-ld.w r2, 0xFF00          # 320x204 pixels
-ld.w r3, 0x00FF          # Clear color: White
-@LABEL CLEARLOOP
-    st.b [r1:r0], r3
-    inc r0
-    dec r2
-    cmp r2,r2
-    test notzero
-jmpif CLEARLOOP
-# restore the registers we've destroyed
-pop r3
-pop r2
-pop r1
-pop r0
 ret
 
 # Sprite position
@@ -276,7 +256,7 @@ ret
 @LABEL VRAMSTART
 @DW 0x8000 0x0000
 @LABEL BORDERCOLOR
-@DW 0x8000 0xFF00
+@DW 0x8000 0xC000
 
 # Sprite data (17x23 just to make it difficult)
 @ORG 0x0400
