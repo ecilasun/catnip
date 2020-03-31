@@ -95,9 +95,13 @@ To compensate for the missing parts of the image due to this address restriction
     24  |--------------------------------|
  pixels |           Border               |
         |--------------------------------| 0x8000 0000 (VRAM start)
-    192 |                                |
- pixels |         Video Area             |
-        |                                |
+        |-                               |
+        |-                               |
+    192 |-                               |
+ pixels |-        Video Area             |
+        |-                               |
+        |- 12x(256x16) pixel slices      |
+        |-                               |
         |--------------------------------| 0x8000 BFFF (last pixel, inclusive)
     24  |           Border               |
  pixels |--------------------------------|
