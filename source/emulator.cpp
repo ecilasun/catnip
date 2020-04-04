@@ -4,6 +4,7 @@
 //#include <thread>
 #include "../SDL/SDL.h"
 #include "emulator.h"
+//#include <windows.h>
 
 // Neko emulator
 
@@ -100,6 +101,7 @@ uint16_t rom_read_enable;
 // SDL
 SDL_Window *s_Window;
 SDL_Surface *s_Surface;
+//HDC hDC;
 
 // Global clock
 uint32_t s_SystemClock = 0;
@@ -990,9 +992,9 @@ void VideoMain()
         uint8_t R = vram_val&0x07;
         uint8_t G = (vram_val>>3)&0x07;
         uint8_t B = (vram_val>>6)&0x03;
-        pixels[4*((y+48)*s_Surface->w+x)+0] = B*(256/3);
-        pixels[4*((y+48)*s_Surface->w+x)+1] = G*(256/7);
-        pixels[4*((y+48)*s_Surface->w+x)+2] = R*(256/7);
+        pixels[4*((y+48)*s_Surface->w+x)+0] = (B*255)/3;
+        pixels[4*((y+48)*s_Surface->w+x)+1] = (G*255)/7;
+        pixels[4*((y+48)*s_Surface->w+x)+2] = (R*255)/7;
         pixels[4*((y+48)*s_Surface->w+x)+3] = 255;
     }
     else
@@ -1006,13 +1008,12 @@ void VideoMain()
             uint32_t R = VRAM[framebuffer_select*0xFFFF+0xC000]&0x07;
             uint32_t G = (VRAM[framebuffer_select*0xFFFF+0xC000]>>3)&0x07;
             uint32_t B = (VRAM[framebuffer_select*0xFFFF+0xC000]>>6)&0x03;
-            pixels[4*(y*s_Surface->w+x)+0] = B*(256/3);
-            pixels[4*(y*s_Surface->w+x)+1] = G*(256/7);
-            pixels[4*(y*s_Surface->w+x)+2] = R*(256/7);
+            pixels[4*(y*s_Surface->w+x)+0] = (B*255)/3;
+            pixels[4*(y*s_Surface->w+x)+1] = (G*255)/7;
+            pixels[4*(y*s_Surface->w+x)+2] = (R*255)/7;
             pixels[4*(y*s_Surface->w+x)+3] = 255;
         }
     }
-    
 }
 
 // NOTE: Return 'true' for 'still running'
@@ -1027,6 +1028,8 @@ bool StepEmulator()
     {
         --flip_invoked;
         SDL_UpdateWindowSurface(s_Window);
+        //static BITMAPINFO bmi = {{sizeof(BITMAPINFOHEADER),256,-192,1,8,BI_RGB,0,0,0,0,0},{0,0,0,0}};
+        //StretchDIBits(hDC, 64, 48, 512, 384, 0, 0, 256, 192, VRAM, &bmi, DIB_RGB_COLORS, SRCCOPY);
     }
 
     if (vga_y == 502)
@@ -1089,13 +1092,19 @@ bool InitEmulator(uint16_t *_rom_binary)
     {
         s_Window = SDL_CreateWindow("Neko", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_SHOWN);
         if (s_Window != nullptr)
+        {
+            //hDC = GetDC(CreateWindowEx(WS_EX_TOPMOST,TEXT("static"), 0, WS_VISIBLE|WS_POPUP|WS_CLIPSIBLINGS|WS_CLIPCHILDREN, 0, 0, 640, 480, 0, 0, 0, 0));
             s_Surface = SDL_GetWindowSurface(s_Window);
+        }
         else
         {
             printf("Failed to create SDL window: %s\n", SDL_GetError());
             return false;
         }
     }
+
+     if (SDL_MUSTLOCK(s_Surface))
+         SDL_LockSurface(s_Surface);
 
     // Start CPU thread
     // Video code stays on main thread async to CPU execution
@@ -1110,6 +1119,9 @@ void TerminateEmulator()
     //s_CPUDone = true;
     //s_CPUThread->join();
     //delete s_CPUThread;
+
+    if (SDL_MUSTLOCK(s_Surface))
+        SDL_UnlockSurface(s_Surface);
 
     SDL_FreeSurface(s_Surface);
     SDL_DestroyWindow(s_Window);

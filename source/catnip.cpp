@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <vector>
 #include "emulator.h"
+#include "astgen.h"
 
 struct SAssemblerKeyword
 {
@@ -1416,19 +1417,53 @@ int emulate_rom(char *_romname)
     return 0;
 }
 
+int compile_c(const char *_inputname, const char *_outputname)
+{
+    FILE *inputfile = fopen(_inputname, "rb");
+    if (inputfile == nullptr)
+    {
+        printf("ERROR: Cannot find input file\n");
+        return -1;
+    }
+
+    // Measure file size
+    unsigned int filebytesize = 0;
+	fpos_t pos, endpos;
+	fgetpos(inputfile, &pos);
+	fseek(inputfile, 0, SEEK_END);
+	fgetpos(inputfile, &endpos);
+    fsetpos(inputfile, &pos);
+    filebytesize = (unsigned int)endpos;
+
+    // Allocate memory and read file contents, then close the file
+    char *filedata = new char[filebytesize+1];
+    fread(filedata, 1, filebytesize, inputfile);
+    filedata[filebytesize] = 0;
+    fclose(inputfile);
+
+    // Compile
+    STokenParserContext astctx;
+    std::string tobeparsed = std::string(filedata);
+    return ASTGenerate(tobeparsed, astctx);
+}
+
 int main(int _argc, char **_argv)
 {
     if (_argc<=1)
     {
         printf("catnip v0.2\n");
         printf("(C)2020 Engin Cilasun\n");
-        printf("Usage: catnip inputfile.asm outputfile.mif - Generates a memory initialization file from assembly input for FPGA device\n");
-        printf("Usage: catnip inputfile.asm outputfile.rom - Generates a ROM file from assembly input for emulator\n");
-        printf("Usage: catnip inputfile.rom - Runs the emulator with given ROM file\n");
+        printf("Usage:\n");
+        printf("{WORK IN PROGRESS!} catnip inputfile.c outputfile.asm - Generates assembly code from input C-like file\n");
+        printf("catnip inputfile.asm outputfile.mif - Generates a memory initialization file from assembly input for FPGA device\n");
+        printf("catnip inputfile.asm outputfile.rom - Generates a ROM file from assembly input for emulator\n");
+        printf("catnip inputfile.rom - Runs the emulator with given ROM file\n");
         return 0;
     }
 
-    if (strstr(_argv[1], ".asm"))
+    if (strstr(_argv[1], ".c"))
+        return compile_c(_argv[1], _argv[2]);
+    else if (strstr(_argv[1], ".asm"))
         return compile_asm(_argv[1], _argv[2]);     // .ASM->.ROM/.MIF
     else
         return emulate_rom(_argv[1]);               // .ROM->Emulator

@@ -30,7 +30,7 @@ Here is a brief list of the architecture details of Neko V3
     * VRAM can only be accessed as bytes
     * VRAM starts at memory address 0x8000:0000
     * Each byte is packed as 2:3:3 bits (B:G:R)
-    * There are two 18 pixel borders at the top and bottom of the screen
+    * There is a somewhat wide border at the edges of the screen
       * This keeps VRAM addresses in the 0x8000:0000-0x8000:C000 range so access fits into a single WORD
       * Border color can be changed by setting byte at 0x8000:C000 to a 2:3:3 color
     * There is currently no hardware unit drawing onto the screen except the CPU
@@ -245,9 +245,9 @@ rA = (lower<<8)|upper;
 ---
 ## Branch Instructions
 
-Branch instruction is a bit special since it needs to read two extra WORDs from the adjacent addresses in memory, IP+1 and IP+2 and therefore takes up more than one cycle to complete its operation.
+Branch instruction is a bit special since it needs to read two extra WORDs from the adjacent addresses in memory, IP+2 and IP+4 and therefore takes up more than one cycle to complete its operation.
 ```
-0 0 000 000 ??00 0001   [IP+1] [IP+2]
+0 0 000 000 ??00 0001   [IP+2] [IP+4]
 | | |   |     |  BRANCH
 | | rB  rA    |
 | |           00:UNCONDITIONAL
@@ -255,8 +255,8 @@ Branch instruction is a bit special since it needs to read two extra WORDs from 
 | 0:JMP
 | 1:CALL
 |
-0:Jump via register address (18 bits addressable via {R2,R1}[17:0])
-1:Jump via address at [IP+1:IP+2] (32 bits, 18 bits addressable (absolute))
+0:Jump via register address (19 bits addressable via {R2,R1}[18:0])
+1:Jump via address at [IP+2:IP+4] (32 bits, 19 bits addressable (absolute))
 ```
 
 ### BRANCH {address} / BRANCH rB:rA
@@ -355,8 +355,8 @@ For word access, use:
 rC  rB  rA  000:REG2MEM [rA:rB], rC - st.w
             001:MEM2REG rA, [rB:rC] - ld.w
             010:REG2REG rA, rB - cp.w
-            011:WORD2REG rA, [IP+1] (16 bit constant starting at IP+1) - ld.w
-            100:DWORD2REGS rA:rB, [IP+1:IP+2] (32 bit constant address starting at IP+1) - ld.d
+            011:WORD2REG rA, [IP+2] (16 bit constant starting at IP+2) - ld.w
+            100:DWORD2REGS rA:rB, [IP+2:IP+4] (32 bit constant address starting at IP+2) - ld.d
             101:reserved
             110:reserved
             111:reserved
@@ -368,7 +368,7 @@ For byte access, use:
 rC  rB  rA  000:REG2MEM [rA:rB], rC - st.b
             001:MEM2REG rA, [rB:rC] - ld.b
             010:REG2REG rA, rB - cp.b
-            011:BYTE2REG rA, [IP+1] (low 8 bit constant starting at IP+1) - ld.b
+            011:BYTE2REG rA, [IP+2] (low 8 bit constant starting at IP+2) - ld.b
             100:reserved
             101:reserved
             110:reserved

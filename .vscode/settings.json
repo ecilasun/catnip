@@ -50,6 +50,12 @@
         "xloctime": "cpp",
         "chrono": "cpp",
         "ratio": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "deque": "cpp",
+        "fstream": "cpp",
+        "list": "cpp",
+        "stack": "cpp",
+        "unordered_set": "cpp",
+        "xhash": "cpp"
     }
 }
