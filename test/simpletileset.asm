@@ -123,7 +123,7 @@ iadd r2, r5
 
 ld.w r4, 0x0010          # column counter (sprite is 16 pixels wide, but has 18 pixel stride)
 ld.w r5, 0x0010          # row counter (16 pixels)
-xor r6, r6               # clear r6 ro zero
+xor r6, r6               # clear r6 to zero
 
 @LABEL INNERLOOP
     # for each column
