@@ -42,13 +42,13 @@
 #define INST_LOGIC						0b0000	// 0: run logic operation and/or/xor/not/bsl/bsr on r1 and r2, write result to r3 
 #define INST_BRANCH						0b0001	// 1: jump or call (direct/indirect/short/long)
 #define INST_MATH						0b0010	// 2: run math operation iadd/isub/imul/idiv/imod/ineg/inc/dec on r1 and r2, write result to r3 
-#define INST_MOV						0b0011	// 3: copy reg2mem/mem2reg/reg2reg/word2reg
+#define INST_MOV						0b0011	// 3: copy reg2mem/mem2reg/reg2reg/word2reg (dword/word/byte)
 #define INST_RET						0b0100	// 4: ret/halt
 #define INST_STACK						0b0101	// 5: push/pop register to stack
 #define INST_TEST						0b0110	// 6: test flags register against mask bits and set TR register to 1 or 0
 #define INST_CMP						0b0111	// 7: compare r1 with r2 and set flags register
 #define INST_IO							0b1000	// 8: wait for vsync signal / in / out to port
-#define INST_BMOV						0b1001	// 9: copy reg2mem/mem2reg/reg2reg (byte)
+#define INST_RELMOV						0b1001	// 9: same as mov, in relative addressing mode
 #define INST_I4							0b1010	// A: TBD
 #define INST_I5							0b1011	// B: TBD
 #define INST_I6							0b1100	// C: TBD
@@ -342,17 +342,28 @@ void execute(uint16_t instruction)
                         bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
                         if (is_vram_address) // VRAM write (address>=0x80000000)
                         {
-                            // NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
-                            // other attributes such as border color, sprite tables and such
-                            framebuffer_address = register_file[r1]&0x0000FFFF;
-                            framebuffer_writeena = 1;
-                            // TODO: Somehow need to implement a WORD mov to VRAM
-                            framebuffer_data = uint8_t(register_file[r2]&0x00FF);
-                            sram_addr = IP+2;
-                            IP = IP + 2;
-                            sram_enable_byteaddress = 0;
-                            sram_read_req = 1;
-                            cpu_state = CPU_FETCH_INSTRUCTION;
+                            if ((register_file[r1]&0x0000FFFF) < 0xD000) // Only if within VRAM region
+                            {
+                                // NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
+                                // other attributes such as border color, sprite tables and such
+                                framebuffer_address = register_file[r1]&0x0000FFFF;
+                                framebuffer_writeena = 1;
+                                // TODO: Somehow need to implement a WORD mov to VRAM
+                                framebuffer_data = uint8_t(register_file[r2]&0x00FF);
+                                sram_addr = IP+2;
+                                IP = IP + 2;
+                                sram_enable_byteaddress = 0;
+                                sram_read_req = 1;
+                                cpu_state = CPU_FETCH_INSTRUCTION;
+                            }
+                            else // Otherwise noop
+                            {
+                                sram_addr = IP+2;
+                                IP = IP + 2;
+                                sram_enable_byteaddress = 0;
+                                sram_read_req = 1;
+                                cpu_state = CPU_FETCH_INSTRUCTION;
+                            }
                         }
                         else
                         {
@@ -399,26 +410,62 @@ void execute(uint16_t instruction)
                         IP = IP + 6; // Skip the WORDs we read plus the instruction
                         cpu_state = CPU_READ_DATAH;
                     break;
-                    case 5: // unused
-                        sram_addr = IP+2;
-                        IP = IP + 2;
-                        sram_enable_byteaddress = 0;
-                        sram_read_req = 1;
-                        cpu_state = CPU_FETCH_INSTRUCTION;
+                    case 5: // reg2mem (byte)
+                    {
+                        bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
+                        if (is_vram_address) // VRAM write (address>=0x80000000)
+                        {
+                            if ((register_file[r1]&0x0000FFFF) < 0xD000) // Only if within VRAM region
+                            {
+                                // NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
+                                // other attributes such as border color, sprite tables and such
+                                framebuffer_address = register_file[r1]&0x0000FFFF;
+                                framebuffer_writeena = 1;
+                                // TODO: Somehow need to implement a WORD mov to VRAM
+                                framebuffer_data = uint8_t(register_file[r2]&0x00FF);
+                                sram_addr = IP+2;
+                                IP = IP + 2;
+                                sram_enable_byteaddress = 0;
+                                sram_read_req = 1;
+                                cpu_state = CPU_FETCH_INSTRUCTION;
+                            }
+                            else // Otherwise noop
+                            {
+                                sram_addr = IP+2;
+                                IP = IP + 2;
+                                sram_enable_byteaddress = 0;
+                                sram_read_req = 1;
+                                cpu_state = CPU_FETCH_INSTRUCTION;
+                            }
+                        }
+                        else
+                        {
+                            // SRAM
+                            sram_enable_byteaddress = 1;
+                            sram_addr = register_file[r1]; // SRAM write
+                            sram_wdata = (uint16_t)(register_file[r2]&0x000000FF);
+                            sram_write_req = 1;
+                            IP = IP + 2;
+                            cpu_state = CPU_WRITE_DATA;
+                        }
+                    }
                     break;
-                    case 6: // unused
-                        sram_addr = IP+2;
-                        IP = IP + 2;
-                        sram_enable_byteaddress = 0;
+                    case 6: // mem2reg (byte)
+                        // NOTE: VRAM reads are not possible at the moment
+                        sram_enable_byteaddress = 1;
+                        sram_addr = register_file[r2];
+                        target_register = r1;
                         sram_read_req = 1;
-                        cpu_state = CPU_FETCH_INSTRUCTION;
+                        IP = IP + 2;
+                        cpu_state = CPU_READ_DATA_BYTE;
                     break;
-                    case 7: // unused
-                        sram_addr = IP+2;
-                        IP = IP + 2;
-                        sram_enable_byteaddress = 0;
+                    case 7: // byte2reg
+                        target_register = r1;
+                        sram_enable_byteaddress = 1;
+                        sram_addr = IP + 2;
                         sram_read_req = 1;
-                        cpu_state = CPU_FETCH_INSTRUCTION;
+                        IP = IP + 4; // Skip the WORD we read plus the instruction
+                        cpu_state = CPU_READ_DATA_BYTE;
                     break;
                 }
             }
@@ -578,66 +625,40 @@ void execute(uint16_t instruction)
             }
             break;
 
-            case INST_BMOV:
+            case INST_RELMOV:
             {
                 uint16_t op = (instruction&0b0000000001110000)>>4; // [6:4]
                 uint16_t r1 = (instruction&0b0000001110000000)>>7; // [9:7]
                 uint16_t r2 = (instruction&0b0001110000000000)>>10; // [12:10]
                 switch (op)
                 {
-                    case 0: // reg2mem
-                    {
-                        bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
-                        if (is_vram_address) // VRAM write (address>=0x80000000)
-                        {
-                            // NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
-                            // other attributes such as border color, sprite tables and such
-                            framebuffer_address = register_file[r1]&0x0000FFFF;
-                            framebuffer_writeena = 1;
-                            // TODO: Somehow need to implement a WORD mov to VRAM
-                            framebuffer_data = uint8_t(register_file[r2]&0x00FF);
-                            sram_addr = IP+2;
-                            IP = IP + 2;
-                            sram_enable_byteaddress = 0;
-                            sram_read_req = 1;
-                            cpu_state = CPU_FETCH_INSTRUCTION;
-                        }
-                        else
-                        {
-                            // SRAM
-                            sram_enable_byteaddress = 1;
-                            sram_addr = register_file[r1]; // SRAM write
-                            sram_wdata = (uint16_t)(register_file[r2]&0x000000FF);
-                            sram_write_req = 1;
-                            IP = IP + 2;
-                            cpu_state = CPU_WRITE_DATA;
-                        }
-                    }
-                    break;
-                    case 1: // mem2reg
-                        // NOTE: VRAM reads are not possible at the moment
-                        sram_enable_byteaddress = 1;
-                        sram_addr = register_file[r2];
-                        target_register = r1;
-                        sram_read_req = 1;
-                        IP = IP + 2;
-                        cpu_state = CPU_READ_DATA_BYTE;
-                    break;
-                    case 2: // reg2reg
-                        register_file[r1] = (register_file[r1]&0xFFFFFF00) | register_file[r2]&0x000000FF;
+                    case 0: // reserved
                         sram_addr = IP+2;
                         IP = IP + 2;
                         sram_enable_byteaddress = 0;
                         sram_read_req = 1;
                         cpu_state = CPU_FETCH_INSTRUCTION;
                     break;
-                    case 3: // byte2reg
-                        target_register = r1;
-                        sram_enable_byteaddress = 1;
-                        sram_addr = IP + 2;
+                    case 1: // reserved
+                        sram_addr = IP+2;
+                        IP = IP + 2;
+                        sram_enable_byteaddress = 0;
                         sram_read_req = 1;
-                        IP = IP + 4; // Skip the WORD we read plus the instruction
-                        cpu_state = CPU_READ_DATA_BYTE;
+                        cpu_state = CPU_FETCH_INSTRUCTION;
+                    break;
+                    case 2: // reserved
+                        sram_addr = IP+2;
+                        IP = IP + 2;
+                        sram_enable_byteaddress = 0;
+                        sram_read_req = 1;
+                        cpu_state = CPU_FETCH_INSTRUCTION;
+                    break;
+                    case 3: // reserved
+                        sram_addr = IP+2;
+                        IP = IP + 2;
+                        sram_enable_byteaddress = 0;
+                        sram_read_req = 1;
+                        cpu_state = CPU_FETCH_INSTRUCTION;
                     break;
                     case 4: // unused
                         sram_addr = IP+2;

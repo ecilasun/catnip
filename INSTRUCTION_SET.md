@@ -348,28 +348,28 @@ rA = rA-1;
 
 There are two variants for memory access instructions: word access and byte access.
 
-For word access, use:
+Non-relative address mode:
 ```
 ??? 000 000 000 0011
-    |   |   |   MOV (WORD / DWORD)
+    |   |   |   MOV (DWORD / WORD / BYTE)
     rB  rA  000:REG2MEM [rA], rB - st.w
             001:MEM2REG rA, [rB] - ld.w
             010:REG2REG rA, rB - cp.w
             011:WORD2REG rA, [IP+2] (16 bit constant starting at IP+2) - ld.w
-            100:DWORD2REGS rA, [IP+2:IP+4] (32 bit constant address starting at IP+2) - ld.d
-            101:reserved
-            110:reserved
-            111:reserved
+            100:DWORD2REG rA, [IP+2:IP+4] (32 bit constant address starting at IP+2) - ld.d
+            101:REG2MEM [rA], rB - st.b
+            110:MEM2REG rA, [rB] - ld.b
+            111:BYTE2REG rA, [IP+2] (low 8 bit constant starting at IP+2) - ld.b
 ```
-For byte access, use:
+Relative address mode (NOT IMPLEMENTED YET):
 ```
-??? 000 000 000 1001
-    |   |   |   MOV (BYTE)
-    rB  rA  000:REG2MEM [rA], rB - st.b
-            001:MEM2REG rA, [rB] - ld.b
-            010:REG2REG rA, rB - cp.b
-            011:BYTE2REG rA, [IP+2] (low 8 bit constant starting at IP+2) - ld.b
-            100:reserved
+000 000 000 000 1001
+|   |   |   |   MOV (REL)
+rC  rB  rA  000:REG2MEM [rA+rC], rB - st.rel.w
+            001:MEM2REG rA, [rB+rC] - ld.rel.w
+            010:REG2MEM [rA+rC], rB - st.rel.b
+            011:MEM2REG rA, [rB+rC] - ld.rel.b
+            100:DWORD2REG rA, [IP+2:IP+4+rC] (32 bit constant address starting at IP+2) - ld.rel.d
             101:reserved
             110:reserved
             111:reserved
@@ -420,6 +420,25 @@ ld.d r1, VRAMSTART
 @LABEL VRAMSTART
 @DW 0x8000 0x0000
 ```
+
+### LD.REL.D rA, rB, rC / LD.REL.W rA, rB, rC / LD.REL.B rA, rB, rC (NOT IMPLEMENTED YET)
+Stores the contents of address pointed by rB plus offset in register rC in register rA.
+
+Example:
+```c
+// Copies contents at [SPRITEMEMORY(r1)+r2] to  register r0
+// Effectively equal to:
+// r1 = SRAM[SPRITEMEMORY+r2];
+lea r1, SPRITEMEMORY
+st.w r2, 0x0100
+ld.rel.w r0, r1, r2
+
+@ORG SPRITEMEMORY
+@DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF ...
+```
+
+### ST.REL.W rA, rB, rC / ST.REL.B rA, rB, rC (NOT IMPLEMENTED YET)
+Stores the contents of register rB address pointed by rA plus offset in register rC.
 
 ---
 ## Return / Halt

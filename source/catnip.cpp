@@ -629,7 +629,7 @@ public:
         else if (strstr(_parser_table[_current_parser_offset+2].m_Value, "["))              // R1 <- BYTE [R2]
         {
             sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d]", &r2);
-            unsigned int code = 0x01; // M2R
+            unsigned int code = 0x06; // M2R
             unsigned short gencode;
             gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10);
             _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
@@ -659,7 +659,7 @@ public:
                 printf("ERROR: label not found for ld.b instruction.\n");
         }
 
-        unsigned int code = 0x01; // B2R
+        unsigned int code = 0x07; // B2R
         unsigned short gencode;
         gencode = m_Opcode | (code<<4) | (r1<<7);
         _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
@@ -725,7 +725,7 @@ public:
         sscanf(_parser_table[_current_parser_offset+1].m_Value, "[r%d]", &r1);
         sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
 
-        unsigned int code = 0x00; // B2M
+        unsigned int code = 0x05; // B2M
         unsigned short gencode;
         gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10);
         _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
@@ -1010,8 +1010,8 @@ CLogicOpNoop s_logicop_noop(0x0000);
 CBranchOp s_branchop(0x0001);
 CMathOp s_mathop(0x0002);
 CLeaOp s_leaop(0x0003); // Not a real instruction!
-CLDBOp s_ldbop(0x0009);
-CSTBOp s_stbop(0x0009);
+CLDBOp s_ldbop(0x0003);
+CSTBOp s_stbop(0x0003);
 CLDDOp s_lddop(0x0003);
 //CSTDOp s_stdop(0x0003);
 CLDWOp s_ldwop(0x0003);
@@ -1060,15 +1060,18 @@ const SAssemblerPair keywords[] =
     {{"inc"}, &s_mathop},
     {{"dec"}, &s_mathop},
 
-    {{"ld.b"}, &s_ldbop},
-    {{"ld.w"}, &s_ldwop},
     {{"ld.d"}, &s_lddop},
-    {{"st.b"}, &s_stbop},
-    {{"st.w"}, &s_stwop},
+    {{"ld.w"}, &s_ldwop},
+    {{"ld.b"}, &s_ldbop},
+
     //{{"st.d"}, &s_stdop},
-    {{"cp.b"}, &s_cpbop},
+    {{"st.w"}, &s_stwop},
+    {{"st.b"}, &s_stbop},
+
+    //{{"cp.d"}, &s_cpdop},
     {{"cp.w"}, &s_cpwop},
-    //{{"cp.d"}, &s_stbop},
+    {{"cp.b"}, &s_cpbop},
+
     {{"lea"}, &s_leaop},
 
     {{"ret"}, &s_rethaltop},
