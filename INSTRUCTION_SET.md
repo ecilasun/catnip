@@ -255,7 +255,7 @@ Branch instruction is a bit special since it needs to read two extra WORDs from 
 | 0:JMP
 | 1:CALL
 |
-0:Jump via register address (19 bits addressable via {R2,R1}[18:0])
+0:Jump via register address (19 bits addressable via {rA}[18:0])
 1:Jump via address at [IP+2:IP+4] (32 bits, 19 bits addressable (absolute))
 ```
 
@@ -278,16 +278,24 @@ Sets the IP to the 2 words following this instruction or the contents of registe
 ---
 ## Integer Math Instruction
 ```
-000 000 ??? 000 0010
-|   |       |   MATHOP
-rB  rA      000:IADD rA,rB (rA=rA+rB)
-            001:ISUB rA,rB (rA=rA-rB)
-            010:IMUL rA,rB (rA=rA*rB)
-            011:IDIV rA,rB (rA=rA/rB)
-            100:IMOD rA,rB (rA=rA%rB)
-            101:INEG rA    (rA=-rA)
-            110:INC rA     (rA=rA+1)
-            111:DEC rA     (rA=rA-1)
+000 000 ?? 0000 0010
+|   |      |    MATHOP
+rB  rA     0000:IADD rA,rB (rA=rA+rB)
+           0001:ISUB rA,rB (rA=rA-rB)
+           0010:IMUL rA,rB (rA=rA*rB)
+           0011:IDIV rA,rB (rA=rA/rB)
+           0100:IMOD rA,rB (rA=rA%rB)
+           0101:INEG rA    (rA=-rA)
+           0110:INC rA     (rA=rA+1)
+           0111:DEC rA     (rA=rA-1)
+           1000:reserved
+           1001:reserved
+           1010:reserved
+           1011:reserved
+           1100:reserved
+           1101:reserved
+           1110:reserved
+           1111:reserved
 ```
 
 ### IADD rA,rB
