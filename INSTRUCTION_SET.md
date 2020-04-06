@@ -144,16 +144,15 @@ Throught this document, you'll find all instruction encodings displayed by base 
 
 ## LEA: Load Effective Address
 
-The LEA intrinsic generates two `mov` instructions which loads the address of matching `@LABEL` into a register pair.
+The LEA intrinsic generates a `ld.d` instructions which loads the address of matching `@LABEL` into a register pair, hardcoded by the assembler. It is a convenience routine to avoid having to type in manual addresses.
 
 Example:
 ```c
-lea r7:r6, SPRITEPOSDATA
+lea r7, SPRITEPOSDATA
 // which is equivalent to a load of the address of the label, resulting in the following code:
-// mov r7, 0x0000
-// mov r6, 0x0300
+// mov r7, 0x00000300
 
-@ORG 0x0300
+@ORG 0x00000300
 @LABEL SPRITEPOSDATA
 @DW 0xFFFF 0xFFE0 0xE000
 ```
@@ -247,11 +246,11 @@ rA = (lower<<8)|upper;
 
 Branch instruction is a bit special since it needs to read two extra WORDs from the adjacent addresses in memory, IP+2 and IP+4 and therefore takes up more than one cycle to complete its operation.
 ```
-0 0 000 000 ??00 0001   [IP+2] [IP+4]
-| | |   |     |  BRANCH
-| | rB  rA    |
-| |           00:UNCONDITIONAL
-| |           01:CONDITIONAL based on TEST
+0 0 ??? 000 ?? 00 0001   [IP+2] [IP+4]
+| |     |      |  BRANCH
+| |     rA     |
+| |            00:UNCONDITIONAL
+| |            01:CONDITIONAL based on TEST
 | 0:JMP
 | 1:CALL
 |
@@ -259,21 +258,21 @@ Branch instruction is a bit special since it needs to read two extra WORDs from 
 1:Jump via address at [IP+2:IP+4] (32 bits, 19 bits addressable (absolute))
 ```
 
-### BRANCH {address} / BRANCH rB:rA
+### BRANCH {address} / BRANCH rA
 
-Pushes the next instuction's address onto the branch stack and sets the IP to the 2 words following this instruction or the contents of registers rA and rB.
+Pushes the next instuction's address onto the branch stack and sets the IP to the 2 words following this instruction or the contents of register rA.
 
-### BRANCHIF {address} / BRANCHIF rB:rA
+### BRANCHIF {address} / BRANCHIF rA
 
-Pushes the next instuction's address onto the branch stack and sets the IP to the 2 words following this instruction or the contents of registers rA and rB if the TR register is set.
+Pushes the next instuction's address onto the branch stack and sets the IP to the 2 words following this instruction or the contents of register rA if the TR register is set.
 
-### JMP {address} / JMP rB:rA
+### JMP {address} / JMP rA
 
-Sets the IP to the 2 words following this instruction or the contents of registers rA and rB.
+Sets the IP to the 2 words following this instruction or the contents of register rA.
 
-### JMPIF {address} / JMPIF rB:rA
+### JMPIF {address} / JMPIF rA
 
-Sets the IP to the 2 words following this instruction or the contents of registers rA and rB if the TR register is set.
+Sets the IP to the 2 words following this instruction or the contents of registers rA if the TR register is set.
 
 ---
 ## Integer Math Instruction
@@ -350,23 +349,23 @@ There are two variants for memory access instructions: word access and byte acce
 
 For word access, use:
 ```
-000 000 000 000 0011
-|   |   |   |   MOV (WORD / DWORD)
-rC  rB  rA  000:REG2MEM [rA:rB], rC - st.w
-            001:MEM2REG rA, [rB:rC] - ld.w
+??? 000 000 000 0011
+    |   |   |   MOV (WORD / DWORD)
+    rB  rA  000:REG2MEM [rA], rB - st.w
+            001:MEM2REG rA, [rB] - ld.w
             010:REG2REG rA, rB - cp.w
             011:WORD2REG rA, [IP+2] (16 bit constant starting at IP+2) - ld.w
-            100:DWORD2REGS rA:rB, [IP+2:IP+4] (32 bit constant address starting at IP+2) - ld.d
+            100:DWORD2REGS rA, [IP+2:IP+4] (32 bit constant address starting at IP+2) - ld.d
             101:reserved
             110:reserved
             111:reserved
 ```
 For byte access, use:
 ```
-000 000 000 000 1001
-|   |   |   |   MOV (BYTE)
-rC  rB  rA  000:REG2MEM [rA:rB], rC - st.b
-            001:MEM2REG rA, [rB:rC] - ld.b
+??? 000 000 000 1001
+    |   |   |   MOV (BYTE)
+    rB  rA  000:REG2MEM [rA], rB - st.b
+            001:MEM2REG rA, [rB] - ld.b
             010:REG2REG rA, rB - cp.b
             011:BYTE2REG rA, [IP+2] (low 8 bit constant starting at IP+2) - ld.b
             100:reserved
@@ -375,11 +374,11 @@ rC  rB  rA  000:REG2MEM [rA:rB], rC - st.b
             111:reserved
 ```
 
-### ST.W [rA:rB], rC / ST.B [rA:rB], rC
-Stores the 16 bit value in register rC at memory pointed by rA:rB register pair. For `ST.B`, the byte value at the memory address is copied to the lower 8 bits of the register rA.
+### ST.W [rA], rB / ST.B [rA], rB
+Stores the 16 bit value in register rB at memory pointed by rA register. For `ST.B` instrucion, the byte value at the memory address is copied to the lower 8 bits of the register rA.
 
-### LD.W rA, [rB:rC] / LD.B rA, [rB:rC]
-Stores the 16 bit value at memory pointed by rB:rC to register rA. For `LD.B`, based on the last bit off the address, it loads either the even or the odd byte onto the lower 8 bits of the register rA.
+### LD.W rA, [rB] / LD.B rA, [rB]
+Stores the 16 bit value at memory pointed by rB to register rA. For `LD.B` instruction, based on the last bit of the address in rB, it loads the 8 bits at the address in rB to the register rA.
 
 ### CP.W rA, rB / CP.B rA, rB
 Stores the 16 bit value of register rB in register rA. For `CP.B`, only the lower 8 bits are copied across registers. For example:
@@ -398,25 +397,23 @@ ld.b r1, 0xAABB
 ### LD.W rA, {word_constant}
 Stores the WORD following this instruction in register rA. For example:
 ```c
-// Write a white pixel at first VRAM address
-ld.w r1, 0x8000
-ld.w r0, 0x0000
-ld.w r2, 0x00FF // White
-st.b [r1:r0], r2
+// Write a white pixel
+ld.w r1, 0x80000000 // First pixel of VRAM
+ld.w r2, 0x00FF     // White
+st.b [r1], r2       // Write the low 8 bits of r2
 ```
-would set the register pair r1:r0 to the VRAM start address, 0x80000000, and r2 to 0x00FF, then write the lower 8 bits of r2 to that address.
+would set the register r1 to the VRAM start address, 0x80000000, and r2 to 0x00FF, then write the lower 8 bits of r2 to that address.
 
 NOTE: The byte access form only works on the lower 8 bits of registers.
 
-### LD.D rA:rB, {dword_mem_address}
-Stores the contents of the DWORD address following this instruction in register pair rA:rB. rA receives the high word whereas register rB receives the low word of the DWORD.
+### LD.D rA, {dword_mem_address}
+Stores the contents of the DWORD address following this instruction in register rA.
 
 Example:
 ```c
-ld.d r1:r0, VRAMSTART
+ld.d r1, VRAMSTART
 // which is equivalent to a load of the value at the given label, resulting in the following register state:
-// r1==0x8000 
-// r6==0x0000
+// r1==0x80000000
 
 @ORG 0x0300
 @LABEL VRAMSTART

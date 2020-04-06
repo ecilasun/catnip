@@ -7,22 +7,27 @@
 
 # By default initial output VRAM page is #0 and writes go to VRAM page #1
 
+ld.w r5, 0x00B6
+
+@LABEL INFINITELOOP
+
 # Clear display and set up border color for both VRAM pages
 ld.w r0, 0x0000
 fsel r0
 ld.w r7, 0x00E0
 clf r7
-ld.w r5, 0x00B6
-ld.d r1:r0, BORDERCOLOR
-st.b [r1:r0], r5
+ld.d r0, BORDERCOLOR
+st.b [r0], r5
 
 ld.w r0, 0x0001
 fsel r0
 ld.w r7, 0x00E0
 clf r7
-ld.w r5, 0x00B6
-ld.d r1:r0, BORDERCOLOR
-st.b [r1:r0], r5
+ld.d r0, BORDERCOLOR
+st.b [r0], r5
+
+# inc r5
+# jmp INFINITELOOP
 
 # Set video display to show VRAM page 0
 ld.w r0, 0x0000
@@ -37,22 +42,22 @@ ld.w r7, 0x00E0
 clf r7
 
 # Set up tile entry count
-lea r7:r6, TILE_HEADER
-ld.w r5, [r7:r6]
+lea r6, TILE_HEADER
+ld.w r5, [r6]
 # Set up tile data pointer
-lea r7:r6, TILE_DATA
+lea r6, TILE_DATA
 ld.w r4, 0x0002
 # Walk over each tile data entry and draw its sprite
 @LABEL DRAWTILESET
     push r5
     push r4
-    ld.w r0, [r7:r6]
+    ld.w r0, [r6]
     push r0 # Y
     iadd r6, r4
-    ld.w r0, [r7:r6]
+    ld.w r0, [r6]
     push r0 # X
     iadd r6, r4
-    ld.w r0, [r7:r6]
+    ld.w r0, [r6]
     push r0 # Sprite#
     branch DrawSprite
     pop r4
@@ -64,15 +69,15 @@ ld.w r4, 0x0002
 jmpif DRAWTILESET
 
 # Step animated tile positions for next time
-lea r7:r6, ANIMATED_TILES
-ld.w r5, [r7:r6]
+lea r6, ANIMATED_TILES
+ld.w r5, [r6]
 inc r5
-st.w [r7:r6], r5
-ld.w r5, 0x0006
+st.w [r6], r5
+ld.d r5, 0x00000006
 iadd r6,r5
-ld.w r5, [r7:r6]
+ld.w r5, [r6]
 inc r5
-st.w [r7:r6], r5
+st.w [r6], r5
 
 # Restore our VRAM page index
 # Increment by one so that we show the page we just produced
@@ -110,23 +115,24 @@ imul r1, r2              # Y*256
 iadd r0, r1              # X+Y*256
 ld.w r1, 0x8000          # 0x8000:(X+Y*256) == VRAM address
 
-# Set up sprite address so that r3:r2 == (0000:0400 + spriteindex*256)
-lea r3:r2, SPRITE_SHEET
+# Set up sprite address so that r2 == (0000:0400 + spriteindex*256)
+lea r2, SPRITE_SHEET
 ld.w r4, 0x0100
 imul r5, r4              # spriteindex*256
 iadd r2, r5
 
 ld.w r4, 0x0010          # column counter (sprite is 16 pixels wide, but has 18 pixel stride)
 ld.w r5, 0x0010          # row counter (16 pixels)
+xor r6, r6               # clear r6 ro zero
 
 @LABEL INNERLOOP
     # for each column
-        ld.b r6, [r3:r2]        # read from current pattern buffer location
+        ld.b r6, [r2]        # read from current pattern buffer location
         ld.w r7, 0x00FF         # compare sprite color with 0xFF (mask color)
         cmp r6, r7
         test equal
         jmpif SKIPWRITE         # ignore writes if it's the mask color
-        st.b [r1:r0], r6	   	# write back to current VRAM location
+        st.b [r0], r6	   	# write back to current VRAM location
         @LABEL SKIPWRITE
 
         inc r0	    	    	# increment VRAM pointer

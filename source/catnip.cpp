@@ -484,7 +484,7 @@ public:
                     {
                         labelfound = true;
                         SLEAResolvePair postResolve;
-                        postResolve.m_PatchAddressPointer = _current_binary_offset+2; // and also +6
+                        postResolve.m_PatchAddressPointer = _current_binary_offset+2;
                         postResolve.m_LabelToResolve = &_parser_table[i];
                         m_LEAResolves.emplace_back(postResolve);
                     }
@@ -494,16 +494,13 @@ public:
                 printf("ERROR: label not found for LEA intrinsic.\n");
         }
 
-        unsigned int code = 0x03; // W2R
+        unsigned int code = 0x04; // DW2Rs
         unsigned short gencode;
         gencode = m_Opcode | (code<<4) | (r1<<7);
         _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = gencode&0x00FF;
         _binary_output[_current_binary_offset++] = (extra_dword&0xFF000000)>>24;
         _binary_output[_current_binary_offset++] = (extra_dword&0x00FF0000)>>16;
-        gencode = m_Opcode | (code<<4) | (r2<<7);
-        _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
-        _binary_output[_current_binary_offset++] = gencode&0x00FF;
         _binary_output[_current_binary_offset++] = (extra_dword&0x0000FF00)>>8;
         _binary_output[_current_binary_offset++] = (extra_dword&0x000000FF);
 
@@ -518,8 +515,8 @@ public:
 
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int r1=0, r2=0;
-        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d:r%d", &r1,&r2);
+        int r1=0;
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         uint32_t extra_dword = 0;
         if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))                  // R1 <- IMMEDIATE(DWORD)
             sscanf(_parser_table[_current_parser_offset+2].m_Value, "%x", &extra_dword);
@@ -567,17 +564,17 @@ public:
 
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int r1 = 0, r2 = 0, r3 = 0;
+        int r1 = 0, r2 = 0;
         sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         uint32_t extra_dword = 0;
         if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))                  // R1 <- IMMEDIATE(WORD)
             sscanf(_parser_table[_current_parser_offset+2].m_Value, "%x", &extra_dword);
-        else if (strstr(_parser_table[_current_parser_offset+2].m_Value, "["))              // R1 <- WORD [R2:R3]
+        else if (strstr(_parser_table[_current_parser_offset+2].m_Value, "["))              // R1 <- WORD [R2]
         {
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d:r%d]", &r2, &r3);
+            sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d]", &r2);
             unsigned int code = 0x01; // M2R
             unsigned short gencode;
-            gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10) | (r3<<13);
+            gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10);
             _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
             _binary_output[_current_binary_offset++] = gencode&0x00FF;
             return 3;
@@ -624,17 +621,17 @@ public:
 
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int r1 = 0, r2 = 0, r3 = 0;
+        int r1 = 0, r2 = 0;
         sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         uint32_t extra_dword = 0;
         if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))                  // R1 <- IMMEDIATE(BYTE - lower byte of following WORD)
             sscanf(_parser_table[_current_parser_offset+2].m_Value, "%x", &extra_dword);
-        else if (strstr(_parser_table[_current_parser_offset+2].m_Value, "["))              // R1 <- BYTE [R2:R3]
+        else if (strstr(_parser_table[_current_parser_offset+2].m_Value, "["))              // R1 <- BYTE [R2]
         {
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d:r%d]", &r2, &r3);
+            sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d]", &r2);
             unsigned int code = 0x01; // M2R
             unsigned short gencode;
-            gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10) | (r3<<13);
+            gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10);
             _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
             _binary_output[_current_binary_offset++] = gencode&0x00FF;
             return 3;
@@ -702,14 +699,14 @@ public:
 
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int r1 = 0, r2 = 0, r3 = 0;
+        int r1 = 0, r2 = 0;
 
-        sscanf(_parser_table[_current_parser_offset+1].m_Value, "[r%d:r%d]", &r1, &r2);
-        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r3);
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "[r%d]", &r1);
+        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
 
         unsigned int code = 0x00; // W2M
         unsigned short gencode;
-        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10) | (r3<<13);
+        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10);
         _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = gencode&0x00FF;
         return 3;
@@ -723,14 +720,14 @@ public:
 
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int r1 = 0, r2 = 0, r3 = 0;
+        int r1 = 0, r2 = 0;
 
-        sscanf(_parser_table[_current_parser_offset+1].m_Value, "[r%d:r%d]", &r1, &r2);
-        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r3);
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "[r%d]", &r1);
+        sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
 
         unsigned int code = 0x00; // B2M
         unsigned short gencode;
-        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10) | (r3<<13);
+        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10);
         _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = gencode&0x00FF;
         return 3;
@@ -1226,8 +1223,8 @@ int parse_nip(const char *_inputtext)
         uint32_t labeladdress = itm->m_LabelMemoryOffset;
         s_binary_output[patch.m_PatchAddressPointer+0] = (labeladdress&0xFF000000)>>24;
         s_binary_output[patch.m_PatchAddressPointer+1] = (labeladdress&0x00FF0000)>>16;
-        s_binary_output[patch.m_PatchAddressPointer+4] = (labeladdress&0x0000FF00)>>8;
-        s_binary_output[patch.m_PatchAddressPointer+5] = (labeladdress&0x000000FF);
+        s_binary_output[patch.m_PatchAddressPointer+2] = (labeladdress&0x0000FF00)>>8;
+        s_binary_output[patch.m_PatchAddressPointer+3] = (labeladdress&0x000000FF);
     }
 
     for (auto &patch : m_LDDResolves) // Set the DWORD value of LD.D to DWORD at address of label
