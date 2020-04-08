@@ -61,7 +61,7 @@ uint32_t BRANCHTARGET;          // Branch target
 uint32_t IP;                    // Instruction pointer
 uint32_t SP;                    // Stack pointer
 uint16_t instruction;           // Current instruction
-uint32_t register_file[8];	    // Array of 8 32bit registers
+uint32_t register_file[16];	    // Array of 16 x 32bit registers (r15=IP, r14=SP, r13=FP)
 uint16_t flags_register;	   	// Flag registers [ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL]
 uint16_t target_register;	    // Target for some memory read operations
 uint16_t target_registerH;	    // Target for some memory read operations (high word)
@@ -159,9 +159,8 @@ void execute(uint16_t instruction)
         case INST_LOGIC:
         {
             uint16_t op = (instruction&0b0000000001110000)>>4; // [6:4]
-            uint16_t subop = (instruction&0b0000001110000000)>>7; // [9:7]
-            uint16_t r1 = (instruction&0b0001110000000000)>>10; // [12:10]
-            uint16_t r2 = (instruction&0b1110000000000000)>>13; // [15:13]
+            uint16_t r1 = (instruction&0b0000011110000000)>>7; // [10:7]
+            uint16_t r2 = (instruction&0b0111100000000000)>>11; // [14:11]
             switch (op)
             {
                 case 0: // Or
@@ -205,7 +204,7 @@ void execute(uint16_t instruction)
             uint16_t typ = (instruction&0b0100000000000000)>>14; // [14]
             uint16_t immed = (instruction&0b1000000000000000)>>15; // [15]
             uint16_t si = (instruction&0b0000000000110000)>>4; // [5:4]
-            uint16_t r1 = (instruction&0b0000011100000000)>>8; // [10:8]
+            uint16_t r1 = (instruction&0b0000001111000000)>>6; // [9:6]
 
             // NOTE: BRANCH and JMP share the same logic except the stack bit
             // Push return address to branch stack for 'BRANCH/BRANCHIF'
@@ -293,8 +292,8 @@ void execute(uint16_t instruction)
             {
                 uint16_t op = (instruction&0b0000000001110000)>>4; // [6:4]
                 uint16_t subop = (instruction&0b0000001110000000)>>7; // [9:7]
-                uint16_t r1 = (instruction&0b0001110000000000)>>10; // [12:10]
-                uint16_t r2 = (instruction&0b1110000000000000)>>13; // [15:13]
+                uint16_t r1 = (instruction&0b0000111100000000)>>8; // [11:8]
+                uint16_t r2 = (instruction&0b1111000000000000)>>12; // [15:12]
                 switch (op)
                 {
                     case 0: // Iadd
@@ -333,8 +332,8 @@ void execute(uint16_t instruction)
             case INST_MOV:
             {
                 uint16_t op = (instruction&0b0000000001110000)>>4; // [6:4]
-                uint16_t r1 = (instruction&0b0000001110000000)>>7; // [9:7]
-                uint16_t r2 = (instruction&0b0001110000000000)>>10; // [12:10]
+                uint16_t r1 = (instruction&0b0000011110000000)>>7; // [10:7]
+                uint16_t r2 = (instruction&0b0111100000000000)>>11; // [14:11]
                 switch (op)
                 {
                     case 0: // reg2mem
@@ -498,7 +497,7 @@ void execute(uint16_t instruction)
             case INST_STACK:
             {
                 uint16_t op = (instruction&0b0000000000010000)>>4; // [4]
-                uint16_t r1 = (instruction&0b0000000011100000)>>5; // [7:5]
+                uint16_t r1 = (instruction&0b0000000111100000)>>5; // [8:5]
                 switch (op)
                 {
                     case 0:
@@ -546,8 +545,8 @@ void execute(uint16_t instruction)
 
             case INST_CMP:
             {
-                uint16_t r1 = (instruction&0b0000000001110000)>>4; // [6:4]
-                uint16_t r2 = (instruction&0b0000001110000000)>>7; // [9:7]
+                uint16_t r1 = (instruction&0b0000000011110000)>>4; // [7:4]
+                uint16_t r2 = (instruction&0b0000111100000000)>>8; // [11:8]
                 flags_register = 0;
                 flags_register |= (register_file[r1] == register_file[r2]) ? 1 : 0; // EQUAL
                 flags_register |= (register_file[r1] > register_file[r2]) ? 2 : 0; // GREATER
@@ -566,7 +565,7 @@ void execute(uint16_t instruction)
             case INST_IO:
             {
                 uint16_t sub = (instruction&0b0000000001110000)>>4; // [6:4]
-                uint16_t r1 = (instruction&0b0000001110000000)>>7; // [9:7]
+                uint16_t r1  = (instruction&0b0000011110000000)>>7; // [10:7]
                 switch(sub)
                 {
                     case 0b000: // VSYNC
@@ -628,8 +627,8 @@ void execute(uint16_t instruction)
             case INST_RELMOV:
             {
                 uint16_t op = (instruction&0b0000000001110000)>>4; // [6:4]
-                uint16_t r1 = (instruction&0b0000001110000000)>>7; // [9:7]
-                uint16_t r2 = (instruction&0b0001110000000000)>>10; // [12:10]
+                uint16_t r1 = (instruction&0b0000011110000000)>>7; // [10:7]
+                uint16_t r2 = (instruction&0b0111100000000000)>>11; // [14:11]
                 switch (op)
                 {
                     case 0: // reserved
@@ -814,6 +813,7 @@ void CPUMain()
         break;
 
         case CPU_FETCH_INSTRUCTION:
+            target_register = 0;
             sram_read_req = 0;
             framebuffer_writeena = 0;
             if (sram_addr == 0x7FFFF)

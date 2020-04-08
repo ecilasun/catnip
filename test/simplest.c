@@ -1,10 +1,10 @@
-void simple_function(uint A)
+void simple_function(uint16 A)
 {
-  uint V = A*A;
+  uint16 V = A*A;
 }
 
 void main()
 {
-  uint V = 14;
+  uint16 V = 14;
   simple_function(V);
 }

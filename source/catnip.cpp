@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <vector>
+#include <iostream>
 #include "emulator.h"
-#include "astgen.h"
+#include "parser.h"
 
 struct SAssemblerKeyword
 {
@@ -132,7 +133,7 @@ public:
         int r1=0, r2=0;
         sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-        unsigned short code = m_Opcode | 0x0000 | (r1<<10) | (r2<<13);
+        unsigned short code = m_Opcode | 0x0000 | (r1<<7) | (r2<<11);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
         return 3;
@@ -151,7 +152,7 @@ public:
         int r1=0, r2=0;
         sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-        unsigned short code = m_Opcode | 0x0010 | (r1<<10) | (r2<<13);
+        unsigned short code = m_Opcode | 0x0010 | (r1<<7) | (r2<<11);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
         return 3;
@@ -170,7 +171,7 @@ public:
         int r1=0, r2=0;
         sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-        unsigned short code = m_Opcode | 0x0020 | (r1<<10) | (r2<<13);
+        unsigned short code = m_Opcode | 0x0020 | (r1<<7) | (r2<<11);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
         return 3;
@@ -189,7 +190,7 @@ public:
         int r1=0, r2=0;
         sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-        unsigned short code = m_Opcode | 0x0030 | (r1<<10) | (r2<<13);
+        unsigned short code = m_Opcode | 0x0030 | (r1<<7) | (r2<<11);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
         return 3;
@@ -208,7 +209,7 @@ public:
         int r1=0, r2=0;
         sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-        unsigned short code = m_Opcode | 0x0040 | (r1<<10) | (r2<<13);
+        unsigned short code = m_Opcode | 0x0040 | (r1<<7) | (r2<<11);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
         return 3;
@@ -227,7 +228,7 @@ public:
         int r1=0, r2=0;
         sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-        unsigned short code = m_Opcode | 0x0050 | (r1<<10) | (r2<<13);
+        unsigned short code = m_Opcode | 0x0050 | (r1<<7) | (r2<<11);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
         return 3;
@@ -246,7 +247,7 @@ public:
         int r1=0, r2=0;
         sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-        unsigned short code = m_Opcode | 0x0060 | (r1<<10) | (r2<<13);
+        unsigned short code = m_Opcode | 0x0060 | (r1<<7) | (r2<<11);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
         return 3;
@@ -304,13 +305,12 @@ public:
                 //printf("Long branch to register pair if TR==1: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
             }
 
-            int r1, r2;
+            int r1;
             sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
-            sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-            unsigned short code = m_Opcode | (r1<<8) | (r2<<11) | (is_conditional ? 0x0010 : 0x0000) | (is_branch ? 0x4000 : 0x0000);
+            unsigned short code = m_Opcode | (r1<<6) | (is_conditional ? 0x0010 : 0x0000) | (is_branch ? 0x4000 : 0x0000);
             _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
             _binary_output[_current_binary_offset++] = code&0x00FF;
-            return 3;
+            return 2;
         }
         else
         {
@@ -449,7 +449,7 @@ public:
         }
 
         unsigned short subop = 0b000;
-        unsigned short code = marker | subop | (r1<<10) | (r2<<13);
+        unsigned short code = marker | subop | (r1<<8) | (r2<<12);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
 
@@ -466,8 +466,8 @@ public:
     // Decodes into two individual LD.W instuctions
     int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
     {
-        int r1=0, r2=0;
-        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d:r%d", &r1,&r2);
+        int r1=0;
+        sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         uint32_t extra_dword = 0;
         if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))
             sscanf(_parser_table[_current_parser_offset+2].m_Value, "%x", &extra_dword);
@@ -574,7 +574,7 @@ public:
             sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d]", &r2);
             unsigned int code = 0x01; // M2R
             unsigned short gencode;
-            gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10);
+            gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<11);
             _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
             _binary_output[_current_binary_offset++] = gencode&0x00FF;
             return 3;
@@ -631,7 +631,7 @@ public:
             sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d]", &r2);
             unsigned int code = 0x06; // M2R
             unsigned short gencode;
-            gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10);
+            gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<11);
             _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
             _binary_output[_current_binary_offset++] = gencode&0x00FF;
             return 3;
@@ -706,7 +706,7 @@ public:
 
         unsigned int code = 0x00; // W2M
         unsigned short gencode;
-        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10);
+        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<11);
         _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = gencode&0x00FF;
         return 3;
@@ -727,7 +727,7 @@ public:
 
         unsigned int code = 0x05; // B2M
         unsigned short gencode;
-        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10);
+        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<11);
         _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = gencode&0x00FF;
         return 3;
@@ -748,7 +748,7 @@ public:
 
         unsigned int code = 0x02; // R2R
         unsigned short gencode;
-        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10);
+        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<11);
         _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = gencode&0x00FF;
         return 3;
@@ -769,7 +769,7 @@ public:
 
         unsigned int code = 0x02; // R2R
         unsigned short gencode;
-        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10);
+        gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<11);
         _binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = gencode&0x00FF;
         return 3;
@@ -901,7 +901,7 @@ public:
         sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
         sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
 
-        unsigned short code = m_Opcode | (r1<<4) | (r2<<7);
+        unsigned short code = m_Opcode | (r1<<4) | (r2<<8);
         _binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
         _binary_output[_current_binary_offset++] = code&0x00FF;
 
@@ -1417,34 +1417,28 @@ int emulate_rom(char *_romname)
     return 0;
 }
 
-int compile_c(const char *_inputname, const char *_outputname)
+int compile_c(char *_inputname, char *_outputname)
 {
-    FILE *inputfile = fopen(_inputname, "rb");
-    if (inputfile == nullptr)
-    {
-        printf("ERROR: Cannot find input file\n");
-        return -1;
+  try
+  {
+    // Creates a stream of tokens from the input file
+    Tokenizer tokenizer(_inputname);
+    // Parses the tokens into an abstract syntax tree
+    Parser parser(&tokenizer);
+    if (!parser.parse()) {
+      return 1;
     }
+    // Compiles the syntax tree to the output file
+    if (!parser.output(_outputname)) {
+      return 1;
+    }
+  } catch (char const *error)
+  {
+    std::cout << "Error: " << error << std::endl;
+    return 1;
+  }
 
-    // Measure file size
-    unsigned int filebytesize = 0;
-	fpos_t pos, endpos;
-	fgetpos(inputfile, &pos);
-	fseek(inputfile, 0, SEEK_END);
-	fgetpos(inputfile, &endpos);
-    fsetpos(inputfile, &pos);
-    filebytesize = (unsigned int)endpos;
-
-    // Allocate memory and read file contents, then close the file
-    char *filedata = new char[filebytesize+1];
-    fread(filedata, 1, filebytesize, inputfile);
-    filedata[filebytesize] = 0;
-    fclose(inputfile);
-
-    // Compile
-    STokenParserContext astctx;
-    std::string tobeparsed = std::string(filedata);
-    return ASTGenerate(tobeparsed, astctx);
+  return 0;
 }
 
 int main(int _argc, char **_argv)

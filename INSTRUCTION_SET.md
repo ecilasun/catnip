@@ -117,7 +117,7 @@ The reason for the banded approach is simply for fast clears; each band in hardw
 # Registers
 
 Neko has some GPRs that the user can access and some hidden ones that only the CPU uses to do its bookkeeping.
-* r0..r7 : User accessible, GPR, 32bit wide
+* r0..r15 : User accessible, GPR, 32bit wide
 * IP: Internal, Instruction Pointer, 32bit wide
 * SP: Internal, Stack Pointer, 32bit wide
 * FLAGS: Internal, comparison flag registers, 6bit wide
@@ -164,10 +164,10 @@ lea r7, SPRITEPOSDATA
 
 The instruction encoding for the LOGICOP base instruction is as follows
 ```
-000 000 ??? 000 0000
-|   |       |   LOGICOP
-rB  rA      000:OR rA,rB (Default NOOP instruction encoding when rA rB are both equal to `r0`, maps to byte code '0')
-            001:AND rA,rB
+? 0000 0000 000 0000
+  |    |    |   LOGICOP
+  rB   rA   000:OR rA,rB (Default NOOP instruction encoding when rA rB are both equal to `r0`, maps to byte code '0')
+  E:B  A:7  001:AND rA,rB
             010:XOR rA,rB
             011:NOT rA
             100:BSL rA,rB
@@ -247,11 +247,11 @@ rA = (lower<<8)|upper;
 
 Branch instruction is a bit special since it needs to read two extra WORDs from the adjacent addresses in memory, IP+2 and IP+4 and therefore takes up more than one cycle to complete its operation.
 ```
-0 0 ??? 000 ?? 00 0001   [IP+2] [IP+4]
-| |     |      |  BRANCH
-| |     rA     |
-| |            00:UNCONDITIONAL
-| |            01:CONDITIONAL based on TEST
+0 0 ???? 0000 00 0001   [IP+2] [IP+4]
+| |      |    |  BRANCH
+| |      rA   |
+| |      9:6  00:UNCONDITIONAL
+| |           01:CONDITIONAL based on TEST
 | 0:JMP
 | 1:CALL
 |
@@ -278,24 +278,24 @@ Sets the IP to the 2 words following this instruction or the contents of registe
 ---
 ## Integer Math Instruction
 ```
-000 000 ?? 0000 0010
-|   |      |    MATHOP
-rB  rA     0000:IADD rA,rB (rA=rA+rB)
-           0001:ISUB rA,rB (rA=rA-rB)
-           0010:IMUL rA,rB (rA=rA*rB)
-           0011:IDIV rA,rB (rA=rA/rB)
-           0100:IMOD rA,rB (rA=rA%rB)
-           0101:INEG rA    (rA=-rA)
-           0110:INC rA     (rA=rA+1)
-           0111:DEC rA     (rA=rA-1)
-           1000:reserved
-           1001:reserved
-           1010:reserved
-           1011:reserved
-           1100:reserved
-           1101:reserved
-           1110:reserved
-           1111:reserved
+0000 0000 0000 0010
+|    |    |    MATHOP
+rB   rA   0000:IADD rA,rB (rA=rA+rB)
+F:C  B:8  0001:ISUB rA,rB (rA=rA-rB)
+          0010:IMUL rA,rB (rA=rA*rB)
+          0011:IDIV rA,rB (rA=rA/rB)
+          0100:IMOD rA,rB (rA=rA%rB)
+          0101:INEG rA    (rA=-rA)
+          0110:INC rA     (rA=rA+1)
+          0111:DEC rA     (rA=rA-1)
+          1000:reserved
+          1001:reserved
+          1010:reserved
+          1011:reserved
+          1100:reserved
+          1101:reserved
+          1110:reserved
+          1111:reserved
 ```
 
 ### IADD rA,rB
@@ -358,10 +358,10 @@ There are two variants for memory access instructions: word access and byte acce
 
 Non-relative address mode:
 ```
-??? 000 000 000 0011
-    |   |   |   MOV (DWORD / WORD / BYTE)
-    rB  rA  000:REG2MEM [rA], rB - st.w
-            001:MEM2REG rA, [rB] - ld.w
+? 0000 0000 000 0011
+  |    |    |   MOV (DWORD / WORD / BYTE)
+  rB   rA   000:REG2MEM [rA], rB - st.w
+  E:B  A:7  001:MEM2REG rA, [rB] - ld.w
             010:REG2REG rA, rB - cp.w
             011:WORD2REG rA, [IP+2] (16 bit constant starting at IP+2) - ld.w
             100:DWORD2REG rA, [IP+2:IP+4] (32 bit constant address starting at IP+2) - ld.d
@@ -371,13 +371,13 @@ Non-relative address mode:
 ```
 Relative address mode (NOT IMPLEMENTED YET):
 ```
-000 000 000 000 1001
-|   |   |   |   MOV (REL)
-rC  rB  rA  000:REG2MEM [rA+rC], rB - st.rel.w
-            001:MEM2REG rA, [rB+rC] - ld.rel.w
-            010:REG2MEM [rA+rC], rB - st.rel.b
-            011:MEM2REG rA, [rB+rC] - ld.rel.b
-            100:DWORD2REG rA, [IP+2:IP+4+rC] (32 bit constant address starting at IP+2) - ld.rel.d
+? 0000 0000 000 1001
+  |    |    |   MOV (REL)
+  rB   rA   000:reserved
+  E:B  A:7  001:reserved
+            010:reserved
+            011:reserved
+            100:reserved
             101:reserved
             110:reserved
             111:reserved
@@ -471,10 +471,10 @@ Stops the CPU entirely, going into an infinite loop. Currently, only a reset sig
 
 These instructions implement stack operations for register store/restore operations. The stack grows from end of SRAM backwards to the top of memory to avoid clashing with loaded code. One thing to keep in mind is to avoid placing code or data too close to the end of memory to prevent possible stack overwrites.
 ```
-???????? 000 0 0101
-         |   | STACK rA
-         rA  0:PUSH rA (rA->[SP--])
-             1:POP rA  ([++SP]->rA)
+??????? 0000 0 0101
+        |    | STACK rA
+        rA   0:PUSH rA (rA->[SP--])
+        8:5  1:POP rA  ([++SP]->rA)
 ```
 
 ### PUSH rA
@@ -489,14 +489,16 @@ Increments the stack pointer to access a valid stack entry then sets the value a
 Comparison consists of two base instructions. TEST base instruction is used to set the TR register to either 0 or 1 based on a previous COMPARE base instruction's result. TEST receives a FLAG_MASK that matches the FLAGS register.
 
 ```
-?????? 000 000 0111
-       |   |   CMP rA, rB
-       rB  rA
+???? 0000 0000 0111
+     |    |    CMP rA, rB
+     rB   rA
+     B:8  7:4
 ```
 ```
 ????? 000000 0110
       |      TEST FLAG_MASK
       FLAG_MASK
+      9:4
 ```
 
 The bit order of the FLAGS register is as follows (LSB on the right)
@@ -541,10 +543,10 @@ test greater equal
 ---
 ## IO Operations
 ```
-?????? 000 000 1000
-       |   |   IO
-       rA  000:VSYNC
-           001:IN rA PORTADDRESS(next WORD in memory)
+????? 0000 000 1000
+      |    |   IO
+      rA   000:VSYNC
+      A:7  001:IN rA PORTADDRESS(next WORD in memory)
            010:OUT rA PORTADDRESS(next WORD in memory)
            011:FSEL rA
            100:CLS rA

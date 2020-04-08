@@ -83,6 +83,7 @@ st.w [r6], r5
 # Increment by one so that we show the page we just produced
 pop r0
 inc r0
+vsync
 fsel r0
 
 jmp ANIMATIONLOOP
