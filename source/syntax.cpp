@@ -210,7 +210,7 @@ Operand OperatorToken::output(Parser *parser,
       // The negative of a 2's complement number x is ~x + 1.
       operandValueToReg(parser, rhs, "r12");
       parser->writeInst("ld.w r13 0xffff");
-      parser->writeInst("XOR r12 r13");
+      parser->writeInst("xor r12 r13");
       parser->writeInst("ld.w r13 0x1");
       parser->writeInst("iadd r12 r13");
       parser->writeInst("push r12");
@@ -234,7 +234,7 @@ Operand OperatorToken::output(Parser *parser,
       // x ^ 0xffff == ~x
       operandValueToReg(parser, rhs, "r12");
       parser->writeInst("ld.w r13 0xffff");
-      parser->writeInst("XOR r12 r13");
+      parser->writeInst("xor r12 r13");
       parser->writeInst("push r12");
       return Operand(OperandType::VALUE);
     } else if ("!" == _op) {
@@ -348,9 +348,9 @@ Operand OperatorToken::output(Parser *parser,
       parser->writeln("@LABEL " + label4);
       // Do the operation.
       if ("||" == _op) {
-        parser->writeInst("OR r12 r13");
+        parser->writeInst("or r12 r13");
       } else if ("&&" == _op) {
-        parser->writeInst("AND r12 r13");
+        parser->writeInst("and r12 r13");
       }
       // Push the result.
       parser->writeInst("push r12");

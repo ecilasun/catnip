@@ -58,7 +58,12 @@
         test zero
         jmpif draw_sprite_for_break1
         cp.w r12 r5
-        cp.w r13 r6
+        cp.w r12 r6
+        ld.w r13 0xffff
+        xor r12 r13
+        ld.w r13 0x1
+        iadd r12 r13
+        cp.w r13 r12
         PIXEL r12 r13
 @LABEL draw_sprite_for_continue1
         ld.w r13 0x0001
