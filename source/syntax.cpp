@@ -208,20 +208,20 @@ Operand OperatorToken::output(Parser *parser,
   if (isUnary()) {
     if ("-" == _op) {
       // The negative of a 2's complement number x is ~x + 1.
-      operandValueToReg(parser, rhs, "M");
-      parser->writeInst("MOVI N 0xffff");
-      parser->writeInst("XOR M N");
-      parser->writeInst("MOVI N 0x1");
-      parser->writeInst("iadd M N");
-      parser->writeInst("push M");
+      operandValueToReg(parser, rhs, "r12");
+      parser->writeInst("ld.w r13 0xffff");
+      parser->writeInst("XOR r12 r13");
+      parser->writeInst("ld.w r13 0x1");
+      parser->writeInst("iadd r12 r13");
+      parser->writeInst("push r12");
       return Operand(OperandType::VALUE);
     } else if ("*" == _op) {
       // Dereference operator. Do nothing for value operands, because
       // we would just be popping them off and pushing them back onto
       // the stack.
       if (OperandType::VALUE != rhs.type()) {
-        operandValueToReg(parser, rhs, "M");
-        parser->writeInst("push M");
+        operandValueToReg(parser, rhs, "r12");
+        parser->writeInst("push r12");
       }
       return Operand(OperandType::ADDRESS);
     } else if ("&" == _op) {
@@ -232,61 +232,61 @@ Operand OperatorToken::output(Parser *parser,
       return Operand(OperandType::VALUE);
     } else if ("~" == _op) {
       // x ^ 0xffff == ~x
-      operandValueToReg(parser, rhs, "M");
-      parser->writeInst("MOVI N 0xffff");
-      parser->writeInst("XOR M N");
-      parser->writeInst("push M");
+      operandValueToReg(parser, rhs, "r12");
+      parser->writeInst("ld.w r13 0xffff");
+      parser->writeInst("XOR r12 r13");
+      parser->writeInst("push r12");
       return Operand(OperandType::VALUE);
     } else if ("!" == _op) {
       // x = x != 0 ? 1 : 0
       std::string label1 = parser->getUnusedLabel("label");
       std::string label2 = parser->getUnusedLabel("label");
-      operandValueToReg(parser, rhs, "M");
-      parser->writeInst("cmp M M");
+      operandValueToReg(parser, rhs, "r12");
+      parser->writeInst("cmp r12 r12");
       parser->writeInst("test notzero");
       parser->writeInst("jmpif " + label1);
-      parser->writeInst("MOVI M 0x1");
+      parser->writeInst("ld.w r12 0x1");
       parser->writeInst("jmp " + label2);
       parser->writeln("@LABEL " + label1 + ":");
-      parser->writeInst("MOVI M 0x0");
+      parser->writeInst("ld.w r12 0x0");
       parser->writeln("@LABEL " + label2 + ":");
-      parser->writeInst("push M");
+      parser->writeInst("push r12");
       return Operand(OperandType::VALUE);
     } else if ("+" == _op) {
       // Get the value and push it onto the stack.
-      operandValueToReg(parser, rhs, "M");
-      parser->writeInst("push M");
+      operandValueToReg(parser, rhs, "r12");
+      parser->writeInst("push r12");
       return Operand(OperandType::VALUE);
     }
   } else if (isBinary()) {
     if ("%" == _op) {
       // a % b == a - (b * (a / b))
-      operandValueToReg(parser, rhs, "N");
-      operandValueToReg(parser, lhs, "M");
-      parser->writeInst("MOV L M");
-      parser->writeInst("idiv M N");
-      parser->writeInst("imul M N");
-      parser->writeInst("isub L M");
-      parser->writeInst("push L");
+      operandValueToReg(parser, rhs, "r13");
+      operandValueToReg(parser, lhs, "r12");
+      parser->writeInst("cp.w r11 r12");
+      parser->writeInst("idiv r12 r13");
+      parser->writeInst("imul r12 r13");
+      parser->writeInst("isub r11 r12");
+      parser->writeInst("push r11");
       return Operand(OperandType::VALUE);
     } else if ("=" == _op) {
       // Load RHS value into a register.
-      operandValueToReg(parser, rhs, "N");
+      operandValueToReg(parser, rhs, "r13");
       if (OperandType::ADDRESS == lhs.type()) {
-        parser->writeInst("pop M");
-        parser->writeInst("STOR N M");
+        parser->writeInst("pop r12");
+        parser->writeInst("st.w [r12] r13");
       } else if (OperandType::REGISTER == lhs.type()) {
-        parser->writeInst("MOV " + lhs.reg() + " N");
+        parser->writeInst("cp.w " + lhs.reg() + " r13");
       } else {
         throw "Left hand side of assignment cannot be an rvalue.";
       }
-      parser->writeInst("push N");
+      parser->writeInst("push r13");
       return Operand(OperandType::VALUE);
     } else if ("+" == _op || "-" == _op || "*" == _op || "/" == _op ||
                "&" == _op || "|" == _op || "^" == _op ||
                "<<" == _op || ">>" == _op) {
-      operandValueToReg(parser, rhs, "N");
-      operandValueToReg(parser, lhs, "M");
+      operandValueToReg(parser, rhs, "r13");
+      operandValueToReg(parser, lhs, "r12");
       std::string inst;
       if ("+" == _op) {
         inst = "iadd";
@@ -297,71 +297,71 @@ Operand OperatorToken::output(Parser *parser,
       } else if ("/" == _op) {
         inst = "idiv";
       } else if ("&" == _op) {
-        inst = "AND";
+        inst = "and";
       } else if ("|" == _op) {
-        inst = "OR";
+        inst = "or";
       } else if ("^" == _op) {
-        inst = "XOR";
+        inst = "xor";
       } else if ("<<" == _op) {
-        inst = "SHL";
+        inst = "bsl";
       } else if (">>" == _op) {
-        inst = "SHRL";
+        inst = "bsr";
       }
-      parser->writeInst(inst + " M N");
-      parser->writeInst("push M");
+      parser->writeInst(inst + " r12 r13");
+      parser->writeInst("push r12");
       return Operand(OperandType::VALUE);
     } else if ("[" == _op) {
       // For x[a], push &x + (a * DATA_SIZE) onto the stack.
-      operandValueToReg(parser, rhs, "N");
-      operandValueToReg(parser, lhs, "M");
+      operandValueToReg(parser, rhs, "r13");
+      operandValueToReg(parser, lhs, "r12");
       // Assume DATA_SIZE is a power of 2, and do a fast
       // multiply by shifting left
-      parser->writeInst("MOVI L " + toHexStr(ceil(log2(DATA_SIZE))));
-      parser->writeInst("SHL N L");
-      parser->writeInst("iadd M N");
-      parser->writeInst("push M");
+      parser->writeInst("ld.w r11 " + toHexStr(ceil(log2(DATA_SIZE))));
+      parser->writeInst("bsl r13 r11");
+      parser->writeInst("iadd r12 r13");
+      parser->writeInst("push r12");
       return Operand(OperandType::ADDRESS);
     } else if ("||" == _op || "&&" == _op) {
-      // Make N either 0 or 1.
+      // Make N(r13) either 0 or 1.
       std::string label1 = parser->getUnusedLabel("label");
       std::string label2 = parser->getUnusedLabel("label");
-      operandValueToReg(parser, rhs, "N");
-      parser->writeInst("cmp N N");
+      operandValueToReg(parser, rhs, "r13");
+      parser->writeInst("cmp r13 r13");
       parser->writeInst("test zero");
       parser->writeInst("jmpif " + label1);
-      parser->writeInst("MOVI N 0x1");
+      parser->writeInst("ld.w r13 0x1");
       parser->writeInst("jmp " + label2);
       parser->writeln("@LABEL " + label1 + ":");
-      parser->writeInst("MOVI N 0x0");
+      parser->writeInst("ld.w r13 0x0");
       parser->writeln("@LABEL " + label2 + ":");
-      // Make M either 0 or 1.
+      // Make M(r12) either 0 or 1.
       std::string label3 = parser->getUnusedLabel("label");
       std::string label4 = parser->getUnusedLabel("label");
-      operandValueToReg(parser, lhs, "M");
-      parser->writeInst("cmp M M");
+      operandValueToReg(parser, lhs, "r12");
+      parser->writeInst("cmp r12 r12");
       parser->writeInst("test zero");
       parser->writeInst("jmpif " + label3);
-      parser->writeInst("MOVI M 0x1");
+      parser->writeInst("ld.w r12 0x1");
       parser->writeInst("jmp " + label4);
       parser->writeln("@LABEL " + label3 + ":");
-      parser->writeInst("MOVI M 0x0");
+      parser->writeInst("ld.w r12 0x0");
       parser->writeln("@LABEL " + label4 + ":");
       // Do the operation.
       if ("||" == _op) {
-        parser->writeInst("OR M N");
+        parser->writeInst("OR r12 r13");
       } else if ("&&" == _op) {
-        parser->writeInst("AND M N");
+        parser->writeInst("AND r12 r13");
       }
       // Push the result.
-      parser->writeInst("push M");
+      parser->writeInst("push r12");
       return Operand(OperandType::VALUE);
     } else if ("<" == _op || "<=" == _op || ">" == _op || ">=" == _op ||
                "==" == _op || "!=" == _op) {
       std::string label1 = parser->getUnusedLabel("label");
       std::string label2 = parser->getUnusedLabel("label");
-      operandValueToReg(parser, rhs, "N");
-      operandValueToReg(parser, lhs, "M");
-      parser->writeInst("cmp M N");
+      operandValueToReg(parser, rhs, "r13");
+      operandValueToReg(parser, lhs, "r12");
+      parser->writeInst("cmp r12 r13");
       std::string inst;
       if ("<" == _op) {
         parser->writeInst("test less");
@@ -377,12 +377,12 @@ Operand OperatorToken::output(Parser *parser,
         parser->writeInst("test notequal");
       }
       parser->writeInst("jmpif " + label1);
-      parser->writeInst("MOVI M 0x0");
+      parser->writeInst("ld.w r12 0x0");
       parser->writeInst("jmp " + label2);
       parser->writeln("@LABEL " + label1 + ":");
-      parser->writeInst("MOVI M 0x1");
+      parser->writeInst("ld.w r12 0x1");
       parser->writeln("@LABEL " + label2 + ":");
-      parser->writeInst("push M");
+      parser->writeInst("push r12");
       return Operand(OperandType::VALUE);
     }
   }
@@ -774,8 +774,8 @@ void ExprToken::output(Parser *parser, const VarLocation& varLoc) {
       operands.push(result);
     } else if (nullptr != global) {
       // Push the address onto the stack.
-      parser->writeInst("MOVI L " + global->name());
-      parser->writeInst("push L");
+      parser->writeInst("lea r11 " + global->name());
+      parser->writeInst("push r11");
       operands.push(Operand(OperandType::ADDRESS));
     } else if (nullptr != var) {
       // Push nothing onto the stack for a register, or the address onto the
@@ -783,19 +783,19 @@ void ExprToken::output(Parser *parser, const VarLocation& varLoc) {
       if (var->isReg()) {
         operands.push(Operand(OperandType::REGISTER, var->getReg()));
       } else {
-        // Get the variable's location into register M
-        parser->writeInst("MOV M FP");
+        // Get the variable's location into register M(r12)
+        parser->writeInst("cp.w r12 r14");
         int offset = var->getOffset();
         if (0 != offset) {
-          parser->writeInst("MOVI L " + toHexStr(0 < offset ? offset : -offset));
+          parser->writeInst("ld.w r11 " + toHexStr(0 < offset ? offset : -offset));
           if (0 < offset) {
-            parser->writeInst("iadd M L");
+            parser->writeInst("iadd r12 r11");
           } else {
-            parser->writeInst("isub M L");
+            parser->writeInst("isub r12 r11");
           }
         }
         // Push the address onto the stack.
-        parser->writeInst("push M");
+        parser->writeInst("push r12");
         operands.push(Operand(OperandType::ADDRESS));
       }
     } else if (nullptr != literal) {
@@ -805,7 +805,7 @@ void ExprToken::output(Parser *parser, const VarLocation& varLoc) {
     } else if (nullptr != fnCall) {
       // Get the result of the function call and push it onto the stack.
       fnCall->output(parser);
-      parser->writeInst("push L");
+      parser->writeInst("push r11");
       // The result of a function call is a value token.
       operands.push(Operand(OperandType::VALUE));
     }
@@ -817,20 +817,20 @@ void ExprToken::output(Parser *parser, const VarLocation& varLoc) {
     // Get the variable's address in a register so that we can store to
     // that address.
     int offset = varLoc.getOffset();
-    parser->writeInst("MOV M FP");
+    parser->writeInst("cp.w r12 r14");
     if (0 != offset) {
       if (offset < 0) {
-        parser->writeInst("MOVI L " + toHexStr(-offset));
-        parser->writeInst("isub M L");
+        parser->writeInst("ld.w r11 " + toHexStr(-offset));
+        parser->writeInst("isub r12 r11");
       } else {
-        parser->writeInst("MOVI L " + toHexStr(offset));
-        parser->writeInst("iadd M L");
+        parser->writeInst("ld.w r11 " + toHexStr(offset));
+        parser->writeInst("iadd r12 r11");
       }
     }
     // Pop the result from the expression and store it in the calculated
     // address.
-    operandValueToReg(parser, operands.top(), "L");
-    parser->writeInst("STOR L M");
+    operandValueToReg(parser, operands.top(), "r11");
+    parser->writeInst("st.w [r12] r11");
   }
 }
 
@@ -956,45 +956,47 @@ void FunctionCallToken::output(Parser *parser) {
   // output will look different (with no CALL instruction).
   if ("COLOR" == _funcName) {
     // Signature is "void COLOR(uint16 color)"
-    _arguments[0]->output(parser, VarLocation("M"));
-    parser->writeInst("COLOR M");
+    _arguments[0]->output(parser, VarLocation("r12"));
+    parser->writeInst("COLOR r12");
   } else if ("PIXEL" == _funcName) {
     // Signature is "void PIXEL(uint16 x, uint16 y)"
-    _arguments[0]->output(parser, VarLocation("M"));
-    _arguments[1]->output(parser, VarLocation("N"));
-    parser->writeInst("PIXEL M N");
+    _arguments[0]->output(parser, VarLocation("r12"));
+    _arguments[1]->output(parser, VarLocation("r13"));
+    parser->writeInst("PIXEL r12 r13");
   } else if ("TIMERST" == _funcName) {
     // Signatue is "void TIMERST()"
     parser->writeInst("TIMERST");
   } else if ("TIME" == _funcName) {
     // Signature is "uint16 TIME()"
-    parser->writeInst("TIME L");
+    parser->writeInst("TIME r11");
   } else if ("INPUT" == _funcName) {
     // Signature is "uint16 INPUT(uint16 input_id)"
-    _arguments[0]->output(parser, VarLocation("M"));
-    parser->writeInst("INPUT L M");
+    _arguments[0]->output(parser, VarLocation("r12"));
+    parser->writeInst("INPUT r11 r12");
   } else if ("RND" == _funcName) {
     // Signature is "uint16 RND()"
-    parser->writeInst("RND L");
+    parser->writeInst("RND r11");
   } else {
     // Save registers A through D if we are using them as arguments.
     std::stack<std::string> savedRegisters;
-    std::string reg = "A";
-    for (size_t i = 0; i < 4 && i < _arguments.size(); i++, reg[0]++) {
-      parser->writeInst("push " + reg);
-      savedRegisters.push(reg);
+    int regindex = 0; // A
+    for (size_t i = 0; i < 4 && i < _arguments.size(); i++, regindex++) {
+      std::string currreg = "r"+std::to_string(regindex);
+      parser->writeInst("push " + currreg);
+      savedRegisters.push(currreg);
     }
     // Evaluate up to the first four arguments and store them in registers
     // A through D.
-    reg = "A";
-    for (size_t i = 0; i < 4 && i < _arguments.size(); i++, reg[0]++) {
-      _arguments[i]->output(parser, VarLocation(reg));
+    regindex = 0;
+    for (size_t i = 0; i < 4 && i < _arguments.size(); i++, regindex++) {
+      std::string currreg = "r"+std::to_string(regindex);
+      _arguments[i]->output(parser, VarLocation(currreg));
     }
     // Push any overflow arguments onto the stack. In reverse order so that
     // it matches the callee's expectations of the order.
     for (int i = _arguments.size() - 1; 4 <= i; i--) {
-      _arguments[i]->output(parser, VarLocation("L"));
-      parser->writeInst("push L");
+      _arguments[i]->output(parser, VarLocation("r11"));
+      parser->writeInst("push r11");
     }
     // Call the function
     parser->writeInst("branch " + _funcName);
@@ -1095,14 +1097,16 @@ bool GlobalVarToken::parse(
  * Output assembly code for this global variable declaration.
  */
 void GlobalVarToken::output(Parser *parser) {
-  // Write out a label for the global variable.
-  parser->writeln("@LABEL " + _name + ":");
   if (_type.isArray()) {
     // The address for the array's elements will be the current byte
     // position plus the instruction size.
-    parser->writeData(toHexStr(parser->getBytePos() + INST_SIZE), 1);
+    parser->writeln("@ORG " + toHexStr(parser->getBytePos() + INST_SIZE));
+  }
+  // Write out a label for the global variable.
+  parser->writeln("@LABEL " + _name + ":");
+  if (_type.isArray()) {
     // Write out the array's elements as hex values.
-    std::string dataOutput;
+    std::string dataOutput = "@DW ";
     for (size_t i = 0; i < _arrayValues.size(); i++) {
       dataOutput += toHexStr(_arrayValues[i]);
       if (i + 1 < _arrayValues.size()) {
@@ -1275,6 +1279,8 @@ void FunctionToken::output(Parser *parser) {
   if (isBuiltin(_name)) {
     return;
   }
+  parser->writeln("");
+  parser->writeln("# -------------------------- "+_name + " -------------------------- ");
   // Create an end label for the function, so if we return we can jump
   // to it without having to unwind the stack each time.
   std::string endLabel = parser->getUnusedLabel(_name + "_end");
@@ -1283,15 +1289,17 @@ void FunctionToken::output(Parser *parser) {
   // Assign registers or stack positions to parameters. Parameters can
   // be stored in registers "A" through "D", and if there are more than
   // 4 parameters they will be stored on the stack before the return
-  // address. The return address is stored at FP, so the first
+  // address. The return address is stored at FP(r14), so the first
   // overflow parameter will be stored at -2, the next at -4, etc.
-  std::string reg = "A";
+  //std::string reg = "";
+  int regindex = 0; // A
   int offset = -ADDRESS_SIZE;
   int numOverflowParams = 0;
   for (auto param : _parameters) {
-    if (reg[0] <= 'D') {
-      param->setReg(reg);
-      reg[0]++;
+    if (regindex <= 4) { // D
+      std::string currreg = "r"+std::to_string(regindex);
+      param->setReg(currreg);
+      regindex++;
     } else {
       param->setOffset(offset);
       offset -= DATA_SIZE;
@@ -1303,19 +1311,21 @@ void FunctionToken::output(Parser *parser) {
   // are more local variables than can fit in registers we store them
   // as frame pointer offsets. The offset starts at 0 and increases from
   // there.
-  reg = "E";
+  //std::string reg = "E";
+  regindex = 5;
   offset = 0;
   int extraParamOffset = 0;
   for (auto local : _localVars) {
-    if (reg[0] <= 'K' && local->canBeReg()) {
-      local->setReg(reg);
+    if (regindex <= 10 && local->canBeReg()) { // K(10)
+      std::string currreg = "r"+std::to_string(regindex);
+      local->setReg(currreg);
       // This is a callee-saved register, push it onto the stack and
       // make a note that we need to pop it later.
-      parser->writeInst("push " + reg);
-      _savedRegisters.push(reg);
+      parser->writeInst("push " + currreg);
+      _savedRegisters.push(currreg);
       extraParamOffset -= DATA_SIZE;
       // Increment the register
-      reg[0]++;
+      regindex++;
     } else {
       local->setOffset(offset);
       offset += DATA_SIZE;
@@ -1330,11 +1340,11 @@ void FunctionToken::output(Parser *parser) {
     }
   }
   // Save the previous value of the frame pointer.
-  parser->writeInst("push FP");
-  _savedRegisters.push("FP");
+  parser->writeInst("push r14");
+  _savedRegisters.push("r14");
   extraParamOffset -= DATA_SIZE;
   // Set the frame pointer to the stack's current location.
-  parser->writeInst("MOV FP SP");
+  parser->writeInst("cp.w r14 r15");
   // Store parameters on the stack if they are currently stored in
   // registers but are flagged as needing their own address. Also fix
   // offset for parameters on the stack based on the number of saved
@@ -1350,8 +1360,8 @@ void FunctionToken::output(Parser *parser) {
   }
   // Reserve space for the local variable storage on the stack.
   if (0 < offset) {
-    parser->writeInst("MOVI L " + toHexStr(offset));
-    parser->writeInst("iadd SP L");
+    parser->writeInst("ld.w r11 " + toHexStr(offset));
+    parser->writeInst("iadd r15 r11");
   }
 
   // Outputs initial values of local variables.
@@ -1375,7 +1385,7 @@ void FunctionToken::output(Parser *parser) {
   // they can jump here without having to unwind the stack in
   // multiple places.
   parser->writeln("@LABEL " + endLabel + ":");
-  parser->writeInst("MOV SP FP");
+  parser->writeInst("cp.w r15 r14");
   while (!_savedRegisters.empty()) {
     parser->writeInst("pop " + _savedRegisters.top());
     _savedRegisters.pop();
@@ -1383,9 +1393,9 @@ void FunctionToken::output(Parser *parser) {
   // If there are overflow parameters, pop them off the stack in
   // addition to jumping to the return address.
   if (0 < numOverflowParams) {
-    parser->writeInst("RET " + toHexStr(numOverflowParams * DATA_SIZE, 2));
+    parser->writeInst("RETOVF " + toHexStr(numOverflowParams * DATA_SIZE, 2));
   } else {
-    parser->writeInst("RET");
+    parser->writeInst("ret");
   }
 }
 
@@ -1665,28 +1675,28 @@ void LocalVarToken::output(Parser *parser,
   if (_type.isArray()) {
     // Store the location of the array at the variable's location.
     if (this->isReg()) {
-      // Store FP + _dataOffset in the variable's register.
-      parser->writeInst("MOV " + this->getReg() + " FP");
+      // Store FP(r14) + _dataOffset in the variable's register.
+      parser->writeInst("cp.w " + this->getReg() + " r14");
       if (0 != _dataOffset) {
-        parser->writeInst("MOVI L " + toHexStr(_dataOffset));
-        parser->writeInst("iadd " + this->getReg() + " L");
+        parser->writeInst("ld.w r11 " + toHexStr(_dataOffset));
+        parser->writeInst("iadd " + this->getReg() + " r11");
       }
     } else {
-      // Store FP + _offset in M
-      parser->writeInst("MOV M FP");
+      // Store FP(r14) + _offset in M(r12)
+      parser->writeInst("cp.w r12 r14");
       if (0 != _offset) {
-        parser->writeInst("MOVI L " + toHexStr(_offset));
-        parser->writeInst("iadd M L");
+        parser->writeInst("ld.w r11 " + toHexStr(_offset));
+        parser->writeInst("iadd r12 r11");
       }
-      // Store FP + _dataOffset in N
-      parser->writeInst("MOV N FP");
+      // Store FP(r14) + _dataOffset in N(r13)
+      parser->writeInst("cp.w r13 r14");
       if (0 != _dataOffset) {
-        parser->writeInst("MOVI L " + toHexStr(_dataOffset));
-        parser->writeInst("iadd N L");
+        parser->writeInst("ld.w r11 " + toHexStr(_dataOffset));
+        parser->writeInst("iadd r13 r11");
       }
       // Store the data offset in the variable's location relative to
       // the frame pointer.
-      parser->writeInst("STOR N M");
+      parser->writeInst("st.w [r12] r13");
     }
   }
   // If there is no initial value, do nothing else.
@@ -1737,7 +1747,7 @@ void ExprStatement::output(Parser *parser,
                            const std::string&,
                            const std::string&,
                            const std::string&) {
-  _expr.output(parser, VarLocation("L"));
+  _expr.output(parser, VarLocation("r11"));
 }
 
 /**
@@ -1847,8 +1857,8 @@ void IfStatement::output(Parser *parser,
   std::string falseLabel = parser->getUnusedLabel(function->name() + "_if_false");
   std::string endLabel = parser->getUnusedLabel(function->name() + "_if_end");
   // Test the condition and jump to the false label if it is false.
-  _condExpr.output(parser, VarLocation("L"));
-  parser->writeInst("cmp L L");
+  _condExpr.output(parser, VarLocation("r11"));
+  parser->writeInst("cmp r11 r11");
   parser->writeInst("test zero");
   parser->writeInst("jmpif " + falseLabel);
   // Output the true statement and jump to the end.
@@ -1976,7 +1986,7 @@ void ForStatement::output(Parser *parser,
                           const std::string&) {
   // Evaluate the initial expressions and discard the result.
   for (auto expr : _initExprs) {
-    expr->output(parser, VarLocation("L"));
+    expr->output(parser, VarLocation("r11"));
   }
   // Create the start, break, and continue labels.
   std::string startLabel =
@@ -1987,8 +1997,8 @@ void ForStatement::output(Parser *parser,
     parser->getUnusedLabel(function->name() + "_for_continue");
   // Output the start label and test the condition.
   parser->writeln("@LABEL " + startLabel + ":");
-  _condExpr->output(parser, VarLocation("L"));
-  parser->writeInst("cmp L L");
+  _condExpr->output(parser, VarLocation("r11"));
+  parser->writeInst("cmp r11 r11");
   parser->writeInst("test zero");
   parser->writeInst("jmpif " + breakLabel);
   // Output the function body followed by the continue label.
@@ -1996,7 +2006,7 @@ void ForStatement::output(Parser *parser,
   parser->writeln("@LABEL " + continueLabel + ":");
   // Output the loop expressions and jump to the start of the loop.
   for (auto expr : _loopExprs) {
-    expr->output(parser, VarLocation("L"));
+    expr->output(parser, VarLocation("r11"));
   }
   parser->writeInst("jmp " + startLabel);
   // Output the break label.
@@ -2070,8 +2080,8 @@ void WhileStatement::output(Parser *parser,
     parser->getUnusedLabel(function->name() + "_while_continue");
   // Output the continue label and test the condition.
   parser->writeln("@LABEL " + continueLabel + ":");
-  _condExpr->output(parser, VarLocation("L"));
-  parser->writeInst("cmp L L");
+  _condExpr->output(parser, VarLocation("r11"));
+  parser->writeInst("cmp r11 r11");
   parser->writeInst("test zero");
   parser->writeInst("jmpif " + breakLabel);
   // Output the loop body and then jump to the start again.
@@ -2158,8 +2168,8 @@ void DoWhileStatement::output(Parser *parser,
   // Output the loop body.
   _body->output(parser, function, returnLabel, breakLabel, continueLabel);
   // Test the condition.
-  _condExpr->output(parser, VarLocation("L"));
-  parser->writeInst("cmp L L");
+  _condExpr->output(parser, VarLocation("r11"));
+  parser->writeInst("cmp r11 r11");
   parser->writeInst("test notzero");
   parser->writeInst("jmpif " + continueLabel);
   // Output the break label.
@@ -2271,7 +2281,7 @@ bool ReturnStatement::parse(
 /**
  * Calculates the return value from the return expression, if the
  * function is not void. Then jumps to the epilogue of the function.
- * Return values are stored in the register L.
+ * Return values are stored in the register L(r11).
  */
 void ReturnStatement::output(Parser *parser,
                              const std::shared_ptr<FunctionToken>&,
@@ -2279,7 +2289,7 @@ void ReturnStatement::output(Parser *parser,
                              const std::string&,
                              const std::string&) {
   if (_hasExpr) {
-    _returnExpr.output(parser, VarLocation("L"));
+    _returnExpr.output(parser, VarLocation("r11"));
   }
   parser->writeInst("jmp " + returnLabel);
 }

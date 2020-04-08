@@ -17,9 +17,9 @@ void operandValueToReg(Parser *parser,
                        const std::string& reg) {
   if (OperandType::ADDRESS == operand.type()) {
     parser->writeInst("pop " + reg);
-    parser->writeInst("LOAD " + reg + " " + reg);
+    parser->writeInst("ld.w " + reg + " [" + reg + "]");
   } else if (OperandType::REGISTER == operand.type()) {
-    parser->writeInst("MOV " + reg + " " + operand.reg());
+    parser->writeInst("cp.w " + reg + " " + operand.reg());
   } else if (OperandType::VALUE == operand.type()) {
     parser->writeInst("pop " + reg);
   } else if (OperandType::LITERAL == operand.type()) {

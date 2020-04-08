@@ -151,11 +151,12 @@ bool Parser::output(char *filename) {
   std::string stackLabel = this->getUnusedLabel("stack");
   this->writeln("# Neko v3 asm output");
   this->writeln("# R15 == SP, R14 == FP");
-  this->writeInst("lea SP " + stackLabel);
+  this->writeInst("lea r15 " + stackLabel);
   this->writeInst("branch main");
   std::string finishedLabel = this->getUnusedLabel("program_finished");
   this->writeln("@LABEL " + finishedLabel + ":");
   this->writeInst("jmp " + finishedLabel);
+  this->writeln("");
   // Output global variables.
   for (auto global : _globals) {
     global->output(this);
@@ -165,6 +166,7 @@ bool Parser::output(char *filename) {
     function->output(this);
   }
   // Output the stack position.
+  this->writeln("");
   this->writeln("@LABEL " + stackLabel + ":");
   return true;
 }
@@ -213,7 +215,7 @@ void Parser::writeInst(const std::string& inst) {
     std::string pushReg = _pendingPushReg;
     _pendingPushReg = "";
     if (popReg != pushReg) {
-      this->writeInst("MOV " + popReg + " " + pushReg);
+      this->writeInst("cp.w " + popReg + " " + pushReg);
     }
     return;
   }
