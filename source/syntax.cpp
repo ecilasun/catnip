@@ -247,9 +247,9 @@ Operand OperatorToken::output(Parser *parser,
       parser->writeInst("jmpif " + label1);
       parser->writeInst("ld.w r12 0x1");
       parser->writeInst("jmp " + label2);
-      parser->writeln("@LABEL " + label1 + ":");
+      parser->writeln("@LABEL " + label1);
       parser->writeInst("ld.w r12 0x0");
-      parser->writeln("@LABEL " + label2 + ":");
+      parser->writeln("@LABEL " + label2);
       parser->writeInst("push r12");
       return Operand(OperandType::VALUE);
     } else if ("+" == _op) {
@@ -331,9 +331,9 @@ Operand OperatorToken::output(Parser *parser,
       parser->writeInst("jmpif " + label1);
       parser->writeInst("ld.w r13 0x1");
       parser->writeInst("jmp " + label2);
-      parser->writeln("@LABEL " + label1 + ":");
+      parser->writeln("@LABEL " + label1);
       parser->writeInst("ld.w r13 0x0");
-      parser->writeln("@LABEL " + label2 + ":");
+      parser->writeln("@LABEL " + label2);
       // Make M(r12) either 0 or 1.
       std::string label3 = parser->getUnusedLabel("label");
       std::string label4 = parser->getUnusedLabel("label");
@@ -343,9 +343,9 @@ Operand OperatorToken::output(Parser *parser,
       parser->writeInst("jmpif " + label3);
       parser->writeInst("ld.w r12 0x1");
       parser->writeInst("jmp " + label4);
-      parser->writeln("@LABEL " + label3 + ":");
+      parser->writeln("@LABEL " + label3);
       parser->writeInst("ld.w r12 0x0");
-      parser->writeln("@LABEL " + label4 + ":");
+      parser->writeln("@LABEL " + label4);
       // Do the operation.
       if ("||" == _op) {
         parser->writeInst("OR r12 r13");
@@ -379,9 +379,9 @@ Operand OperatorToken::output(Parser *parser,
       parser->writeInst("jmpif " + label1);
       parser->writeInst("ld.w r12 0x0");
       parser->writeInst("jmp " + label2);
-      parser->writeln("@LABEL " + label1 + ":");
+      parser->writeln("@LABEL " + label1);
       parser->writeInst("ld.w r12 0x1");
-      parser->writeln("@LABEL " + label2 + ":");
+      parser->writeln("@LABEL " + label2);
       parser->writeInst("push r12");
       return Operand(OperandType::VALUE);
     }
@@ -1103,7 +1103,7 @@ void GlobalVarToken::output(Parser *parser) {
     parser->writeln("@ORG " + toHexStr(parser->getBytePos() + INST_SIZE));
   }
   // Write out a label for the global variable.
-  parser->writeln("@LABEL " + _name + ":");
+  parser->writeln("@LABEL " + _name);
   if (_type.isArray()) {
     // Write out the array's elements as hex values.
     std::string dataOutput = "@DW ";
@@ -1285,7 +1285,7 @@ void FunctionToken::output(Parser *parser) {
   // to it without having to unwind the stack each time.
   std::string endLabel = parser->getUnusedLabel(_name + "_end");
   // Create a label for the function so that we can CALL it.
-  parser->writeln("@LABEL " + _name + ":");
+  parser->writeln("@LABEL " + _name);
   // Assign registers or stack positions to parameters. Parameters can
   // be stored in registers "A" through "D", and if there are more than
   // 4 parameters they will be stored on the stack before the return
@@ -1384,7 +1384,7 @@ void FunctionToken::output(Parser *parser) {
   // We have a label here so that when we have return statements
   // they can jump here without having to unwind the stack in
   // multiple places.
-  parser->writeln("@LABEL " + endLabel + ":");
+  parser->writeln("@LABEL " + endLabel);
   parser->writeInst("cp.w r15 r14");
   while (!_savedRegisters.empty()) {
     parser->writeInst("pop " + _savedRegisters.top());
@@ -1866,14 +1866,14 @@ void IfStatement::output(Parser *parser,
                          continueLabel);
   parser->writeInst("jmp " + endLabel);
   // Output the false statement label and the false statement.
-  parser->writeln("@LABEL " + falseLabel + ":");
+  parser->writeln("@LABEL " + falseLabel);
   if (nullptr != _falseStatement) {
     _falseStatement->output(parser, function, returnLabel, breakLabel,
                             continueLabel);
   }
   // Output the end label that the true statement uses to jump over the
   // false statement.
-  parser->writeln("@LABEL " + endLabel + ":");
+  parser->writeln("@LABEL " + endLabel);
 }
 
 /**
@@ -1996,21 +1996,21 @@ void ForStatement::output(Parser *parser,
   std::string continueLabel =
     parser->getUnusedLabel(function->name() + "_for_continue");
   // Output the start label and test the condition.
-  parser->writeln("@LABEL " + startLabel + ":");
+  parser->writeln("@LABEL " + startLabel);
   _condExpr->output(parser, VarLocation("r11"));
   parser->writeInst("cmp r11 r11");
   parser->writeInst("test zero");
   parser->writeInst("jmpif " + breakLabel);
   // Output the function body followed by the continue label.
   _body->output(parser, function, returnLabel, breakLabel, continueLabel);
-  parser->writeln("@LABEL " + continueLabel + ":");
+  parser->writeln("@LABEL " + continueLabel);
   // Output the loop expressions and jump to the start of the loop.
   for (auto expr : _loopExprs) {
     expr->output(parser, VarLocation("r11"));
   }
   parser->writeInst("jmp " + startLabel);
   // Output the break label.
-  parser->writeln("@LABEL " + breakLabel + ":");
+  parser->writeln("@LABEL " + breakLabel);
 }
 
 /**
@@ -2079,7 +2079,7 @@ void WhileStatement::output(Parser *parser,
   std::string continueLabel =
     parser->getUnusedLabel(function->name() + "_while_continue");
   // Output the continue label and test the condition.
-  parser->writeln("@LABEL " + continueLabel + ":");
+  parser->writeln("@LABEL " + continueLabel);
   _condExpr->output(parser, VarLocation("r11"));
   parser->writeInst("cmp r11 r11");
   parser->writeInst("test zero");
@@ -2088,7 +2088,7 @@ void WhileStatement::output(Parser *parser,
   _body->output(parser, function, returnLabel, breakLabel, continueLabel);
   parser->writeInst("jmp " + continueLabel);
   // Output the break label.
-  parser->writeln("@LABEL " + breakLabel + ":");
+  parser->writeln("@LABEL " + breakLabel);
 }
 
 /**
@@ -2164,7 +2164,7 @@ void DoWhileStatement::output(Parser *parser,
   std::string continueLabel =
     parser->getUnusedLabel(function->name() + "_do_while_continue");
   // Output the continue label.
-  parser->writeln("@LABEL " + continueLabel + ":");
+  parser->writeln("@LABEL " + continueLabel);
   // Output the loop body.
   _body->output(parser, function, returnLabel, breakLabel, continueLabel);
   // Test the condition.
@@ -2173,7 +2173,7 @@ void DoWhileStatement::output(Parser *parser,
   parser->writeInst("test notzero");
   parser->writeInst("jmpif " + continueLabel);
   // Output the break label.
-  parser->writeln("@LABEL " + breakLabel + ":");
+  parser->writeln("@LABEL " + breakLabel);
 }
 
 /**
@@ -2322,7 +2322,7 @@ void LabelStatement::output(Parser *parser,
                             const std::string&,
                             const std::string&,
                             const std::string&) {
-  parser->writeln("@LABEL " + _asmLabel + ":");
+  parser->writeln("@LABEL " + _asmLabel);
 }
 
 /**

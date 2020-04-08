@@ -2,15 +2,15 @@
 # R15 == SP, R14 == FP
         lea r15 stack
         branch main
-@LABEL program_finished:
+@LABEL program_finished
         jmp program_finished
 
 @ORG 0x0010
-@LABEL sprite:
+@LABEL sprite
         @DW 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0xffff 0x0000 0x0000 0x0000 0x0000 0x0000 0x00ff 0xffff 0xff00 0xf69a 0x9a9a 0x9a9a 0x9a9a 0x9a9a 0x5100 0xffff 0xff00 0x9a09 0x0909 0x0909 0x0909 0x0909 0x5100 0xffff 0xff00 0x9a09 0x0909 0x0909 0x0909 0x0909 0x5100 0xffff 0xff00 0x9a09 0x0909 0x0909 0x0909 0x0909 0x5100 0xffff 0xff00 0x9a09 0x0909 0x0909 0x0909 0x0909 0x5100 0xffff 0xff00 0x9a09 0x0909 0x0909 0x0909 0x0909 0x5100 0xffff 0xff00 0x9a09 0x0909 0x0909 0x0909 0x0909 0x5151
 
 # -------------------------- draw_sprite -------------------------- 
-@LABEL draw_sprite:
+@LABEL draw_sprite
         push r5
         push r6
         push r14
@@ -18,7 +18,7 @@
         cp.w r13 r1
         cp.w r6 r13
         cp.w r11 r13
-@LABEL draw_sprite_for_start:
+@LABEL draw_sprite_for_start
         ld.w r13 0x0010
         cp.w r12 r1
         iadd r12 r13
@@ -29,9 +29,9 @@
         jmpif label
         ld.w r12 0x0
         jmp label1
-@LABEL label:
+@LABEL label
         ld.w r12 0x1
-@LABEL label1:
+@LABEL label1
         cp.w r11 r12
         cmp r11 r11
         test zero
@@ -39,7 +39,7 @@
         cp.w r13 r0
         cp.w r5 r13
         cp.w r11 r13
-@LABEL draw_sprite_for_start1:
+@LABEL draw_sprite_for_start1
         ld.w r13 0x0010
         cp.w r12 r0
         iadd r12 r13
@@ -50,9 +50,9 @@
         jmpif label2
         ld.w r12 0x0
         jmp label3
-@LABEL label2:
+@LABEL label2
         ld.w r12 0x1
-@LABEL label3:
+@LABEL label3
         cp.w r11 r12
         cmp r11 r11
         test zero
@@ -60,7 +60,7 @@
         cp.w r12 r5
         cp.w r13 r6
         PIXEL r12 r13
-@LABEL draw_sprite_for_continue1:
+@LABEL draw_sprite_for_continue1
         ld.w r13 0x0001
         cp.w r12 r5
         iadd r12 r13
@@ -68,8 +68,8 @@
         cp.w r5 r13
         cp.w r11 r13
         jmp draw_sprite_for_start1
-@LABEL draw_sprite_for_break1:
-@LABEL draw_sprite_for_continue:
+@LABEL draw_sprite_for_break1
+@LABEL draw_sprite_for_continue
         ld.w r13 0x0001
         cp.w r12 r6
         iadd r12 r13
@@ -77,8 +77,8 @@
         cp.w r6 r13
         cp.w r11 r13
         jmp draw_sprite_for_start
-@LABEL draw_sprite_for_break:
-@LABEL draw_sprite_end:
+@LABEL draw_sprite_for_break
+@LABEL draw_sprite_end
         cp.w r15 r14
         pop r14
         pop r6
@@ -86,10 +86,10 @@
         ret
 
 # -------------------------- main -------------------------- 
-@LABEL main:
+@LABEL main
         push r14
         cp.w r14 r15
-@LABEL main_while_continue:
+@LABEL main_while_continue
         ld.w r11 0x0001
         cmp r11 r11
         test zero
@@ -102,10 +102,10 @@
         pop r1
         pop r0
         jmp main_while_continue
-@LABEL main_while_break:
-@LABEL main_end:
+@LABEL main_while_break
+@LABEL main_end
         cp.w r15 r14
         pop r14
         ret
 
-@LABEL stack:
+@LABEL stack

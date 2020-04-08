@@ -154,7 +154,7 @@ bool Parser::output(char *filename) {
   this->writeInst("lea r15 " + stackLabel);
   this->writeInst("branch main");
   std::string finishedLabel = this->getUnusedLabel("program_finished");
-  this->writeln("@LABEL " + finishedLabel + ":");
+  this->writeln("@LABEL " + finishedLabel);
   this->writeInst("jmp " + finishedLabel);
   this->writeln("");
   // Output global variables.
@@ -167,7 +167,7 @@ bool Parser::output(char *filename) {
   }
   // Output the stack position.
   this->writeln("");
-  this->writeln("@LABEL " + stackLabel + ":");
+  this->writeln("@LABEL " + stackLabel);
   return true;
 }
 
