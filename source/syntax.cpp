@@ -3,6 +3,8 @@
  * Copyright (c) 2015 Robert Fotino, All Rights Reserved
  */
 
+// Engin Cilasun : Modified asm code generation targeting Neko CPU - April 2020
+
 #include <iostream>
 #include <regex>
 #include <cmath>
@@ -210,8 +212,8 @@ Operand OperatorToken::output(Parser *parser,
       parser->writeInst("MOVI N 0xffff");
       parser->writeInst("XOR M N");
       parser->writeInst("MOVI N 0x1");
-      parser->writeInst("ADD M N");
-      parser->writeInst("PUSH M");
+      parser->writeInst("iadd M N");
+      parser->writeInst("push M");
       return Operand(OperandType::VALUE);
     } else if ("*" == _op) {
       // Dereference operator. Do nothing for value operands, because
@@ -219,7 +221,7 @@ Operand OperatorToken::output(Parser *parser,
       // the stack.
       if (OperandType::VALUE != rhs.type()) {
         operandValueToReg(parser, rhs, "M");
-        parser->writeInst("PUSH M");
+        parser->writeInst("push M");
       }
       return Operand(OperandType::ADDRESS);
     } else if ("&" == _op) {
@@ -233,26 +235,27 @@ Operand OperatorToken::output(Parser *parser,
       operandValueToReg(parser, rhs, "M");
       parser->writeInst("MOVI N 0xffff");
       parser->writeInst("XOR M N");
-      parser->writeInst("PUSH M");
+      parser->writeInst("push M");
       return Operand(OperandType::VALUE);
     } else if ("!" == _op) {
       // x = x != 0 ? 1 : 0
       std::string label1 = parser->getUnusedLabel("label");
       std::string label2 = parser->getUnusedLabel("label");
       operandValueToReg(parser, rhs, "M");
-      parser->writeInst("TST M M");
-      parser->writeInst("JNE " + label1);
+      parser->writeInst("cmp M M");
+      parser->writeInst("test notzero");
+      parser->writeInst("jmpif " + label1);
       parser->writeInst("MOVI M 0x1");
-      parser->writeInst("JMPI " + label2);
-      parser->writeln(label1 + ":");
+      parser->writeInst("jmp " + label2);
+      parser->writeln("@LABEL " + label1 + ":");
       parser->writeInst("MOVI M 0x0");
-      parser->writeln(label2 + ":");
-      parser->writeInst("PUSH M");
+      parser->writeln("@LABEL " + label2 + ":");
+      parser->writeInst("push M");
       return Operand(OperandType::VALUE);
     } else if ("+" == _op) {
       // Get the value and push it onto the stack.
       operandValueToReg(parser, rhs, "M");
-      parser->writeInst("PUSH M");
+      parser->writeInst("push M");
       return Operand(OperandType::VALUE);
     }
   } else if (isBinary()) {
@@ -261,23 +264,23 @@ Operand OperatorToken::output(Parser *parser,
       operandValueToReg(parser, rhs, "N");
       operandValueToReg(parser, lhs, "M");
       parser->writeInst("MOV L M");
-      parser->writeInst("DIV M N");
-      parser->writeInst("MUL M N");
-      parser->writeInst("SUB L M");
-      parser->writeInst("PUSH L");
+      parser->writeInst("idiv M N");
+      parser->writeInst("imul M N");
+      parser->writeInst("isub L M");
+      parser->writeInst("push L");
       return Operand(OperandType::VALUE);
     } else if ("=" == _op) {
       // Load RHS value into a register.
       operandValueToReg(parser, rhs, "N");
       if (OperandType::ADDRESS == lhs.type()) {
-        parser->writeInst("POP M");
+        parser->writeInst("pop M");
         parser->writeInst("STOR N M");
       } else if (OperandType::REGISTER == lhs.type()) {
         parser->writeInst("MOV " + lhs.reg() + " N");
       } else {
         throw "Left hand side of assignment cannot be an rvalue.";
       }
-      parser->writeInst("PUSH N");
+      parser->writeInst("push N");
       return Operand(OperandType::VALUE);
     } else if ("+" == _op || "-" == _op || "*" == _op || "/" == _op ||
                "&" == _op || "|" == _op || "^" == _op ||
@@ -286,13 +289,13 @@ Operand OperatorToken::output(Parser *parser,
       operandValueToReg(parser, lhs, "M");
       std::string inst;
       if ("+" == _op) {
-        inst = "ADD";
+        inst = "iadd";
       } else if ("-" == _op) {
-        inst = "SUB";
+        inst = "isub";
       } else if ("*" == _op) {
-        inst = "MUL";
+        inst = "imul";
       } else if ("/" == _op) {
-        inst = "DIV";
+        inst = "idiv";
       } else if ("&" == _op) {
         inst = "AND";
       } else if ("|" == _op) {
@@ -305,7 +308,7 @@ Operand OperatorToken::output(Parser *parser,
         inst = "SHRL";
       }
       parser->writeInst(inst + " M N");
-      parser->writeInst("PUSH M");
+      parser->writeInst("push M");
       return Operand(OperandType::VALUE);
     } else if ("[" == _op) {
       // For x[a], push &x + (a * DATA_SIZE) onto the stack.
@@ -315,32 +318,34 @@ Operand OperatorToken::output(Parser *parser,
       // multiply by shifting left
       parser->writeInst("MOVI L " + toHexStr(ceil(log2(DATA_SIZE))));
       parser->writeInst("SHL N L");
-      parser->writeInst("ADD M N");
-      parser->writeInst("PUSH M");
+      parser->writeInst("iadd M N");
+      parser->writeInst("push M");
       return Operand(OperandType::ADDRESS);
     } else if ("||" == _op || "&&" == _op) {
       // Make N either 0 or 1.
       std::string label1 = parser->getUnusedLabel("label");
       std::string label2 = parser->getUnusedLabel("label");
       operandValueToReg(parser, rhs, "N");
-      parser->writeInst("TST N N");
-      parser->writeInst("JEQ " + label1);
+      parser->writeInst("cmp N N");
+      parser->writeInst("test zero");
+      parser->writeInst("jmpif " + label1);
       parser->writeInst("MOVI N 0x1");
-      parser->writeInst("JMPI " + label2);
-      parser->writeln(label1 + ":");
+      parser->writeInst("jmp " + label2);
+      parser->writeln("@LABEL " + label1 + ":");
       parser->writeInst("MOVI N 0x0");
-      parser->writeln(label2 + ":");
+      parser->writeln("@LABEL " + label2 + ":");
       // Make M either 0 or 1.
       std::string label3 = parser->getUnusedLabel("label");
       std::string label4 = parser->getUnusedLabel("label");
       operandValueToReg(parser, lhs, "M");
-      parser->writeInst("TST M M");
-      parser->writeInst("JEQ " + label3);
+      parser->writeInst("cmp M M");
+      parser->writeInst("test zero");
+      parser->writeInst("jmpif " + label3);
       parser->writeInst("MOVI M 0x1");
-      parser->writeInst("JMPI " + label4);
-      parser->writeln(label3 + ":");
+      parser->writeInst("jmp " + label4);
+      parser->writeln("@LABEL " + label3 + ":");
       parser->writeInst("MOVI M 0x0");
-      parser->writeln(label4 + ":");
+      parser->writeln("@LABEL " + label4 + ":");
       // Do the operation.
       if ("||" == _op) {
         parser->writeInst("OR M N");
@@ -348,7 +353,7 @@ Operand OperatorToken::output(Parser *parser,
         parser->writeInst("AND M N");
       }
       // Push the result.
-      parser->writeInst("PUSH M");
+      parser->writeInst("push M");
       return Operand(OperandType::VALUE);
     } else if ("<" == _op || "<=" == _op || ">" == _op || ">=" == _op ||
                "==" == _op || "!=" == _op) {
@@ -356,28 +361,28 @@ Operand OperatorToken::output(Parser *parser,
       std::string label2 = parser->getUnusedLabel("label");
       operandValueToReg(parser, rhs, "N");
       operandValueToReg(parser, lhs, "M");
-      parser->writeInst("CMP M N");
+      parser->writeInst("cmp M N");
       std::string inst;
       if ("<" == _op) {
-        inst = "JB";
+        parser->writeInst("test less");
       } else if ("<=" == _op) {
-        inst = "JBE";
+        parser->writeInst("test less equal");
       } else if (">" == _op) {
-        inst = "JA";
+        parser->writeInst("test greater");
       } else if (">=" == _op) {
-        inst = "JAE";
+        parser->writeInst("test greater equal");
       } else if ("==" == _op) {
-        inst = "JEQ";
+        parser->writeInst("test equal");
       } else if ("!=" == _op) {
-        inst = "JNE";
+        parser->writeInst("test notequal");
       }
-      parser->writeInst(inst + " " + label1);
+      parser->writeInst("jmpif " + label1);
       parser->writeInst("MOVI M 0x0");
-      parser->writeInst("JMPI " + label2);
-      parser->writeln(label1 + ":");
+      parser->writeInst("jmp " + label2);
+      parser->writeln("@LABEL " + label1 + ":");
       parser->writeInst("MOVI M 0x1");
-      parser->writeln(label2 + ":");
-      parser->writeInst("PUSH M");
+      parser->writeln("@LABEL " + label2 + ":");
+      parser->writeInst("push M");
       return Operand(OperandType::VALUE);
     }
   }
@@ -770,7 +775,7 @@ void ExprToken::output(Parser *parser, const VarLocation& varLoc) {
     } else if (nullptr != global) {
       // Push the address onto the stack.
       parser->writeInst("MOVI L " + global->name());
-      parser->writeInst("PUSH L");
+      parser->writeInst("push L");
       operands.push(Operand(OperandType::ADDRESS));
     } else if (nullptr != var) {
       // Push nothing onto the stack for a register, or the address onto the
@@ -784,13 +789,13 @@ void ExprToken::output(Parser *parser, const VarLocation& varLoc) {
         if (0 != offset) {
           parser->writeInst("MOVI L " + toHexStr(0 < offset ? offset : -offset));
           if (0 < offset) {
-            parser->writeInst("ADD M L");
+            parser->writeInst("iadd M L");
           } else {
-            parser->writeInst("SUB M L");
+            parser->writeInst("isub M L");
           }
         }
         // Push the address onto the stack.
-        parser->writeInst("PUSH M");
+        parser->writeInst("push M");
         operands.push(Operand(OperandType::ADDRESS));
       }
     } else if (nullptr != literal) {
@@ -800,7 +805,7 @@ void ExprToken::output(Parser *parser, const VarLocation& varLoc) {
     } else if (nullptr != fnCall) {
       // Get the result of the function call and push it onto the stack.
       fnCall->output(parser);
-      parser->writeInst("PUSH L");
+      parser->writeInst("push L");
       // The result of a function call is a value token.
       operands.push(Operand(OperandType::VALUE));
     }
@@ -816,10 +821,10 @@ void ExprToken::output(Parser *parser, const VarLocation& varLoc) {
     if (0 != offset) {
       if (offset < 0) {
         parser->writeInst("MOVI L " + toHexStr(-offset));
-        parser->writeInst("SUB M L");
+        parser->writeInst("isub M L");
       } else {
         parser->writeInst("MOVI L " + toHexStr(offset));
-        parser->writeInst("ADD M L");
+        parser->writeInst("iadd M L");
       }
     }
     // Pop the result from the expression and store it in the calculated
@@ -976,7 +981,7 @@ void FunctionCallToken::output(Parser *parser) {
     std::stack<std::string> savedRegisters;
     std::string reg = "A";
     for (size_t i = 0; i < 4 && i < _arguments.size(); i++, reg[0]++) {
-      parser->writeInst("PUSH " + reg);
+      parser->writeInst("push " + reg);
       savedRegisters.push(reg);
     }
     // Evaluate up to the first four arguments and store them in registers
@@ -989,13 +994,13 @@ void FunctionCallToken::output(Parser *parser) {
     // it matches the callee's expectations of the order.
     for (int i = _arguments.size() - 1; 4 <= i; i--) {
       _arguments[i]->output(parser, VarLocation("L"));
-      parser->writeInst("PUSH L");
+      parser->writeInst("push L");
     }
     // Call the function
-    parser->writeInst("CALL " + _funcName);
+    parser->writeInst("branch " + _funcName);
     // Restore registers A through D if they were used as arguments.
     while (!savedRegisters.empty()) {
-      parser->writeInst("POP " + savedRegisters.top());
+      parser->writeInst("pop " + savedRegisters.top());
       savedRegisters.pop();
     }
   }
@@ -1091,7 +1096,7 @@ bool GlobalVarToken::parse(
  */
 void GlobalVarToken::output(Parser *parser) {
   // Write out a label for the global variable.
-  parser->writeln(_name + ":");
+  parser->writeln("@LABEL " + _name + ":");
   if (_type.isArray()) {
     // The address for the array's elements will be the current byte
     // position plus the instruction size.
@@ -1274,7 +1279,7 @@ void FunctionToken::output(Parser *parser) {
   // to it without having to unwind the stack each time.
   std::string endLabel = parser->getUnusedLabel(_name + "_end");
   // Create a label for the function so that we can CALL it.
-  parser->writeln(_name + ":");
+  parser->writeln("@LABEL " + _name + ":");
   // Assign registers or stack positions to parameters. Parameters can
   // be stored in registers "A" through "D", and if there are more than
   // 4 parameters they will be stored on the stack before the return
@@ -1306,7 +1311,7 @@ void FunctionToken::output(Parser *parser) {
       local->setReg(reg);
       // This is a callee-saved register, push it onto the stack and
       // make a note that we need to pop it later.
-      parser->writeInst("PUSH " + reg);
+      parser->writeInst("push " + reg);
       _savedRegisters.push(reg);
       extraParamOffset -= DATA_SIZE;
       // Increment the register
@@ -1325,7 +1330,7 @@ void FunctionToken::output(Parser *parser) {
     }
   }
   // Save the previous value of the frame pointer.
-  parser->writeInst("PUSH FP");
+  parser->writeInst("push FP");
   _savedRegisters.push("FP");
   extraParamOffset -= DATA_SIZE;
   // Set the frame pointer to the stack's current location.
@@ -1336,7 +1341,7 @@ void FunctionToken::output(Parser *parser) {
   // registers.
   for (auto param : _parameters) {
     if (param->isReg() && !param->canBeReg()) {
-      parser->writeInst("PUSH " + param->getReg());
+      parser->writeInst("push " + param->getReg());
       param->setOffset(offset);
       offset += DATA_SIZE;
     } else if (!param->isReg()) {
@@ -1346,7 +1351,7 @@ void FunctionToken::output(Parser *parser) {
   // Reserve space for the local variable storage on the stack.
   if (0 < offset) {
     parser->writeInst("MOVI L " + toHexStr(offset));
-    parser->writeInst("ADD SP L");
+    parser->writeInst("iadd SP L");
   }
 
   // Outputs initial values of local variables.
@@ -1369,10 +1374,10 @@ void FunctionToken::output(Parser *parser) {
   // We have a label here so that when we have return statements
   // they can jump here without having to unwind the stack in
   // multiple places.
-  parser->writeln(endLabel + ":");
+  parser->writeln("@LABEL " + endLabel + ":");
   parser->writeInst("MOV SP FP");
   while (!_savedRegisters.empty()) {
-    parser->writeInst("POP " + _savedRegisters.top());
+    parser->writeInst("pop " + _savedRegisters.top());
     _savedRegisters.pop();
   }
   // If there are overflow parameters, pop them off the stack in
@@ -1664,20 +1669,20 @@ void LocalVarToken::output(Parser *parser,
       parser->writeInst("MOV " + this->getReg() + " FP");
       if (0 != _dataOffset) {
         parser->writeInst("MOVI L " + toHexStr(_dataOffset));
-        parser->writeInst("ADD " + this->getReg() + " L");
+        parser->writeInst("iadd " + this->getReg() + " L");
       }
     } else {
       // Store FP + _offset in M
       parser->writeInst("MOV M FP");
       if (0 != _offset) {
         parser->writeInst("MOVI L " + toHexStr(_offset));
-        parser->writeInst("ADD M L");
+        parser->writeInst("iadd M L");
       }
       // Store FP + _dataOffset in N
       parser->writeInst("MOV N FP");
       if (0 != _dataOffset) {
         parser->writeInst("MOVI L " + toHexStr(_dataOffset));
-        parser->writeInst("ADD N L");
+        parser->writeInst("iadd N L");
       }
       // Store the data offset in the variable's location relative to
       // the frame pointer.
@@ -1843,21 +1848,22 @@ void IfStatement::output(Parser *parser,
   std::string endLabel = parser->getUnusedLabel(function->name() + "_if_end");
   // Test the condition and jump to the false label if it is false.
   _condExpr.output(parser, VarLocation("L"));
-  parser->writeInst("TST L L");
-  parser->writeInst("JEQ " + falseLabel);
+  parser->writeInst("cmp L L");
+  parser->writeInst("test zero");
+  parser->writeInst("jmpif " + falseLabel);
   // Output the true statement and jump to the end.
   _trueStatement->output(parser, function, returnLabel, breakLabel,
                          continueLabel);
-  parser->writeInst("JMPI " + endLabel);
+  parser->writeInst("jmp " + endLabel);
   // Output the false statement label and the false statement.
-  parser->writeln(falseLabel + ":");
+  parser->writeln("@LABEL " + falseLabel + ":");
   if (nullptr != _falseStatement) {
     _falseStatement->output(parser, function, returnLabel, breakLabel,
                             continueLabel);
   }
   // Output the end label that the true statement uses to jump over the
   // false statement.
-  parser->writeln(endLabel + ":");
+  parser->writeln("@LABEL " + endLabel + ":");
 }
 
 /**
@@ -1980,20 +1986,21 @@ void ForStatement::output(Parser *parser,
   std::string continueLabel =
     parser->getUnusedLabel(function->name() + "_for_continue");
   // Output the start label and test the condition.
-  parser->writeln(startLabel + ":");
+  parser->writeln("@LABEL " + startLabel + ":");
   _condExpr->output(parser, VarLocation("L"));
-  parser->writeInst("TST L L");
-  parser->writeInst("JEQ " + breakLabel);
+  parser->writeInst("cmp L L");
+  parser->writeInst("test zero");
+  parser->writeInst("jmpif " + breakLabel);
   // Output the function body followed by the continue label.
   _body->output(parser, function, returnLabel, breakLabel, continueLabel);
-  parser->writeln(continueLabel + ":");
+  parser->writeln("@LABEL " + continueLabel + ":");
   // Output the loop expressions and jump to the start of the loop.
   for (auto expr : _loopExprs) {
     expr->output(parser, VarLocation("L"));
   }
-  parser->writeInst("JMPI " + startLabel);
+  parser->writeInst("jmp " + startLabel);
   // Output the break label.
-  parser->writeln(breakLabel + ":");
+  parser->writeln("@LABEL " + breakLabel + ":");
 }
 
 /**
@@ -2062,15 +2069,16 @@ void WhileStatement::output(Parser *parser,
   std::string continueLabel =
     parser->getUnusedLabel(function->name() + "_while_continue");
   // Output the continue label and test the condition.
-  parser->writeln(continueLabel + ":");
+  parser->writeln("@LABEL " + continueLabel + ":");
   _condExpr->output(parser, VarLocation("L"));
-  parser->writeInst("TST L L");
-  parser->writeInst("JEQ " + breakLabel);
+  parser->writeInst("cmp L L");
+  parser->writeInst("test zero");
+  parser->writeInst("jmpif " + breakLabel);
   // Output the loop body and then jump to the start again.
   _body->output(parser, function, returnLabel, breakLabel, continueLabel);
-  parser->writeInst("JMPI " + continueLabel);
+  parser->writeInst("jmp " + continueLabel);
   // Output the break label.
-  parser->writeln(breakLabel + ":");
+  parser->writeln("@LABEL " + breakLabel + ":");
 }
 
 /**
@@ -2146,15 +2154,16 @@ void DoWhileStatement::output(Parser *parser,
   std::string continueLabel =
     parser->getUnusedLabel(function->name() + "_do_while_continue");
   // Output the continue label.
-  parser->writeln(continueLabel + ":");
+  parser->writeln("@LABEL " + continueLabel + ":");
   // Output the loop body.
   _body->output(parser, function, returnLabel, breakLabel, continueLabel);
   // Test the condition.
   _condExpr->output(parser, VarLocation("L"));
-  parser->writeInst("TST L L");
-  parser->writeInst("JNE " + continueLabel);
+  parser->writeInst("cmp L L");
+  parser->writeInst("test notzero");
+  parser->writeInst("jmpif " + continueLabel);
   // Output the break label.
-  parser->writeln(breakLabel + ":");
+  parser->writeln("@LABEL " + breakLabel + ":");
 }
 
 /**
@@ -2182,7 +2191,7 @@ void BreakStatement::output(Parser *parser,
                             const std::string&,
                             const std::string& breakLabel,
                             const std::string&) {
-  parser->writeInst("JMPI " + breakLabel);
+  parser->writeInst("jmp " + breakLabel);
 }
 
 /**
@@ -2210,7 +2219,7 @@ void ContinueStatement::output(Parser *parser,
                                const std::string&,
                                const std::string&,
                                const std::string& continueLabel) {
-  parser->writeInst("JMPI " + continueLabel);
+  parser->writeInst("jmp " + continueLabel);
 }
 
 /**
@@ -2272,7 +2281,7 @@ void ReturnStatement::output(Parser *parser,
   if (_hasExpr) {
     _returnExpr.output(parser, VarLocation("L"));
   }
-  parser->writeInst("JMPI " + returnLabel);
+  parser->writeInst("jmp " + returnLabel);
 }
 
 /**
@@ -2303,7 +2312,7 @@ void LabelStatement::output(Parser *parser,
                             const std::string&,
                             const std::string&,
                             const std::string&) {
-  parser->writeln(_asmLabel + ":");
+  parser->writeln("@LABEL " + _asmLabel + ":");
 }
 
 /**
@@ -2341,5 +2350,5 @@ void GotoStatement::output(Parser *parser,
                            const std::string&,
                            const std::string&) {
   std::string asmLabel = function->toAsmLabel(_label);
-  parser->writeInst("JMPI " + asmLabel);
+  parser->writeInst("jmp " + asmLabel);
 }

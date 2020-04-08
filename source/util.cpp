@@ -3,6 +3,8 @@
  * Copyright (c) 2015 Robert Fotino, All Rights Reserved
  */
 
+// Engin Cilasun : Modified asm code generation targeting Neko CPU - April 2020
+
 #include <regex>
 #include "util.h"
 
@@ -14,14 +16,14 @@ void operandValueToReg(Parser *parser,
                        const Operand& operand,
                        const std::string& reg) {
   if (OperandType::ADDRESS == operand.type()) {
-    parser->writeInst("POP " + reg);
+    parser->writeInst("pop " + reg);
     parser->writeInst("LOAD " + reg + " " + reg);
   } else if (OperandType::REGISTER == operand.type()) {
     parser->writeInst("MOV " + reg + " " + operand.reg());
   } else if (OperandType::VALUE == operand.type()) {
-    parser->writeInst("POP " + reg);
+    parser->writeInst("pop " + reg);
   } else if (OperandType::LITERAL == operand.type()) {
-    parser->writeInst("MOVI " + reg + " " + toHexStr(operand.literal()));
+    parser->writeInst("ld.w " + reg + " " + toHexStr(operand.literal()));
   }
 }
 

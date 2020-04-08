@@ -3,6 +3,8 @@
  * Copyright (c) 2015 Robert Fotino, All Rights Reserved
  */
 
+// Engin Cilasun : Modified asm code generation targeting Neko CPU - April 2020
+
 #include <iostream>
 #include "parser.h"
 #include "util.h"
@@ -147,11 +149,13 @@ bool Parser::output(char *filename) {
   // then goes into an infinite loop to prevent attempting to execute
   // code that wasn't meant to be executed.
   std::string stackLabel = this->getUnusedLabel("stack");
-  this->writeInst("MOVI SP " + stackLabel);
-  this->writeInst("CALL main");
+  this->writeln("# Neko v3 asm output");
+  this->writeln("# R15 == SP, R14 == FP");
+  this->writeInst("lea SP " + stackLabel);
+  this->writeInst("branch main");
   std::string finishedLabel = this->getUnusedLabel("program_finished");
-  this->writeln(finishedLabel + ":");
-  this->writeInst("JMPI " + finishedLabel);
+  this->writeln("@LABEL " + finishedLabel + ":");
+  this->writeInst("jmp " + finishedLabel);
   // Output global variables.
   for (auto global : _globals) {
     global->output(this);
@@ -161,7 +165,7 @@ bool Parser::output(char *filename) {
     function->output(this);
   }
   // Output the stack position.
-  this->writeln(stackLabel + ":");
+  this->writeln("@LABEL " + stackLabel + ":");
   return true;
 }
 
@@ -195,17 +199,17 @@ void Parser::writeInst(const std::string& inst) {
   // removing it entirely or by turning it into a single MOV
   // instruction.
   if (_pendingPushReg.empty() &&
-      0 == inst.compare(0, std::string("PUSH").size(), "PUSH")) {
+      0 == inst.compare(0, std::string("push").size(), "push")) {
     // It is a PUSH instruction and there are no pending push instructions.
     // We need to save the register and write nothing, because the next
     // instruction could be a POP.
-    _pendingPushReg = inst.substr(std::string("PUSH ").size());
+    _pendingPushReg = inst.substr(std::string("push ").size());
     return;
   } else if (!_pendingPushReg.empty() &&
-             0 == inst.compare(0, std::string("POP").size(), "POP")) {
+             0 == inst.compare(0, std::string("pop").size(), "pop")) {
     // It is a POP instruction and the previous instruction was a PUSH.
     // We can optimize this into nothing or a MOV instruction.
-    std::string popReg = inst.substr(std::string("POP ").size());
+    std::string popReg = inst.substr(std::string("pop ").size());
     std::string pushReg = _pendingPushReg;
     _pendingPushReg = "";
     if (popReg != pushReg) {
@@ -229,7 +233,7 @@ void Parser::writeln(const std::string& line) {
   // If there is a pending PUSH instruction, first write it
   // to the outfile.
   if (!_pendingPushReg.empty()) {
-    _outfile << "        PUSH " << _pendingPushReg << std::endl;
+    _outfile << "        push " << _pendingPushReg << std::endl;
     _pendingPushReg = "";
   }
   // Then write the new line.
