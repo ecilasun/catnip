@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <vector>
 #include <iostream>
+#include <string>
 #include "emulator.h"
-#include "parser.h"
 
 struct SAssemblerKeyword
 {
@@ -1419,26 +1419,8 @@ int emulate_rom(char *_romname)
 
 int compile_c(char *_inputname, char *_outputname)
 {
-  try
-  {
-    // Creates a stream of tokens from the input file
-    Tokenizer tokenizer(_inputname);
-    // Parses the tokens into an abstract syntax tree
-    Parser parser(&tokenizer);
-    if (!parser.parse()) {
-      return 1;
-    }
-    // Compiles the syntax tree to the output file
-    if (!parser.output(_outputname)) {
-      return 1;
-    }
-  } catch (char const *error)
-  {
-    std::cout << "Error: " << error << std::endl;
-    return 1;
-  }
-
-  return 0;
+    // WiP
+    return 0;
 }
 
 int main(int _argc, char **_argv)

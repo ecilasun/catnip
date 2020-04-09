@@ -48,7 +48,7 @@ def build(ctx):
         target = 'catnip',
         defines = platform_defines,
         includes = ['source', 'includes', win_sdk_include_path, win_sdk_include_path_shared],
-        libpath = [win_sdk_lib_path, os.path.abspath('libclang'), os.path.abspath('SDL')],
+        libpath = [win_sdk_lib_path, os.path.abspath('SDL')],
         lib = ['user32', 'Comdlg32', 'gdi32', 'ole32', 'kernel32', 'winmm', 'ws2_32', 'SDL2'],
         use = [''])
 

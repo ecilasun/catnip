@@ -1,5 +1,6 @@
 // Simple test to draw a sprite onto the screen
-uint16[128] sprite = {
+
+unsigned short sprites[] = {
 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,  0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 
 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,  0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 
 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,  0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 
@@ -17,15 +18,17 @@ uint16[128] sprite = {
 0xFFFF, 0xFF00, 0x9A09, 0x909 , 0x909  , 0x909 , 0x909 , 0x5100, 
 0xFFFF, 0xFF00, 0x9A09, 0x909 , 0x909  , 0x909 , 0x909 , 0x5151 };
 
-void draw_sprite(uint16 x, uint16 y)
+unsigned char *VRAM = 0x80000000;
+
+void draw_sprite(unsigned short x, unsigned short y)
 {
-  uint16 ix;
-  uint16 iy;
+  unsigned short ix;
+  unsigned short iy;
   for (iy = y; iy < y + 16; iy = iy + 1)
   {
     for (ix = x; ix < x + 16; ix = ix + 1)
     {
-        PIXEL(ix, iy);
+        VRAM[ix+iy*256] = 0xFF;
     }
   }
 }
