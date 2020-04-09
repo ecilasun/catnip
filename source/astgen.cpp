@@ -144,12 +144,9 @@ static const char *s_tokenTypeNames[]=
 
 void ASTDumpTokens(TTokenList &root, STokenParserContext &_ctx)
 {
-    HANDLE hStdout = _ctx.m_hStdout;
-
     std::string indentation = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
 
     bool newstatement = true;
-    SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE);
     for (auto &t : root)
     {
         if (newstatement)
@@ -159,10 +156,7 @@ void ASTDumpTokens(TTokenList &root, STokenParserContext &_ctx)
         newstatement = false;
 
         // Show token data
-        std::cout << s_tokenTypeNames[t.m_Class] << ":";
-        SetConsoleTextAttribute(hStdout, BACKGROUND_RED|BACKGROUND_GREEN|BACKGROUND_BLUE|BACKGROUND_INTENSITY);
-        std::cout << t.m_Value;
-        SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE);
+        std::cout << s_tokenTypeNames[t.m_Class] << ":" << t.m_Value;
 
         //std::cout << t.m_Value << "(" << t.m_BodyDepth << ":" << t.m_ParameterDepth << ")";
 
@@ -181,10 +175,6 @@ void ASTDumpTokens(TTokenList &root, STokenParserContext &_ctx)
 
 int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
 {
-    HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-    //SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE);
-    _ctx.m_hStdout = hStdout;
-
     std::string out, token;
     std::string::size_type offset;
     uint32_t stringliteralstack = 0;
@@ -261,8 +251,8 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
                     bodydepth -= endbody ? 1 : 0;
                     parameterdepth -= endparameter ? 1 : 0;
 
-                    _ctx.m_MaxBodyDepth = max(_ctx.m_MaxBodyDepth, bodydepth);
-                    _ctx.m_MaxParameterDepth = max(_ctx.m_MaxParameterDepth, parameterdepth);
+                    _ctx.m_MaxBodyDepth = _ctx.m_MaxBodyDepth > bodydepth ? _ctx.m_MaxBodyDepth : bodydepth;
+                    _ctx.m_MaxParameterDepth = _ctx.m_MaxParameterDepth > parameterdepth ? _ctx.m_MaxParameterDepth : parameterdepth;
                 }
             }
             else
@@ -374,7 +364,6 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
                 }
                 if (declarationfound == false)
                 {
-                    //SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_GREEN);
                     std::cout << "WARNING: '" << beg->m_Value << "' is not declared in this module.\n";
                 }
             }

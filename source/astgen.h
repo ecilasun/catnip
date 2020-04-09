@@ -1,11 +1,10 @@
-#include <windows.h>
+//#include <windows.h>
 #include <string>
 
 struct STokenParserContext
 {
     int m_MaxBodyDepth{0};
     int m_MaxParameterDepth{0};
-    HANDLE m_hStdout;
 };
 
 enum ETokenClass
