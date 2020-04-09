@@ -17,4 +17,5 @@ void draw_block(ushort x, ushort y)
 
 void main() {
   draw_block(64, 16);
+  draw_block(32, 48);
 }
