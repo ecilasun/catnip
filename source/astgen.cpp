@@ -146,10 +146,19 @@ void ASTDumpTokens(TTokenList &root, STokenParserContext &_ctx)
 {
     HANDLE hStdout = _ctx.m_hStdout;
 
+    std::string indentation = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
+
+    bool newstatement = true;
+    SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE);
     for (auto &t : root)
     {
+        if (newstatement)
+        {
+            std::cout << indentation.substr(0, t.m_Class == ETC_BodyEnd ? t.m_BodyDepth-1 : t.m_BodyDepth);
+        }
+        newstatement = false;
+
         // Show token data
-        SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE);
         std::cout << s_tokenTypeNames[t.m_Class] << ":";
         SetConsoleTextAttribute(hStdout, BACKGROUND_RED|BACKGROUND_GREEN|BACKGROUND_BLUE|BACKGROUND_INTENSITY);
         std::cout << t.m_Value;
@@ -161,7 +170,10 @@ void ASTDumpTokens(TTokenList &root, STokenParserContext &_ctx)
         //ASTDumpTokens(t.m_TokenList, _ctx);
 
         if (t.m_Class == ETC_StatementEnd || t.m_Class == ETC_BodyStart || t.m_Class == ETC_BodyEnd)
+        {
             std::cout << "\n";
+            newstatement = true;
+        }
         else
             std::cout << " ";
     }
