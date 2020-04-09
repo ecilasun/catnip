@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include "emulator.h"
+#include "astgen.h"
 
 struct SAssemblerKeyword
 {
@@ -1394,6 +1395,7 @@ int emulate_rom(char *_romname)
     fgetpos(inputfile, &endpos);
     fsetpos(inputfile, &pos);
     filebytesize = (unsigned int)endpos;
+    filebytesize = filebytesize<0x7FFFF ? filebytesize : 0x7FFFF;
 
     // Allocate memory and read file contents, then close the file
     uint16_t *rom_binary = new uint16_t[0x7FFFF];
@@ -1419,8 +1421,30 @@ int emulate_rom(char *_romname)
 
 int compile_c(char *_inputname, char *_outputname)
 {
-    // WiP
-    return 0;
+    // Read ROM file
+    FILE *inputfile = fopen(_inputname, "rb");
+    if (inputfile == nullptr)
+    {
+        printf("ERROR: Cannot find .c file\n");
+        return -1;
+    }
+
+    unsigned int filebytesize = 0;
+    fpos_t pos, endpos;
+    fgetpos(inputfile, &pos);
+    fseek(inputfile, 0, SEEK_END);
+    fgetpos(inputfile, &endpos);
+    fsetpos(inputfile, &pos);
+    filebytesize = (unsigned int)endpos;
+
+    // Allocate memory and read file contents, then close the file
+    char *filedata = new char[filebytesize];
+    fread(filedata, 1, filebytesize, inputfile);
+    fclose(inputfile);
+
+    STokenParserContext parsercontext;
+    std::string filecontents = std::string(filedata);
+    return ASTGenerate(filecontents, parsercontext);
 }
 
 int main(int _argc, char **_argv)
