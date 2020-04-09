@@ -157,38 +157,10 @@ void ASTDumpTokens(TTokenList &root, STokenParserContext &_ctx)
                 std::cout << "\nroot(" << nodelevel << ") = '" << t.m_Value << "'\n";
             }
         }*/
-        SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE);
-        std::cout << s_tokenTypeNames[t.m_Class] << ": ";
-        // if (t.m_Class == ETC_Keyword || t.m_Class == ETC_FunctionCall || t.m_Class == ETC_Builtin)
-        //     SetConsoleTextAttribute(hStdout, FOREGROUND_BLUE|FOREGROUND_INTENSITY);
-        // else if (t.m_Class == ETC_TypeName)
-        //     SetConsoleTextAttribute(hStdout, FOREGROUND_RED);
-        // else if (t.m_Class == ETC_Symbol)
-        //     SetConsoleTextAttribute(hStdout, BACKGROUND_RED|BACKGROUND_GREEN|BACKGROUND_INTENSITY);
-        // else if (t.m_Class == ETC_NumericLiteral)
-        //     SetConsoleTextAttribute(hStdout, BACKGROUND_GREEN|BACKGROUND_INTENSITY);
-        // else if (t.m_Class == ETC_FunctionDefinition)
-        //     SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_BLUE|FOREGROUND_INTENSITY);
-        // else if (t.m_Class == ETC_Variable)
-        //     SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_INTENSITY|BACKGROUND_GREEN);
-        // else if (t.m_Class == ETC_BeginParameterList || t.m_Class == ETC_EndParameterList)
-        //     SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_GREEN);
-        // else if (t.m_Class == ETC_Assignment)
-        //     SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_BLUE);
-        // else if (t.m_Class == ETC_VariableDeclaration)
-        // {
-        //     SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE);
-        //     if (t.m_SubClass&ETSC_Pointer) std::cout << "pointer::";
-        //     if (t.m_SubClass&ETSC_Handle) std::cout << "handle::";
-        // }
-        // else if (t.m_Class == ETC_StringLiteral)
-        //     SetConsoleTextAttribute(hStdout, BACKGROUND_RED|BACKGROUND_GREEN|BACKGROUND_BLUE);
-        // else if (t.m_Class == ETC_BodyStart || t.m_Class == ETC_BodyEnd)
-        //     SetConsoleTextAttribute(hStdout, FOREGROUND_GREEN|BACKGROUND_RED);
-        // else // Unknown
-        //     SetConsoleTextAttribute(hStdout, BACKGROUND_RED|BACKGROUND_INTENSITY);
 
         // Show token data
+        SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE);
+        std::cout << s_tokenTypeNames[t.m_Class] << ": ";
         //std::cout << t.m_Value << "(" << t.m_BodyDepth << ":" << t.m_ParameterDepth << ")";
         SetConsoleTextAttribute(hStdout, BACKGROUND_RED|BACKGROUND_GREEN|BACKGROUND_BLUE|BACKGROUND_INTENSITY);
         std::cout << t.m_Value;
