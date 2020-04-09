@@ -126,7 +126,7 @@ static const char *s_tokenTypeNames[]=
     "AsmInstruction",
     "TypeName",
     "VariableDeclaration",
-    "Variable",
+    "VariableReference",
     "Symbol",
     "Name",
     "StringLiteral",
@@ -136,9 +136,10 @@ static const char *s_tokenTypeNames[]=
     "Builtin",
     "BeginParameterList",
     "EndParameterList",
-    "Assignment",
+    "VariableAssignment",
     "BodyStart",
     "BodyEnd",
+    "StatementEnd",
 };
 
 void ASTDumpTokens(TTokenList &root, STokenParserContext &_ctx)
@@ -147,30 +148,19 @@ void ASTDumpTokens(TTokenList &root, STokenParserContext &_ctx)
 
     for (auto &t : root)
     {
-        //if (rootNode == nullptr)
-        /*if (nodelevel != t.m_BodyDepth)
-        {
-            if (t.m_Class == ETC_FunctionDefinition || t.m_Class == ETC_FunctionCall)
-            {
-                nodelevel = t.m_BodyDepth;
-                rootNode->m_Token = &t;
-                std::cout << "\nroot(" << nodelevel << ") = '" << t.m_Value << "'\n";
-            }
-        }*/
-
         // Show token data
         SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE);
-        std::cout << s_tokenTypeNames[t.m_Class] << ": ";
-        //std::cout << t.m_Value << "(" << t.m_BodyDepth << ":" << t.m_ParameterDepth << ")";
+        std::cout << s_tokenTypeNames[t.m_Class] << ":";
         SetConsoleTextAttribute(hStdout, BACKGROUND_RED|BACKGROUND_GREEN|BACKGROUND_BLUE|BACKGROUND_INTENSITY);
         std::cout << t.m_Value;
         SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE);
 
-        // Dump children
+        //std::cout << t.m_Value << "(" << t.m_BodyDepth << ":" << t.m_ParameterDepth << ")";
+
+        // Dump child nodes
         //ASTDumpTokens(t.m_TokenList, _ctx);
 
-        //SetConsoleTextAttribute(hStdout, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE);
-        if (t.m_Value == ";" || t.m_Value == "{" || t.m_Value == "}")
+        if (t.m_Class == ETC_StatementEnd || t.m_Class == ETC_BodyStart || t.m_Class == ETC_BodyEnd)
             std::cout << "\n";
         else
             std::cout << " ";
@@ -245,11 +235,14 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
                     bool endbody = token == "}" ? true:false;
                     bool beginparameter = token == "(" ? true:false;
                     bool endparameter = token == ")" ? true:false;
+                    bool endstatement = token == ";" ? true:false;
                     bodydepth += beginbody ? 1 : 0;
                     parameterdepth += beginparameter ? 1 : 0;
                     SToken t;
                     t.m_Value = token;
                     t.m_Class = beginbody ? ETC_BodyStart : (endbody ? ETC_BodyEnd : (beginparameter ? ETC_BeginParameterList : (endparameter ? ETC_EndParameterList : ETC_Symbol)));
+                    if (t.m_Class==ETC_Symbol && endstatement)
+                        t.m_Class = ETC_StatementEnd;
                     t.m_BodyDepth = bodydepth;
                     t.m_ParameterDepth = parameterdepth;
                     g_TokenList.emplace_back(t);
@@ -278,12 +271,12 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
         _input = _input.substr(offset);
     } while (1);
 
-    // ) Remove 'empty' tokens
+    // 1) Remove 'empty' tokens
     {
         auto beg = g_TokenList.begin();
         while (beg != g_TokenList.end())
         {
-            // An 'unknown' followed by a "(" is a function call if not followed by "{" (if followed by "{" it is a definition)
+            // ''
             if (beg->m_Value == "")
             {
                 beg = g_TokenList.erase(beg);
@@ -293,12 +286,12 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
         }
     }
 
-    // ) Collapse function definitions
+    // 2) Collapse function definitions
     {
         auto beg = g_TokenList.begin();
         while (beg != g_TokenList.end())
         {
-            // A type followed by an 'unknown' followed by a "(" is a function definition
+            // typename + unknown + '('
             if (beg->m_Class == ETC_TypeName && (beg+1)->m_Class == ETC_Unknown && (beg+2)->m_Value == "(")
             {
                 std::string returntype = beg->m_Value;
@@ -317,37 +310,31 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
         }
     }
 
-    // ) Collapse variables
+    // 3) Collapse variable declarations
     {
         auto beg = g_TokenList.begin();
         while (beg != g_TokenList.end())
         {
-            // An 'unknown' followed by a "(" is a function call if not followed by "{" (if followed by "{" it is a definition)
+            // typename + unknown
             if (beg->m_Class == ETC_TypeName && (beg+1)->m_Class == ETC_Unknown)
             {
                 (beg+1)->m_Class = ETC_VariableDeclaration;
                 beg+=2;
                 continue;
             }
-            // cases such as char*
+            // typename + symbol + unknown
             if (beg->m_Class == ETC_TypeName && (beg+1)->m_Class == ETC_Symbol && (beg+2)->m_Class == ETC_Unknown)
             {
+                // This could be 'char * blah' or 'char & somestuff'
                 (beg+2)->m_Class = ETC_VariableDeclaration;
                 beg+=3;
-                continue;
-            }
-            // cases such as char**
-            if (beg->m_Class == ETC_TypeName && (beg+1)->m_Class == ETC_Symbol && (beg+2)->m_Class == ETC_Symbol && (beg+3)->m_Class == ETC_Unknown)
-            {
-                (beg+3)->m_Class = ETC_VariableDeclaration;
-                beg+=4;
                 continue;
             }
             ++beg;
         }
     }
 
-    // ) Scan for variable usages
+    // 4) Scan for function and variable references (pretty much most leftover unknowns at this point)
     {
         auto beg = g_TokenList.begin();
         while (beg != g_TokenList.end())
@@ -361,7 +348,7 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
                 {
                     if (vbeg->m_Class == ETC_VariableDeclaration && vbeg->m_Value == beg->m_Value) // variable
                     {
-                        beg->m_Class = ETC_Variable;
+                        beg->m_Class = ETC_VariableReference;
                         declarationfound = true;
                         break;
                     }
@@ -383,7 +370,7 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
         }
     }
 
-    // ) Deduce subtypes
+    // 5) Deduce subtypes
     {
         auto beg = g_TokenList.begin();
         while (beg != g_TokenList.end())
@@ -412,12 +399,12 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
         }
     }
 
-    // ) Collapse function calls
+    // 6) Detect builtin functions (if/return/continue etc) and function calls
     {
         auto beg = g_TokenList.begin();
         while (beg != g_TokenList.end())
         {
-            // 'unknown' or keyword followed by a "(" is a function / builtin call
+            // 'unknown' or keyword followed by a "(" is a function / builtin call (since we didn't find any prior definition of this function)
             if ((beg->m_Class == ETC_Unknown || beg->m_Class == ETC_Keyword) && (beg+1)->m_Value == "(")
             {
                 if (g_keywords.find_first_of(beg->m_Value) != std::string::npos)
@@ -426,27 +413,27 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
                     beg->m_Class = ETC_Builtin;
                     beg->m_Value = builtinname;
                 }
-                else
+                else // This wasn't a function definition so this means we're now calling one
                 {
                     std::string functionname = beg->m_Value;
                     beg->m_Class = ETC_FunctionCall;
                     beg->m_Value = functionname;
 
-                    // TODO: Collect all nodes and add them as child nodes to beg, then erase them from main list
-                    /*auto cbeg = beg+1;
-                    int skipcount = 0;
-                    bool breaknext = false;
-                    while (cbeg != g_TokenList.end())
-                    {
-                        beg->m_TokenList.emplace_back(*cbeg);
-                        cbeg = g_TokenList.erase(cbeg);
-                        ++skipcount;
-                        if (breaknext)
-                            break;
-                        if (cbeg->m_Class == ETC_EndParameterList)
-                            breaknext = true;
-                    }
-                    beg += skipcount+1;*/
+                    // TODO: Collect all nodes and add them as child nodes to beg, then erase them from main list (from ETC_BodyStart to ETC_BodyEnd)
+                    // auto cbeg = beg+1;
+                    // int skipcount = 0;
+                    // bool breaknext = false;
+                    // while (cbeg != g_TokenList.end())
+                    // {
+                    //     beg->m_TokenList.emplace_back(*cbeg);
+                    //     cbeg = g_TokenList.erase(cbeg);
+                    //     ++skipcount;
+                    //     if (breaknext)
+                    //         break;
+                    //     if (cbeg->m_Class == ETC_EndParameterList)
+                    //         breaknext = true;
+                    // }
+                    // beg += skipcount+1;
                 }
                 beg += 2;
                 continue;
@@ -455,14 +442,14 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
         }
     }
 
-    // ) Collapse assignments
+    // 7) Collapse assignments
     {
         auto beg = g_TokenList.begin();
         while (beg != g_TokenList.end())
         {
-            if ((beg->m_Class == ETC_Variable || beg->m_Class == ETC_VariableDeclaration)  && (beg+1)->m_Value == "=")
+            if ((beg->m_Class == ETC_VariableReference || beg->m_Class == ETC_VariableDeclaration)  && (beg+1)->m_Value == "=")
             {
-                (beg+1)->m_Class = ETC_Assignment;
+                (beg+1)->m_Class = ETC_VariableAssignment;
                 beg+=2;
                 continue;
             }

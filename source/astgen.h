@@ -15,7 +15,7 @@ enum ETokenClass
     ETC_AsmInstruction,
     ETC_TypeName,
     ETC_VariableDeclaration,
-    ETC_Variable,
+    ETC_VariableReference,
     ETC_Symbol,
     ETC_Name,
     ETC_StringLiteral,
@@ -25,9 +25,10 @@ enum ETokenClass
     ETC_Builtin,
     ETC_BeginParameterList,
     ETC_EndParameterList,
-    ETC_Assignment,
+    ETC_VariableAssignment,
     ETC_BodyStart,
     ETC_BodyEnd,
+    ETC_StatementEnd,
 };
 
 enum ETokenSubClass
