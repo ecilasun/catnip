@@ -61,7 +61,8 @@ struct SToken
     ETokenSubClass m_SubClass{ETSC_Actual};     // Subclass of variable
     int m_BodyDepth{0};                         // Level of depth for this tokens
     int m_ParameterDepth{0};                    // Level of depth for this parameter
-    TTokenList m_TokenList;                     // Child nodes
+    TTokenList m_LeftTokenList;                 // Left child nodes
+    TTokenList m_RightTokenList;                // Right child nodes
 };
 
 TTokenList g_TokenList;
@@ -188,13 +189,13 @@ void ASTDumpTokens(TTokenList &root, STokenParserContext &_ctx)
 
     for (auto &t : root)
     {
-        if (t.m_Class == ETC_BodyStart)
+        if (t.m_Class == ETC_BodyStart || t.m_Class == ETC_BeginParameterList)
         {
             std::cout << "\n" << indentation.substr(0, _ctx.m_CurrentIndentation);
             _ctx.m_CurrentIndentation++;
         }
 
-        if (t.m_Class == ETC_BodyEnd)
+        if (t.m_Class == ETC_BodyEnd || t.m_Class == ETC_EndParameterList)
         {
             _ctx.m_CurrentIndentation--;
             std::cout << "\n" << indentation.substr(0, _ctx.m_CurrentIndentation);
@@ -205,9 +206,10 @@ void ASTDumpTokens(TTokenList &root, STokenParserContext &_ctx)
         //std::cout << t.m_Value << "(" << t.m_BodyDepth << ":" << t.m_ParameterDepth << ")";
 
         // Dump child nodes
-        ASTDumpTokens(t.m_TokenList, _ctx);
+        ASTDumpTokens(t.m_LeftTokenList, _ctx);
+        ASTDumpTokens(t.m_RightTokenList, _ctx);
 
-        if (t.m_Class == ETC_StatementEnd || t.m_Class == ETC_BodyStart || t.m_Class == ETC_BodyEnd)
+        if (t.m_Class == ETC_StatementEnd || t.m_Class == ETC_BodyStart || t.m_Class == ETC_BodyEnd || t.m_Class == ETC_BeginParameterList || t.m_Class == ETC_EndParameterList)
         {
             std::cout << "\n" << indentation.substr(0, _ctx.m_CurrentIndentation);
         }
@@ -485,28 +487,43 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
         }
     }
 
-    // 8) Gather function bodies
+    // 8) Gather function bodies into 'EndParameterList'
     {
         auto beg = g_TokenList.begin();
         while (beg != g_TokenList.end())
         {
-            // If this is a body after parameterlistend it's a function body.
-            if (beg->m_Class == ETC_BodyStart && (beg-1)->m_Class == ETC_EndParameterList)
+            // Found a function definition, start collapsing parameter list
+            if (beg->m_Class == ETC_FunctionDefinition)
             {
-                auto cbeg = beg;
+                auto cbeg = beg+1;
                 bool breaknext = false;
-                int bodyDepth = beg->m_BodyDepth;
-                TTokenList &updatelist = (beg-1)->m_TokenList; // Parent of 'body'
+                TTokenList &leftupdatelist = beg->m_LeftTokenList;
+                TTokenList &rightupdatelist = beg->m_RightTokenList;
                 while (cbeg != g_TokenList.end())
                 {
                     SToken copytoken = *cbeg;
-                    updatelist.emplace_back(copytoken);
+                    leftupdatelist.emplace_back(copytoken);
+                    cbeg = g_TokenList.erase(cbeg);
+                    if (breaknext)
+                        break;
+                    if (cbeg->m_Class == ETC_EndParameterList)
+                        breaknext = true;
+                }
+
+                // Start collapsing function body
+                breaknext = false;
+                int bodyDepth = cbeg->m_BodyDepth;
+                while (cbeg != g_TokenList.end())
+                {
+                    SToken copytoken = *cbeg;
+                    rightupdatelist.emplace_back(copytoken);
                     cbeg = g_TokenList.erase(cbeg);
                     if (breaknext)
                         break;
                     if (cbeg->m_Class == ETC_BodyEnd && cbeg->m_BodyDepth == bodyDepth)
                         breaknext = true;
                 }
+                ++beg;
             }
             else
                 ++beg;
