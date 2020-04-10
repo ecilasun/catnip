@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <vector>
 #include <iostream>
+#if defined(CAT_LINUX)
+#include <string.h>
+#endif
 #include <string>
 #include "emulator.h"
 #include "astgen.h"
@@ -1102,16 +1105,11 @@ const SAssemblerPair keywords[] =
 
 int find_token(const char *token)
 {
-    //printf("%s:", token);
-    for (unsigned int i=0;i<_countof(keywords);++i)
+    for (unsigned int i=0;i<sizeof(keywords)/sizeof(SAssemblerPair);++i)
     {
         if (strcmp(token, keywords[i].m_Keyword.m_Name) == 0)
-        {
-            //printf("%d\n", i);
             return i;
-        }
     }
-    //printf("???\n");
     return -1;
 }
 
@@ -1184,7 +1182,6 @@ int parse_nip(const char *_inputtext)
                 m_codeBlocks.emplace_back(newblock);
             }
             
-
             if (s_current_binary_offset/2 >= 4096)
             {
                 s_current_binary_offset = 8192;
@@ -1277,7 +1274,11 @@ int compile_asm(const char *_inputname, const char *_outputname)
 	fseek(inputfile, 0, SEEK_END);
 	fgetpos(inputfile, &endpos);
     fsetpos(inputfile, &pos);
+#if defined(CAT_LINUX)
+    filebytesize = (unsigned int)endpos.__pos;
+#else
     filebytesize = (unsigned int)endpos;
+#endif
 
     // Allocate memory and read file contents, then close the file
     char *filedata = new char[filebytesize+1];
@@ -1394,7 +1395,11 @@ int emulate_rom(char *_romname)
     fseek(inputfile, 0, SEEK_END);
     fgetpos(inputfile, &endpos);
     fsetpos(inputfile, &pos);
+#if defined(CAT_LINUX)
+    filebytesize = (unsigned int)endpos.__pos;
+#else
     filebytesize = (unsigned int)endpos;
+#endif
     filebytesize = filebytesize<0x7FFFF ? filebytesize : 0x7FFFF;
 
     // Allocate memory and read file contents, then close the file
@@ -1435,7 +1440,11 @@ int compile_c(char *_inputname, char *_outputname)
     fseek(inputfile, 0, SEEK_END);
     fgetpos(inputfile, &endpos);
     fsetpos(inputfile, &pos);
+#if defined(CAT_LINUX)
+    filebytesize = (unsigned int)endpos.__pos;
+#else
     filebytesize = (unsigned int)endpos;
+#endif
 
     // Allocate memory and read file contents, then close the file
     char *filedata = new char[filebytesize];

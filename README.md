@@ -13,13 +13,20 @@ If you're using Visual Studio Code, this folder contains a .vscode directory wit
 * For first time around, and all subsequent builds related to any code change, use Ctrl+Shift+B and select 'build' from the menu
 
 ### Command line
-WAF (the build system) is included with this release. To build CatNip from command line, run these from the root directory on the command line:
+WAF (the build system) is included with this release. To build CatNip from command line, run these from the root directory where you've placed the catnip project.
 
-For first time:
+If you happen to be building on Linux, before everything else you'll need to install clang and SDL2 libraries as follows:
+```
+sudo apt install clang
+sudo apt install libsdl2-dev
+```
+
+For first time around, or if you change the wscript's configure or options functions, a configuration step is required:
 ```
 python waf --out='build/release' configure
 ```
-For first code build and all subsequent builds:
+
+After that, any further code builds require only the following:
 ```
 python waf build
 ```

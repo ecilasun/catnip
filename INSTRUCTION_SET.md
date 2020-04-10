@@ -3,7 +3,7 @@
 Project Neko is a small game console aimed at FPGAs.
 It has a 16 bit CPU, and has access to 512Kbytes of SRAM. The VRAM is made up of on-chip dual port block memory and delivers an image at 256x192 resolution and 8bpp.
 
-The architecture is currently implemented on the [Terasic Cyclone V GX Starter Kit](https://www.terasic.com.tw/cgi-bin/page/archive.pl?Language=English&CategoryNo=167&No=830) and uses up about 6 to 7 percent of the resources available on the FPGA.
+The architecture is currently implemented on the [Terasic Cyclone V GX Starter Kit](https://www.terasic.com.tw/cgi-bin/page/archive.pl?Language=English&CategoryNo=167&No=830) and uses up about 12 to 13 percent of the resources available on the FPGA.
 
 There is also an assembler/emulator which can generate ROM images out of ASM files and run the ROM files to test out code while the actual hardware is being developed.
 
@@ -14,8 +14,8 @@ Here is a brief list of the architecture details of Neko V3
     * Currently only 8 out of these 16 base instructions are used
     * Each instruction has variety of sub-instructions
     * Rest of the bits on the instruction define either sub-instuctions, register indices, some other useful flag bits in any predetermined order
-  * 50Mhz core clock
-    * The main CPU unit runs at 50Mhz
+  * 40Mhz core clock
+    * The main CPU unit runs at 40Mhz
     * Most instructions take 1 clock cycle to execute
     * Additional clocks are required for SRAM read/writes if instruction requires
     * Shortest instruction is 16 bits

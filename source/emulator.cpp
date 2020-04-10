@@ -1,10 +1,12 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-//#include <thread>
-#include "../SDL/SDL.h"
+#if defined(CAT_LINUX)
+  #include <SDL2/SDL.h>
+#else
+  #include "../SDL/SDL.h"
+#endif
 #include "emulator.h"
-//#include <windows.h>
 
 // Neko emulator
 
@@ -110,9 +112,6 @@ uint32_t s_VGAClock = 0;
 uint32_t s_VGAClockRisingEdge = 0;
 uint32_t s_VGAClockFallingEdge = 0;
 
-// CPU emulation
-//std::thread *s_CPUThread;
-//bool s_CPUDone = false;
 
 // Video emulation
 int vga_x = 0;
@@ -867,7 +866,7 @@ void CPUMain()
         break;
 
         case CPU_READ_DATA_BYTE:
-            register_file[target_register] = (register_file[target_register]&0xFFFFFF00) | sram_rdata&0x000000FF; // No C equivalent to partially assign
+            register_file[target_register] = (register_file[target_register]&0xFFFFFF00) | (sram_rdata&0x000000FF); // No C equivalent to partially assign
             sram_enable_byteaddress = 0;
             sram_addr = IP;
             sram_read_req = 1;
@@ -940,7 +939,7 @@ void MemoryMain()
     // --------------------------------------------------------------
 
     // ROM read access
-    if (rom_addrs<0x7FFFF && rom_read_enable)
+    if (/*rom_addrs<0x7FFFF &&*/ rom_read_enable)
         rom_out = ROM[rom_addrs];
 
     // SRAM read/write (byte or word) access
@@ -1120,20 +1119,11 @@ bool InitEmulator(uint16_t *_rom_binary)
      if (SDL_MUSTLOCK(s_Surface))
          SDL_LockSurface(s_Surface);
 
-    // Start CPU thread
-    // Video code stays on main thread async to CPU execution
-    //s_CPUThread = new std::thread(CPUMain);
-    //s_CPUThread->detach();
-
     return true;
 }
 
 void TerminateEmulator()
 {
-    //s_CPUDone = true;
-    //s_CPUThread->join();
-    //delete s_CPUThread;
-
     if (SDL_MUSTLOCK(s_Surface))
         SDL_UnlockSurface(s_Surface);
 
