@@ -1,5 +1,6 @@
 // Simple VRAM access test
 
+uchar testsprite[16]={0x00,0xFF,0xFF,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF};
 uchar *VRAM = 0x80000000;
 
 void draw_block(ushort x, ushort y)
@@ -10,7 +11,7 @@ void draw_block(ushort x, ushort y)
   {
     for (ix = x; ix < x + 16; ix = ix + 1)
     {
-        VRAM[ix+iy*256] = 0xFF;
+        VRAM[ix+iy*256] = testsprite[ix%16];
     }
   }
 }

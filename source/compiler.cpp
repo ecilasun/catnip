@@ -14,6 +14,8 @@ enum ETokenClass
     ETC_VariableDeclaration,
     ETC_VariableReference,
     ETC_Symbol,
+    ETC_BeginArray,
+    ETC_EndArray,
     ETC_Name,
     ETC_StringLiteral,
     ETC_NumericLiteral,
@@ -25,7 +27,7 @@ enum ETokenClass
     ETC_VariableAssignment,
     ETC_BodyStart,
     ETC_BodyEnd,
-    ETC_StatementEnd,
+    ETC_EndStatement,
 };
 
 enum ETokenSubClass
@@ -169,6 +171,8 @@ static const char *s_tokenTypeNames[]=
     "VariableDeclaration",
     "VariableReference",
     "Symbol",
+    "BeginArray",
+    "EndArray",
     "Name",
     "StringLiteral",
     "NumericLiteral",
@@ -180,38 +184,47 @@ static const char *s_tokenTypeNames[]=
     "VariableAssignment",
     "BodyStart",
     "BodyEnd",
-    "StatementEnd",
+    "EndStatement",
 };
+
+static std::string indentation = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
 
 void ASTDumpTokens(TTokenList &root, STokenParserContext &_ctx)
 {
-    std::string indentation = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
-
     for (auto &t : root)
     {
-        if (t.m_Class == ETC_BodyStart || t.m_Class == ETC_BeginParameterList)
+        /*if (t.m_Class == ETC_BodyStart || t.m_Class == ETC_BeginParameterList || t.m_Class == ETC_BeginArray || t.m_Class == ETC_VariableAssignment)
         {
             std::cout << "\n" << indentation.substr(0, _ctx.m_CurrentIndentation);
             _ctx.m_CurrentIndentation++;
         }
 
-        if (t.m_Class == ETC_BodyEnd || t.m_Class == ETC_EndParameterList)
+        if (t.m_Class == ETC_BodyEnd || t.m_Class == ETC_EndParameterList || t.m_Class == ETC_EndArray)
         {
             _ctx.m_CurrentIndentation--;
             std::cout << "\n" << indentation.substr(0, _ctx.m_CurrentIndentation);
-        }
+        }*/
 
         // Show token data
         std::cout << s_tokenTypeNames[t.m_Class] << ":" << t.m_Value;
         //std::cout << t.m_Value << "(" << t.m_BodyDepth << ":" << t.m_ParameterDepth << ")";
 
         // Dump child nodes
-        ASTDumpTokens(t.m_LeftTokenList, _ctx);
-        ASTDumpTokens(t.m_RightTokenList, _ctx);
-
-        if (t.m_Class == ETC_StatementEnd || t.m_Class == ETC_BodyStart || t.m_Class == ETC_BodyEnd || t.m_Class == ETC_BeginParameterList || t.m_Class == ETC_EndParameterList)
+        if (t.m_LeftTokenList.size())
         {
-            std::cout << "\n" << indentation.substr(0, _ctx.m_CurrentIndentation);
+            std::cout << "\n";
+            ASTDumpTokens(t.m_LeftTokenList, _ctx);
+        }
+        if (t.m_RightTokenList.size())
+        {
+            std::cout << "\n";
+            ASTDumpTokens(t.m_RightTokenList, _ctx);
+        }
+
+        if (t.m_Class == ETC_EndStatement || t.m_Class == ETC_BodyStart || t.m_Class == ETC_BodyEnd || t.m_Class == ETC_BeginParameterList || t.m_Class == ETC_EndParameterList || t.m_Class == ETC_BeginArray || t.m_Class == ETC_EndArray || t.m_Class == ETC_VariableAssignment)
+        {
+            //std::cout << "\n" << indentation.substr(0, _ctx.m_CurrentIndentation);
+            std::cout << "\n";
         }
         else
             std::cout << " ";
@@ -283,13 +296,17 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
                     bool beginparameter = token == "(" ? true:false;
                     bool endparameter = token == ")" ? true:false;
                     bool endstatement = token == ";" ? true:false;
+                    bool beginarray = token == "[" ? true:false;
+                    bool endarray = token == "]" ? true:false;
                     bodydepth += beginbody ? 1 : 0;
                     parameterdepth += beginparameter ? 1 : 0;
                     SToken t;
                     t.m_Value = token;
                     t.m_Class = beginbody ? ETC_BodyStart : (endbody ? ETC_BodyEnd : (beginparameter ? ETC_BeginParameterList : (endparameter ? ETC_EndParameterList : ETC_Symbol)));
                     if (t.m_Class==ETC_Symbol && endstatement)
-                        t.m_Class = ETC_StatementEnd;
+                        t.m_Class = ETC_EndStatement;
+                    if (t.m_Class==ETC_Symbol && (beginarray || endarray))
+                        t.m_Class = beginarray ? ETC_BeginArray : ETC_EndArray;
                     t.m_BodyDepth = bodydepth;
                     t.m_ParameterDepth = parameterdepth;
                     g_TokenList.emplace_back(t);
@@ -477,7 +494,7 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
         auto beg = g_TokenList.begin();
         while (beg != g_TokenList.end())
         {
-            if ((beg->m_Class == ETC_VariableReference || beg->m_Class == ETC_VariableDeclaration)  && (beg+1)->m_Value == "=")
+            if ((beg->m_Class == ETC_VariableReference || beg->m_Class == ETC_VariableDeclaration || beg->m_Class == ETC_EndArray)  && (beg+1)->m_Value == "=")
             {
                 (beg+1)->m_Class = ETC_VariableAssignment;
                 beg+=2;
@@ -487,13 +504,64 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
         }
     }
 
-    // 8) Gather function bodies into 'EndParameterList'
+    // 8) Gather array accessor into variable reference or declaration
     {
         auto beg = g_TokenList.begin();
         while (beg != g_TokenList.end())
         {
-            // Found a function definition, start collapsing parameter list
-            if (beg->m_Class == ETC_FunctionDefinition)
+            if ((beg->m_Class == ETC_VariableReference || beg->m_Class == ETC_VariableDeclaration) && (beg+1)->m_Class == ETC_BeginArray)
+            {
+                auto cbeg = beg+1;
+                bool breaknext = false;
+                TTokenList &leftupdatelist = beg->m_LeftTokenList;
+                while (cbeg != g_TokenList.end())
+                {
+                    SToken copytoken = *cbeg;
+                    leftupdatelist.emplace_back(copytoken);
+                    cbeg = g_TokenList.erase(cbeg);
+                    if (breaknext)
+                        break;
+                    if (cbeg->m_Class == ETC_EndArray)
+                        breaknext = true;
+                }
+                ++beg;
+            }
+            else
+                ++beg;
+        }
+    }
+
+    // 9) Gather assignment operators after variables
+    {
+        auto beg = g_TokenList.begin();
+        while (beg != g_TokenList.end())
+        {
+            if ((beg->m_Class == ETC_VariableReference || beg->m_Class == ETC_VariableDeclaration) && (beg+1)->m_Class == ETC_VariableAssignment)
+            {
+                auto cbeg = beg+1;
+                TTokenList &leftupdatelist = beg->m_RightTokenList;
+                while (cbeg != g_TokenList.end())
+                {
+                    if (cbeg->m_Class == ETC_EndParameterList || cbeg->m_Class == ETC_EndStatement)
+                        break;
+                    SToken copytoken = *cbeg;
+                    leftupdatelist.emplace_back(copytoken);
+                    cbeg = g_TokenList.erase(cbeg);
+                }
+                ++beg;
+            }
+            else
+                ++beg;
+        }
+    }
+
+    // 10) Gather function bodies into 'EndParameterList'
+    {
+        auto beg = g_TokenList.begin();
+        while (beg != g_TokenList.end())
+        {
+            // Found a function definition or a builtin or a function call, start collapsing parameter list
+            if (beg->m_Class == ETC_FunctionDefinition || beg->m_Class == ETC_Builtin || beg->m_Class == ETC_FunctionCall)
             {
                 auto cbeg = beg+1;
                 bool breaknext = false;
@@ -533,6 +601,7 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
     // DEBUG: Dump tokens
     ASTDumpTokens(g_TokenList, _ctx);
 
+    std::cout << std::endl;
     std::cout << "Max Body Depth: " << _ctx.m_MaxBodyDepth << "\n";
     std::cout << "Max Parameter Depth: " << _ctx.m_MaxParameterDepth << "\n";
 
