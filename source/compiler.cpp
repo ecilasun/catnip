@@ -49,6 +49,7 @@ struct STokenParserContext
 {
     int m_MaxBodyDepth{0};
     int m_MaxParameterDepth{0};
+    int m_CurrentIndentation{0};
 };
 
 typedef std::vector<struct SToken> TTokenList;
@@ -60,7 +61,7 @@ struct SToken
     ETokenSubClass m_SubClass{ETSC_Actual};     // Subclass of variable
     int m_BodyDepth{0};                         // Level of depth for this tokens
     int m_ParameterDepth{0};                    // Level of depth for this parameter
-    //TTokenList m_TokenList;                     // Child nodes
+    TTokenList m_TokenList;                     // Child nodes
 };
 
 TTokenList g_TokenList;
@@ -185,27 +186,30 @@ void ASTDumpTokens(TTokenList &root, STokenParserContext &_ctx)
 {
     std::string indentation = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
 
-    bool newstatement = true;
     for (auto &t : root)
     {
-        if (newstatement)
+        if (t.m_Class == ETC_BodyStart)
         {
-            std::cout << indentation.substr(0, t.m_Class == ETC_BodyEnd ? t.m_BodyDepth-1 : t.m_BodyDepth);
+            std::cout << "\n" << indentation.substr(0, _ctx.m_CurrentIndentation);
+            _ctx.m_CurrentIndentation++;
         }
-        newstatement = false;
+
+        if (t.m_Class == ETC_BodyEnd)
+        {
+            _ctx.m_CurrentIndentation--;
+            std::cout << "\n" << indentation.substr(0, _ctx.m_CurrentIndentation);
+        }
 
         // Show token data
         std::cout << s_tokenTypeNames[t.m_Class] << ":" << t.m_Value;
-
         //std::cout << t.m_Value << "(" << t.m_BodyDepth << ":" << t.m_ParameterDepth << ")";
 
         // Dump child nodes
-        //ASTDumpTokens(t.m_TokenList, _ctx);
+        ASTDumpTokens(t.m_TokenList, _ctx);
 
         if (t.m_Class == ETC_StatementEnd || t.m_Class == ETC_BodyStart || t.m_Class == ETC_BodyEnd)
         {
-            std::cout << "\n";
-            newstatement = true;
+            std::cout << "\n" << indentation.substr(0, _ctx.m_CurrentIndentation);
         }
         else
             std::cout << " ";
@@ -458,22 +462,6 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
                     std::string functionname = beg->m_Value;
                     beg->m_Class = ETC_FunctionCall;
                     beg->m_Value = functionname;
-
-                    // TODO: Collect all nodes and add them as child nodes to beg, then erase them from main list (from ETC_BodyStart to ETC_BodyEnd)
-                    // auto cbeg = beg+1;
-                    // int skipcount = 0;
-                    // bool breaknext = false;
-                    // while (cbeg != g_TokenList.end())
-                    // {
-                    //     beg->m_TokenList.emplace_back(*cbeg);
-                    //     cbeg = g_TokenList.erase(cbeg);
-                    //     ++skipcount;
-                    //     if (breaknext)
-                    //         break;
-                    //     if (cbeg->m_Class == ETC_EndParameterList)
-                    //         breaknext = true;
-                    // }
-                    // beg += skipcount+1;
                 }
                 beg += 2;
                 continue;
@@ -497,9 +485,35 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
         }
     }
 
+    // 8) Gather function bodies
+    {
+        auto beg = g_TokenList.begin();
+        while (beg != g_TokenList.end())
+        {
+            // If this is a body after parameterlistend it's a function body.
+            if (beg->m_Class == ETC_BodyStart && (beg-1)->m_Class == ETC_EndParameterList)
+            {
+                auto cbeg = beg;
+                bool breaknext = false;
+                int bodyDepth = beg->m_BodyDepth;
+                TTokenList &updatelist = (beg-1)->m_TokenList; // Parent of 'body'
+                while (cbeg != g_TokenList.end())
+                {
+                    SToken copytoken = *cbeg;
+                    updatelist.emplace_back(copytoken);
+                    cbeg = g_TokenList.erase(cbeg);
+                    if (breaknext)
+                        break;
+                    if (cbeg->m_Class == ETC_BodyEnd && cbeg->m_BodyDepth == bodyDepth)
+                        breaknext = true;
+                }
+            }
+            else
+                ++beg;
+        }
+    }
+
     // DEBUG: Dump tokens
-    //CASTNode *rootNode = new CASTNode();
-    //int nodelevel = -1;
     ASTDumpTokens(g_TokenList, _ctx);
 
     std::cout << "Max Body Depth: " << _ctx.m_MaxBodyDepth << "\n";
