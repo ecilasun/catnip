@@ -1136,3 +1136,48 @@ void TerminateEmulator()
     delete []SRAM;
     delete []ROM;
 }
+
+int emulate_rom(char *_romname)
+{
+    // Read ROM file
+    FILE *inputfile = fopen(_romname, "rb");
+    if (inputfile == nullptr)
+    {
+        printf("ERROR: Cannot find ROM file\n");
+        return -1;
+    }
+
+    unsigned int filebytesize = 0;
+    fpos_t pos, endpos;
+    fgetpos(inputfile, &pos);
+    fseek(inputfile, 0, SEEK_END);
+    fgetpos(inputfile, &endpos);
+    fsetpos(inputfile, &pos);
+#if defined(CAT_LINUX)
+    filebytesize = (unsigned int)endpos.__pos;
+#else
+    filebytesize = (unsigned int)endpos;
+#endif
+    filebytesize = filebytesize<0x7FFFF ? filebytesize : 0x7FFFF;
+
+    // Allocate memory and read file contents, then close the file
+    uint16_t *rom_binary = new uint16_t[0x7FFFF];
+    fread(rom_binary, 1, filebytesize, inputfile);
+    fclose(inputfile);
+
+    // Start eumulator with input ROM image
+    if (InitEmulator((uint16_t*)rom_binary))
+    {
+        // Run the emulator
+        bool running = true;
+        do
+        {
+            running = StepEmulator();
+        } while (running);
+    }
+    
+    // Clean up, report errors etc
+    TerminateEmulator();
+
+    return 0;
+}

@@ -1,3 +1,1 @@
-bool InitEmulator(uint16_t *_rom_binary);
-bool StepEmulator();
-void TerminateEmulator();
+int emulate_rom(char *_romname);

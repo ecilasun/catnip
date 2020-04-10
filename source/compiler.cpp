@@ -1,7 +1,40 @@
 #include <stdio.h>
 #include <vector>
 #include <iostream>
-#include "astgen.h"
+#include "compiler.h"
+
+#include <string>
+
+enum ETokenClass
+{
+    ETC_Unknown,
+    ETC_Keyword,
+    ETC_AsmInstruction,
+    ETC_TypeName,
+    ETC_VariableDeclaration,
+    ETC_VariableReference,
+    ETC_Symbol,
+    ETC_Name,
+    ETC_StringLiteral,
+    ETC_NumericLiteral,
+    ETC_FunctionDefinition,
+    ETC_FunctionCall,
+    ETC_Builtin,
+    ETC_BeginParameterList,
+    ETC_EndParameterList,
+    ETC_VariableAssignment,
+    ETC_BodyStart,
+    ETC_BodyEnd,
+    ETC_StatementEnd,
+};
+
+enum ETokenSubClass
+{
+    ETSC_Actual = 0,
+    ETSC_Pointer = 1,
+    ETSC_Handle = 2,
+    ETSC_Reference = 4,
+};
 
 std::string g_whitespace = " \r\n\t";
 std::string g_letters = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVQXYZ";
@@ -11,6 +44,12 @@ std::string g_numeralsAlsoHex = "0123456789xABCDEF";
 std::string g_keywords = "return for while do if continue break switch case asm";
 std::string g_asmkeywords = "mov out in branch call branchif callif ret cmp test";
 std::string g_typenames = "register uint int ushort short bool void uchar char";
+
+struct STokenParserContext
+{
+    int m_MaxBodyDepth{0};
+    int m_MaxParameterDepth{0};
+};
 
 typedef std::vector<struct SToken> TTokenList;
 
@@ -467,4 +506,36 @@ int ASTGenerate(std::string &_input, STokenParserContext &_ctx)
     std::cout << "Max Parameter Depth: " << _ctx.m_MaxParameterDepth << "\n";
 
     return 0; // No error
+}
+
+int compile_c(char *_inputname, char *_outputname)
+{
+    // Read ROM file
+    FILE *inputfile = fopen(_inputname, "rb");
+    if (inputfile == nullptr)
+    {
+        printf("ERROR: Cannot find .c file\n");
+        return -1;
+    }
+
+    unsigned int filebytesize = 0;
+    fpos_t pos, endpos;
+    fgetpos(inputfile, &pos);
+    fseek(inputfile, 0, SEEK_END);
+    fgetpos(inputfile, &endpos);
+    fsetpos(inputfile, &pos);
+#if defined(CAT_LINUX)
+    filebytesize = (unsigned int)endpos.__pos;
+#else
+    filebytesize = (unsigned int)endpos;
+#endif
+
+    // Allocate memory and read file contents, then close the file
+    char *filedata = new char[filebytesize];
+    fread(filedata, 1, filebytesize, inputfile);
+    fclose(inputfile);
+
+    STokenParserContext parsercontext;
+    std::string filecontents = std::string(filedata);
+    return ASTGenerate(filecontents, parsercontext);
 }
