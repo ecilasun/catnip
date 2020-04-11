@@ -250,7 +250,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 node.m_Right = new SASTNode();
                 node.m_Right->m_Self.m_Value = _tokenTable[currentToken+2].m_Value; // Assignment
                 node.m_Right->m_Self.m_Type = NT_OpAssignment;
-                // node.m_Right->m_Left ?
+                // node.m_Right->m_Right is empty
 
                 // Resume parsing as expression
                 state = PS_Expression;
@@ -259,9 +259,9 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 SASTNode payload;
                 ParseAndGenerateAST(_tokenTable, _ast, state, currentToken, &payload);
 
-                // Insert expression from payload on right node of right node
-                node.m_Right->m_Right = new SASTNode();
-                *node.m_Right->m_Right = payload;
+                // Insert expression from payload on left node of right node
+                node.m_Right->m_Left = new SASTNode();
+                *node.m_Right->m_Left = payload;
                 // Nothing on right node
                 // Store
                 _ast.emplace_back(node);
