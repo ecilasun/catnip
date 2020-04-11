@@ -410,12 +410,14 @@ int CompileCode(char *_inputname, char *_outputname)
     uint32_t tokenIndex = 0;
     ParseAndGenerateAST(tokentable, ast, state, tokenIndex, nullptr);
 
+#if defined(DEBUG)
     std::cout << "AST" << std::endl;
     for(auto &node : ast)
     {
         DebugDumpAST(node);
         std::cout << std::endl;
     }
+#endif
 
     return 0;
 }
