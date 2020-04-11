@@ -7,4 +7,5 @@
 
 #include "emulator.h"
 #include "assembler.h"
+#include "oldcompiler.h"
 #include "compiler.h"
