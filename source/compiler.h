@@ -83,8 +83,9 @@ enum SParserState
 enum EASTNodeType
 {
     NT_Unknown,
-    NT_TypeName,
     NT_VariableDeclaration,
+    NT_TypeName,
+    NT_Identifier,
     NT_OpAssignment,
     NT_LiteralConstant,
 };

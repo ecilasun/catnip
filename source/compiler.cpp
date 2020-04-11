@@ -216,13 +216,16 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
             {
                 SASTNode node;
                 // Self is variable name
-                node.m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
+                node.m_Self.m_Value = "DECL";
                 node.m_Self.m_Type = NT_VariableDeclaration;
                 // Type on left node
                 node.m_Left = new SASTNode();
                 node.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
                 node.m_Left->m_Self.m_Type = NT_TypeName;
-                // No right node
+                // Identifier on right node
+                node.m_Right = new SASTNode();
+                node.m_Right->m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
+                node.m_Right->m_Self.m_Type = NT_Identifier;
                 // Store
                 _ast.emplace_back(node);
                 // Advance
@@ -231,40 +234,46 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
         }
 
         // 2) typename identifier = expression ;
+        // DECL(type, identifier)
+        // ASSIGN(identifier, expression)
         {
             bool is_typename = _tokenTable[currentToken].m_Type == TK_Typename;
             bool is_identifier = _tokenTable[currentToken+1].m_Type == TK_Identifier;
             bool is_assignment = _tokenTable[currentToken+2].m_Type == TK_OpAssignment;
             if (is_typename && is_identifier && is_assignment)
             {
-                // Insert the declaration part
-                SASTNode node;
+                // DECL
+                SASTNode nodeDecl;
                 // Self is variable name
-                node.m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
-                node.m_Self.m_Type = NT_VariableDeclaration;
+                nodeDecl.m_Self.m_Value = "DECL";
+                nodeDecl.m_Self.m_Type = NT_VariableDeclaration;
                 // Type on left node
-                node.m_Left = new SASTNode();
-                node.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value; // Typename
-                node.m_Left->m_Self.m_Type = NT_TypeName;
-                // Assignment operation on right node
-                node.m_Right = new SASTNode();
-                node.m_Right->m_Self.m_Value = _tokenTable[currentToken+2].m_Value; // Assignment
-                node.m_Right->m_Self.m_Type = NT_OpAssignment;
-                // node.m_Right->m_Right is empty
+                nodeDecl.m_Left = new SASTNode();
+                nodeDecl.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
+                nodeDecl.m_Left->m_Self.m_Type = NT_TypeName;
+                // Identifier on right node
+                nodeDecl.m_Right = new SASTNode();
+                nodeDecl.m_Right->m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
+                nodeDecl.m_Right->m_Self.m_Type = NT_Identifier;
+                // Store
+                _ast.emplace_back(nodeDecl);
 
-                // Resume parsing as expression
+                // ASSIGN
+                SASTNode nodeAssign;
+                nodeAssign.m_Self.m_Value = "ASSIGN";
+                nodeAssign.m_Self.m_Type = NT_OpAssignment;
+                // Left: identifier
+                nodeAssign.m_Left = new SASTNode();
+                nodeAssign.m_Left->m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
+                nodeAssign.m_Left->m_Self.m_Type = NT_Identifier;
+                // Right: Resume parsing expression into right node
+                nodeAssign.m_Right = new SASTNode();
                 state = PS_Expression;
                 currentToken += 3;
-                // Subtree will be in payload after return
-                SASTNode payload;
-                ParseAndGenerateAST(_tokenTable, _ast, state, currentToken, &payload);
-
-                // Insert expression from payload on left node of right node
-                node.m_Right->m_Left = new SASTNode();
-                *node.m_Right->m_Left = payload;
-                // Nothing on right node
+                ParseAndGenerateAST(_tokenTable, _ast, state, currentToken, nodeAssign.m_Right);
                 // Store
-                _ast.emplace_back(node);
+                _ast.emplace_back(nodeAssign);
+
                 // Cursor already advanced
             }
         }
