@@ -25,7 +25,7 @@ def configure(conf):
 def build(ctx):
 
     if platform.system() == 'Linux':
-        platform_defines = ['_CRT_SECURE_NO_WARNINGS', 'CAT_LINUX']
+        platform_defines = ['_CRT_SECURE_NO_WARNINGS', 'CAT_LINUX', 'DEBUG']
         compile_flags = ['-std=c++17']
         linker_flags = []
 
