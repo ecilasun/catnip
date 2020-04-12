@@ -1,4 +1,4 @@
-/* Simple VRAM access test */
+/* Compiler/parser test */
 
 word testglobal;
 
@@ -42,8 +42,11 @@ void draw_block(word x, word y)
   }
 }
 
-void main() {
+void main(){
   testglobal = 0;
-  draw_block(64, 16);
-  draw_block(32, 48);
+  if (testglobal >= 0)
+  {
+    draw_block(64, 16);
+    draw_block(32, 48);
+  }
 }

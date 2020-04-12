@@ -5,122 +5,13 @@
 // Convert text stream to tokens
 // ---------------------------------------------------------------------------
 
-std::string tokenizer_whitespace = " \r\n\t";
-std::string tokenizer_letters = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVQXYZ";
-std::string tokenizer_symbols = "<>!=,;{}()[]+-*%^/\\'#@&|\":";
+std::string tokenizer_symbols = ",;{}()\\'\":";
+std::string tokenizer_operators = "< > ! ~ | & = == >= <= != ^ * + - / % [ ]";
 std::string tokenizer_numerals = "0123456789";
 std::string tokenizer_hexNumerals = "0123456789xABCDEF";
 std::string tokenizer_keywords = "return for while do if continue break switch case asm";
 std::string tokenizer_asmkeywords = "ldd ldw ldb stw stb out in jmp jmpif call callif ret cmp test vsync fsel";
 std::string tokenizer_typenames = "dword dwordptr word wordptr byte byteptr void";
-
-void TokenizeSkipWhiteSpace(std::string &_input, std::string &_output)
-{
-    if (_input.length() == 0)
-    {
-        _output = "";
-        return;
-    }
-
-    std::string::size_type found = 0;
-    found = _input.find_first_not_of(tokenizer_whitespace);
-    if (found != std::string::npos)
-        _output = _input.substr(found);
-    else
-        _output = "";
-}
-
-void TokenizeSkipComment(std::string &_input, std::string &_output)
-{
-    if (_input.length() == 0)
-    {
-        _output = "";
-        return;
-    }
-
-    if (_input[0]=='/' && _input[1]=='/')
-    {
-        size_t found = _input.find("\n", 1);
-        if (found != std::string::npos)
-            _output = _input.substr(found+1);
-        else
-            _output = _input.substr(2);
-    }
-    else if (_input[0]=='/' && _input[1]=='*')
-    {
-        size_t found = _input.find("*/", 2);
-        if (found != std::string::npos)
-            _output = _input.substr(found+2);
-        else
-            _output = _input.substr(2);
-    }
-    else
-        _output = _input;
-}
-
-void TokenizeNextToken(std::string &_input, std::string &_token, std::string::size_type &_offset, ETokenType &_tokenType)
-{
-    if (_input.length() == 0)
-    {
-        _token = "";
-        _tokenType = TK_Unknown;
-        _offset = std::string::npos;
-        return;
-    }
-
-    std::string::size_type foundstart = 0;
-    if (tokenizer_letters.find_first_of(_input[0]) != std::string::npos)
-    {
-        // Was a letter, continue until not a letter
-        std::string::size_type foundend = 0;
-        foundend = _input.find_first_not_of(tokenizer_letters, foundstart);
-        _token = _input.substr(foundstart, foundend);
-        _tokenType = TK_Identifier;
-        _offset = foundend;
-    }
-    else
-    {
-        if (tokenizer_symbols.find_first_of(_input[0]) != std::string::npos)
-        {
-            if (_input[0] == '\"')
-            {
-                std::string::size_type foundend = 0;
-                foundend = _input.find_first_not_of("\n", foundstart);
-                _token = _input.substr(foundstart, foundend);
-                _tokenType = TK_LitString;
-                _offset = foundend;
-            }
-            else
-            {
-                // Was any other symbol apart from string quotes, continue until not a symbol
-                std::string::size_type foundend = 0;
-                // Symbols might be concatenated such as '==' or '+=' etc
-                foundend = _input.find_first_not_of(tokenizer_symbols, foundstart);
-                _token = _input.substr(foundstart, foundend);
-                _tokenType = TK_Symbol;
-                _offset = foundend;
-            }
-        }
-        else
-        {
-            if (tokenizer_numerals.find_first_of(_input[0]) != std::string::npos)
-            {
-                // Was a numeral, continue until not a symbol
-                std::string::size_type foundend = 0;
-                foundend = _input.find_first_not_of(tokenizer_hexNumerals, foundstart);
-                _token = _input.substr(foundstart, foundend);
-                _tokenType = TK_LitNumeric;
-                _offset = foundend;
-            }
-            else
-            {
-                _token = "";
-                _tokenType = TK_Unknown;
-                _offset = std::string::npos;
-            }
-        }
-    }
-}
 
 void Tokenize(std::string &_inputStream, TTokenTable &_tokenTable)
 {
@@ -128,57 +19,88 @@ void Tokenize(std::string &_inputStream, TTokenTable &_tokenTable)
     
     std::string str = _inputStream;
 
-    // Generate initial tokens and basic types
-    bool done = false;
-    while (str.length() != 0)
-    {
-        TokenizeSkipWhiteSpace(str, str);
-        TokenizeSkipComment(str, str);
-
-        std::string token;
-        std::string::size_type offset;
-        ETokenType tokenType;
-        TokenizeSkipWhiteSpace(str, str);
-        TokenizeNextToken(str, token, offset, tokenType);
-
-        if (offset == std::string::npos)
+    // Strip comments
+    do {
+        size_t foundStart = str.find("/*");
+        if (foundStart != std::string::npos)
+        {
+            size_t foundEnd = str.find("*/");
+            str = str.substr(0, foundStart) + str.substr(foundEnd+2);
+        }
+        else
             break;
-        str = str.substr(offset);
+    } while(str.length() != 0);
 
-        // Place each token into the token table
-        // disregarding any syntax rules
-        STokenEntry tokenEntry;
-        tokenEntry.m_Type = tokenType;
-        tokenEntry.m_Value = token;
-        _tokenTable.emplace_back(tokenEntry);
-    }
-
-    // Loop further to refine token types
-    for (auto &t : _tokenTable)
+    // Find words, operators and symbols
+    std::regex words_and_symbols("(\\w+)|(>=)|(<=)|(==)|(!=)|(\\+\\+)|(\\-\\-)|[\"';=\\[\\]\\{\\},:\\+\\-<>~!%^&\\*\\(\\)]");
+    auto words_begin = std::sregex_iterator(str.begin(), str.end(), words_and_symbols);
+    auto words_end = std::sregex_iterator();
+    for (std::sregex_iterator i=words_begin; i!=words_end; ++i)
     {
-        if(t.m_Type == TK_Symbol && t.m_Value == ";")
-            t.m_Type = TK_EndStatement;
-        if(t.m_Type == TK_Symbol && t.m_Value == "=")
-            t.m_Type = TK_OpAssignment;
-        if(t.m_Type == TK_Symbol && t.m_Value == "==")
-            t.m_Type = TK_OpCmpEqual;
-        if(t.m_Type == TK_Symbol && t.m_Value == "<")
-            t.m_Type = TK_OpCmpLess;
-        if(t.m_Type == TK_Symbol && t.m_Value == ">")
-            t.m_Type = TK_OpCmpGreater;
-        if(t.m_Type == TK_Symbol && t.m_Value == "!=")
-            t.m_Type = TK_OpCmpNotEqual;
-        if(t.m_Type == TK_Symbol && t.m_Value == ">=")
-            t.m_Type = TK_OpCmpGreaterEqual;
-        if(t.m_Type == TK_Symbol && t.m_Value == "<=")
-            t.m_Type = TK_OpCmpLessEqual;
+        std::smatch match = *i;
+        std::string token = match.str();
 
-        if (tokenizer_keywords.find(t.m_Value) != std::string::npos)
-            t.m_Type = TK_Keyword;
-        if (tokenizer_asmkeywords.find(t.m_Value) != std::string::npos)
-            t.m_Type = TK_AsmKeyword;
-        if (tokenizer_typenames.find(t.m_Value) != std::string::npos)
-            t.m_Type = TK_Typename;
+        STokenEntry tokenEntry;
+        tokenEntry.m_Value = token;
+        tokenEntry.m_Type = TK_Identifier;
+
+        // Token is numeric if first character is numeric
+        if (tokenizer_numerals.find_first_of(token[0]) != std::string::npos)
+            tokenEntry.m_Type = TK_LitNumeric;
+
+        if (tokenizer_keywords.find(token) != std::string::npos)
+            tokenEntry.m_Type = TK_Keyword;
+        if (tokenizer_asmkeywords.find(token) != std::string::npos)
+            tokenEntry.m_Type = TK_AsmKeyword;
+        if (tokenizer_typenames.find(token) != std::string::npos)
+            tokenEntry.m_Type = TK_Typename;
+        if (tokenizer_operators.find(token) != std::string::npos)
+            tokenEntry.m_Type = TK_Operator;
+        if (tokenizer_symbols.find(token) != std::string::npos)
+            tokenEntry.m_Type = TK_Symbol;
+
+        if(token == "==")
+            tokenEntry.m_Type = TK_OpCmpEqual;
+        if(token == "!=")
+            tokenEntry.m_Type = TK_OpCmpNotEqual;
+        if(token == ">=")
+            tokenEntry.m_Type = TK_OpCmpGreaterEqual;
+        if(token == "<=")
+            tokenEntry.m_Type = TK_OpCmpLessEqual;
+        if(token == ";")
+            tokenEntry.m_Type = TK_EndStatement;
+        if(token == "=")
+            tokenEntry.m_Type = TK_OpAssignment;
+        if(token == "(")
+            tokenEntry.m_Type = TK_BeginParams;
+        if(token == ")")
+            tokenEntry.m_Type = TK_EndParams;
+        if(token == "{")
+            tokenEntry.m_Type = TK_BeginBlock;
+        if(token == "}")
+            tokenEntry.m_Type = TK_EndBlock;
+        if(token == "[")
+            tokenEntry.m_Type = TK_BeginArray;
+        if(token == "]")
+            tokenEntry.m_Type = TK_EndArray;
+        if(token == "<")
+            tokenEntry.m_Type = TK_OpCmpLess;
+        if(token == ">")
+            tokenEntry.m_Type = TK_OpCmpGreater;
+        if(token == "+")
+            tokenEntry.m_Type = TK_OpAdd;
+        if(token == "-")
+            tokenEntry.m_Type = TK_OpSub;
+        if(token == "*")
+            tokenEntry.m_Type = TK_OpMul;
+        if(token == "/")
+            tokenEntry.m_Type = TK_OpDiv;
+        if(token == "%")
+            tokenEntry.m_Type = TK_OpMod;
+        if(token == ",")
+            tokenEntry.m_Type = TK_Separator;
+
+        _tokenTable.emplace_back(tokenEntry);
     }
 }
 
@@ -190,6 +112,7 @@ void Tokenize(std::string &_inputStream, TTokenTable &_tokenTable)
 void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SParserState &state, uint32_t &currentToken, SASTNode *_payload)
 {
     // statement ----------> typename identifier ;
+    //                       typename identifier [ numericliteral ] ;
     //                       typename identifier = expression ;
     //                       identifier = expression ;
     //                       if (expression) statement
@@ -207,21 +130,115 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
     // Statement mode
     if (state == PS_Statement)
     {
-        // 1) typename identifier ;
+        // 1) typename identifier
         {
             bool is_typename = _tokenTable[currentToken].m_Type == TK_Typename;
             bool is_identifier = _tokenTable[currentToken+1].m_Type == TK_Identifier;
-            bool is_endstatement = _tokenTable[currentToken+2].m_Type == TK_EndStatement;
-            if (is_typename && is_identifier && is_endstatement)
+            if (is_typename && is_identifier)
+            {
+                // either expected ;
+                // typename identifier ;
+                bool is_endstatement = _tokenTable[currentToken+2].m_Type == TK_EndStatement;
+                if (is_endstatement)
+                {
+                    // DECL(type, identifier)
+                    SASTNode node;
+                    // Self is variable name
+                    node.m_Self.m_Value = "DECL";
+                    node.m_Self.m_Type = NT_VariableDeclaration;
+                    // Type on left node
+                    node.m_Left = new SASTNode();
+                    node.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
+                    node.m_Left->m_Self.m_Type = NT_TypeName;
+                    // Identifier on right node
+                    node.m_Right = new SASTNode();
+                    node.m_Right->m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
+                    node.m_Right->m_Self.m_Type = NT_Identifier;
+                    // Store
+                    _ast.emplace_back(node);
+                    // Advance
+                    currentToken += 3;
+                    return;
+                }
+
+                // or expected =
+                // typename identifier = 
+                bool is_assignment = _tokenTable[currentToken+2].m_Type == TK_OpAssignment;
+                if (is_assignment)
+                {
+                    // expected expression ;
+                    // typename identifier = expression ;
+
+                    // DECL(type, identifier)
+                    SASTNode nodeDecl;
+                    // Self is variable name
+                    nodeDecl.m_Self.m_Value = "DECL";
+                    nodeDecl.m_Self.m_Type = NT_VariableDeclaration;
+                    // Type on left node
+                    nodeDecl.m_Left = new SASTNode();
+                    nodeDecl.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
+                    nodeDecl.m_Left->m_Self.m_Type = NT_TypeName;
+                    // Identifier on right node
+                    nodeDecl.m_Right = new SASTNode();
+                    nodeDecl.m_Right->m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
+                    nodeDecl.m_Right->m_Self.m_Type = NT_Identifier;
+                    // Store
+                    _ast.emplace_back(nodeDecl);
+
+                    // ASSIGN(identifier, expression)
+                    SASTNode nodeAssign;
+                    nodeAssign.m_Self.m_Value = "ASSIGN";
+                    nodeAssign.m_Self.m_Type = NT_OpAssignment;
+                    // Left: identifier
+                    nodeAssign.m_Left = new SASTNode();
+                    nodeAssign.m_Left->m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
+                    nodeAssign.m_Left->m_Self.m_Type = NT_Identifier;
+                    // Right: Resume parsing expression into right node
+                    nodeAssign.m_Right = new SASTNode();
+                    state = PS_Expression;
+                    currentToken += 3;
+                    ParseAndGenerateAST(_tokenTable, _ast, state, currentToken, nodeAssign.m_Right);
+                    // Store
+                    _ast.emplace_back(nodeAssign);
+
+                    // Skip the endstatement
+                    bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndStatement;
+                    if (is_endstatement)
+                    {
+                        // Back to statement
+                        state = PS_Statement;
+                        ++currentToken;
+                    }
+                    else
+                        std::cout << "Statement not terminated after assignment" << std::endl;
+                    return;
+                }
+            }
+        }
+
+        // 2) typename identifier [ numericliteral ] ;
+        // DECL(type, identifier)
+        /*{
+            bool is_typename = _tokenTable[currentToken].m_Type == TK_Typename;
+            bool is_identifier = _tokenTable[currentToken+1].m_Type == TK_Identifier;
+            bool is_symbol1 = _tokenTable[currentToken+2].m_Type == TK_Symbol;
+            bool is_literal = _tokenTable[currentToken+3].m_Type == TK_LitNumeric;
+            bool is_symbol2 = _tokenTable[currentToken+4].m_Type == TK_Symbol;
+            bool is_endstatement = _tokenTable[currentToken+5].m_Type == TK_EndStatement;
+            if (is_typename && is_identifier && is_symbol1 && is_literal && is_symbol2 && is_endstatement)
             {
                 SASTNode node;
                 // Self is variable name
-                node.m_Self.m_Value = "DECL";
+                node.m_Self.m_Value = "DECLARRAY";
                 node.m_Self.m_Type = NT_VariableDeclaration;
                 // Type on left node
                 node.m_Left = new SASTNode();
                 node.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
                 node.m_Left->m_Self.m_Type = NT_TypeName;
+                // Array size on left of left
+                node.m_Left->m_Left = new SASTNode();
+                node.m_Left->m_Left->m_Self.m_Value = _tokenTable[currentToken+3].m_Value;
+                node.m_Left->m_Left->m_Self.m_Type = NT_LiteralConstant;
                 // Identifier on right node
                 node.m_Right = new SASTNode();
                 node.m_Right->m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
@@ -229,58 +246,31 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 // Store
                 _ast.emplace_back(node);
                 // Advance
-                currentToken += 3;
+                currentToken += 6;
+                return;
             }
-        }
+        }*/
 
-        // 2) typename identifier = expression ;
-        // DECL(type, identifier)
-        // ASSIGN(identifier, expression)
+        // Unknown
         {
-            bool is_typename = _tokenTable[currentToken].m_Type == TK_Typename;
-            bool is_identifier = _tokenTable[currentToken+1].m_Type == TK_Identifier;
-            bool is_assignment = _tokenTable[currentToken+2].m_Type == TK_OpAssignment;
-            if (is_typename && is_identifier && is_assignment)
-            {
-                // DECL
-                SASTNode nodeDecl;
-                // Self is variable name
-                nodeDecl.m_Self.m_Value = "DECL";
-                nodeDecl.m_Self.m_Type = NT_VariableDeclaration;
-                // Type on left node
-                nodeDecl.m_Left = new SASTNode();
-                nodeDecl.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
-                nodeDecl.m_Left->m_Self.m_Type = NT_TypeName;
-                // Identifier on right node
-                nodeDecl.m_Right = new SASTNode();
-                nodeDecl.m_Right->m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
-                nodeDecl.m_Right->m_Self.m_Type = NT_Identifier;
-                // Store
-                _ast.emplace_back(nodeDecl);
-
-                // ASSIGN
-                SASTNode nodeAssign;
-                nodeAssign.m_Self.m_Value = "ASSIGN";
-                nodeAssign.m_Self.m_Type = NT_OpAssignment;
-                // Left: identifier
-                nodeAssign.m_Left = new SASTNode();
-                nodeAssign.m_Left->m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
-                nodeAssign.m_Left->m_Self.m_Type = NT_Identifier;
-                // Right: Resume parsing expression into right node
-                nodeAssign.m_Right = new SASTNode();
-                state = PS_Expression;
-                currentToken += 3;
-                ParseAndGenerateAST(_tokenTable, _ast, state, currentToken, nodeAssign.m_Right);
-                // Store
-                _ast.emplace_back(nodeAssign);
-
-                // Cursor already advanced
-            }
+            ++currentToken;
+            return;
         }
     }
 
     if (state == PS_Expression)
     {
+        // 0) end of statement
+        {
+            bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndStatement;
+            if (is_endstatement)
+            {
+                state = PS_Statement;
+                ++currentToken;
+                return;
+            }
+        }
+
         // 1) expression term
         {
             bool is_string = _tokenTable[currentToken].m_Type == TK_LitString;
@@ -299,10 +289,15 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 else
                 {
                     std::cout << "Found standalone expression" << std::endl;
-                    return;
                 }
-                
+                return;
             }
+        }
+
+        // Unknown
+        {
+            ++currentToken;
+            return;
         }
     }
 }
@@ -345,6 +340,8 @@ static const char *s_typeAsString[]=
     "LitNumeric",
     "LitString",
     "Symbol",
+    "Operator",
+
     // Further expanded types
     "OpAssignment",
     "OpCmpEqual",
@@ -353,21 +350,50 @@ static const char *s_typeAsString[]=
     "OpCmpNotEqual",
     "OpCmpGreaterEqual",
     "OpCmpLessEqual",
+    "OpAdd",
+    "OpSub",
+    "OpMul",
+    "OpDiv",
+    "OpMod",
     "EndStatement",
     "Keyword",
     "AsmKeyword",
-    "Typename"
+    "Typename",
+    "BeginBlock",
+    "EndBlock",
+    "BeginParams",
+    "EndParams",
+    "BeginArray",
+    "EndArray",
+    "Separator",
 };
 
 void DebugDumpAST(SASTNode &_root)
 {
-    std::cout << _root.m_Self.m_Value << "(";
-    if (_root.m_Left)
+    if (_root.m_Left && _root.m_Right)
+    {
+        std::cout << _root.m_Self.m_Value << "(";
         DebugDumpAST(*_root.m_Left);
-    std::cout << ",";
-    if (_root.m_Right)
+        std::cout << ",";
         DebugDumpAST(*_root.m_Right);
-    std::cout << ") ";
+        std::cout << ") ";
+    }
+    else if (_root.m_Left)
+    {
+        std::cout << _root.m_Self.m_Value << "(";
+        DebugDumpAST(*_root.m_Left);
+        std::cout << ") ";
+    }
+    else if (_root.m_Right)
+    {
+        std::cout << _root.m_Self.m_Value << "(,";
+        DebugDumpAST(*_root.m_Right);
+        std::cout << ") ";
+    }
+    else
+    {
+        std::cout << _root.m_Self.m_Value;
+    }
 }
 
 int CompileCode(char *_inputname, char *_outputname)
@@ -417,7 +443,10 @@ int CompileCode(char *_inputname, char *_outputname)
     // Start with 'statement' state at token 0
     SParserState state = PS_Statement;
     uint32_t tokenIndex = 0;
-    ParseAndGenerateAST(tokentable, ast, state, tokenIndex, nullptr);
+    while (tokenIndex < tokentable.size())
+    {
+        ParseAndGenerateAST(tokentable, ast, state, tokenIndex, nullptr);
+    }
 
 #if defined(DEBUG)
     std::cout << "AST" << std::endl;

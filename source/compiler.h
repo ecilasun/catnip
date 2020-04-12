@@ -1,6 +1,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <regex>
 #include "inttypes.h"
 
 // ---------------------------------------------------------------------------
@@ -43,6 +44,8 @@ enum ETokenType
     TK_LitNumeric,
     TK_LitString,
     TK_Symbol,
+    TK_Operator,
+
     // Further expanded types
     TK_OpAssignment,
     TK_OpCmpEqual,
@@ -51,10 +54,22 @@ enum ETokenType
     TK_OpCmpNotEqual,
     TK_OpCmpGreaterEqual,
     TK_OpCmpLessEqual,
+    TK_OpAdd,
+    TK_OpSub,
+    TK_OpMul,
+    TK_OpDiv,
+    TK_OpMod,
     TK_EndStatement,
     TK_Keyword,
     TK_AsmKeyword,
-    TK_Typename
+    TK_Typename,
+    TK_BeginBlock,
+    TK_EndBlock,
+    TK_BeginParams,
+    TK_EndParams,
+    TK_BeginArray,
+    TK_EndArray,
+    TK_Separator,
 };
 
 struct STokenEntry
