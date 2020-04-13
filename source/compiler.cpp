@@ -144,6 +144,44 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
     //                       (empty)
     // expression ---------> expression term
 
+    // Parameter mode
+    while(state == PS_Parameters)
+    {
+        // 0) end of parameter list
+        {
+            bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndParams;
+            if (is_endstatement)
+            {
+                state = PS_Statement;
+                ++currentToken;
+                return;
+            }
+        }
+
+        bool is_typename = _tokenTable[currentToken].m_Type == TK_Typename;
+        bool is_identifier = _tokenTable[currentToken+1].m_Type == TK_Identifier;
+        if (is_typename, is_identifier)
+        {
+            SASTNode node;
+            // Self is variable name
+            node.m_Self.m_Value = "PARAM";
+            node.m_Self.m_Type = NT_VariableDeclaration;
+            // Type on left node
+            node.m_Left = new SASTNode();
+            node.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
+            node.m_Left->m_Self.m_Type = NT_TypeName;
+            // Identifier on right node
+            node.m_Right = new SASTNode();
+            node.m_Right->m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
+            node.m_Right->m_Self.m_Type = NT_Identifier;
+            // Store
+            _ast.emplace_back(node);
+            currentToken += 2;
+        }
+        else
+            ++currentToken;
+    }
+
     // Statement mode
     if (state == PS_Statement)
     {
@@ -178,9 +216,12 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 _ast.emplace_back(node);
                 currentToken += 2;
 
-                // TODO: Jump into statement block mode
+                // TODO: Jump into parameter parse mode
                 if (is_functiondecl)
+                {
+                    state = PS_Parameters;
                     return;
+                }
 
                 // expected ; or , or )
                 bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndStatement;

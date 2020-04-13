@@ -102,6 +102,7 @@ enum SParserState
 {
     PS_Unknown,
     PS_Statement,
+    PS_Parameters,
     PS_Expression,
     PS_OptionalExpression,
     PS_Statements,
