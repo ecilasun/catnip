@@ -158,6 +158,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
             }
         }
 
+        // 1) parameter entry
         bool is_typename = _tokenTable[currentToken].m_Type == TK_Typename;
         bool is_identifier = _tokenTable[currentToken+1].m_Type == TK_Identifier;
         if (is_typename, is_identifier)
@@ -185,6 +186,31 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
     // Statement mode
     if (state == PS_Statement)
     {
+        // 0) identifier (
+        {
+            bool is_identifier = _tokenTable[currentToken].m_Type == TK_Identifier;
+            bool is_beginparams = _tokenTable[currentToken+1].m_Type == TK_BeginParams;
+            if (is_identifier && is_beginparams)
+            {
+                SASTNode node;
+                // Self is variable name
+                node.m_Self.m_Value = "FUNCCALL";
+                node.m_Self.m_Type = NT_VariableDeclaration;
+                // Type on left node
+                node.m_Left = new SASTNode();
+                node.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
+                node.m_Left->m_Self.m_Type = NT_TypeName;
+                node.m_Right = new SASTNode();
+                state = PS_Expression;
+                currentToken+=2; // Skip identifier and beginparams
+                ParseAndGenerateAST(_tokenTable, _ast, state, currentToken, node.m_Right);
+                // Store
+                _ast.emplace_back(node);
+
+                return;
+            }
+        }
+
         // 1) typename identifier
         {
             bool is_typename = _tokenTable[currentToken].m_Type == TK_Typename;
@@ -198,7 +224,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 // DECL(typename, identifier) or FUNC(typename, identifier)
                 SASTNode node;
                 // Self is variable name
-                node.m_Self.m_Value = is_functiondecl ? "FUNC" : "DECL";
+                node.m_Self.m_Value = is_functiondecl ? "FUNCDEF" : "VARDECL";
                 node.m_Self.m_Type = NT_VariableDeclaration;
                 // Type on left node
                 node.m_Left = new SASTNode();
@@ -298,10 +324,11 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
 
     while (state == PS_Expression)
     {
-        // 0) end of statement or separator
+        // 0) end of statement
         {
             bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndStatement;
-            if (is_endstatement)
+            bool is_endparams = _tokenTable[currentToken].m_Type == TK_EndParams;
+            if (is_endstatement || is_endparams)
             {
                 state = PS_Statement;
                 ++currentToken;
@@ -311,10 +338,10 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
 
         // 1) expression term
         {
-            //bool is_identifier = _tokenTable[currentToken+1].m_Type == TK_Identifier;
-            bool is_string = _tokenTable[currentToken].m_Type == TK_LitString;
-            bool is_numeric = _tokenTable[currentToken].m_Type == TK_LitNumeric;
-            if (is_string || is_numeric)
+            bool is_separator = _tokenTable[currentToken].m_Type == TK_Separator;
+            bool is_beginblock = _tokenTable[currentToken].m_Type == TK_BeginBlock;
+            bool is_endblock = _tokenTable[currentToken].m_Type == TK_EndBlock;
+            if (!is_separator && !is_beginblock && !is_endblock)
             {
                 if (!_payload)
                 {
@@ -322,7 +349,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                     return;
                 }
 
-                _payload->m_Self.m_Value += _tokenTable[currentToken].m_Value + " ";
+                _payload->m_Self.m_Value += _tokenTable[currentToken].m_Value + ", ";
                 _payload->m_Self.m_Type = NT_LiteralConstant;
             }
         }

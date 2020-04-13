@@ -116,6 +116,7 @@ enum EASTNodeType
     NT_Identifier,
     NT_OpAssignment,
     NT_LiteralConstant,
+    NT_Expression,
 };
 
 struct SASTEntry
