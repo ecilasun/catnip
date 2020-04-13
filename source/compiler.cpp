@@ -192,20 +192,21 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
             bool is_beginparams = _tokenTable[currentToken+1].m_Type == TK_BeginParams;
             if (is_identifier && is_beginparams)
             {
-                SASTNode node;
+                SASTNode nodeCall;
                 // Self is variable name
-                node.m_Self.m_Value = "FUNCCALL";
-                node.m_Self.m_Type = NT_VariableDeclaration;
+                nodeCall.m_Self.m_Value = "FUNCCALL";
+                nodeCall.m_Self.m_Type = NT_VariableDeclaration;
                 // Type on left node
-                node.m_Left = new SASTNode();
-                node.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
-                node.m_Left->m_Self.m_Type = NT_TypeName;
-                node.m_Right = new SASTNode();
+                nodeCall.m_Left = new SASTNode();
+                nodeCall.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
+                nodeCall.m_Left->m_Self.m_Type = NT_TypeName;
+                // Parameters on right node (comma separated, not evaluated)
+                nodeCall.m_Right = new SASTNode();
                 state = PS_Expression;
                 currentToken+=2; // Skip identifier and beginparams
-                ParseAndGenerateAST(_tokenTable, _ast, state, currentToken, node.m_Right);
+                ParseAndGenerateAST(_tokenTable, _ast, state, currentToken, nodeCall.m_Right);
                 // Store
-                _ast.emplace_back(node);
+                _ast.emplace_back(nodeCall);
 
                 return;
             }
