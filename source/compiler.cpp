@@ -187,10 +187,12 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
     if (state == PS_Statement)
     {
         // 0) identifier (
+        // or builtin (
         {
             bool is_identifier = _tokenTable[currentToken].m_Type == TK_Identifier;
+            bool is_builtin = _tokenTable[currentToken].m_Type == TK_Keyword;
             bool is_beginparams = _tokenTable[currentToken+1].m_Type == TK_BeginParams;
-            if (is_identifier && is_beginparams)
+            if ((is_identifier||is_builtin) && is_beginparams)
             {
                 SASTNode nodeCall;
                 // Self is variable name
@@ -202,7 +204,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 nodeCall.m_Left->m_Self.m_Type = NT_TypeName;
                 // Parameters on right node (comma separated, not evaluated)
                 nodeCall.m_Right = new SASTNode();
-                state = PS_Expression;
+                state = PS_ExpressionParamList;
                 currentToken+=2; // Skip identifier and beginparams
                 ParseAndGenerateAST(_tokenTable, _ast, state, currentToken, nodeCall.m_Right);
                 // Store
@@ -212,7 +214,32 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
             }
         }
 
-        // 1) typename identifier
+        // 1) identifier =
+        {
+            bool is_identifier = _tokenTable[currentToken].m_Type == TK_Identifier;
+            bool is_assignop = _tokenTable[currentToken+1].m_Type == TK_OpAssignment;
+            if (is_identifier && is_assignop)
+            {
+                SASTNode nodeAssign;
+                nodeAssign.m_Self.m_Value = "ASSIGN";
+                nodeAssign.m_Self.m_Type = NT_OpAssignment;
+                // Left: identifier
+                nodeAssign.m_Left = new SASTNode();
+                nodeAssign.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
+                nodeAssign.m_Left->m_Self.m_Type = NT_Identifier;
+                // Right: Resume parsing expression into right node
+                nodeAssign.m_Right = new SASTNode();
+                state = PS_Expression;
+                currentToken+=2; // Skip identifier and assignment operator and parse the expression
+                ParseAndGenerateAST(_tokenTable, _ast, state, currentToken, nodeAssign.m_Right);
+                // Store
+                _ast.emplace_back(nodeAssign);
+            }
+        }
+
+        // 2) identifier [ expression ] = expression;
+
+        // 3) typename identifier
         {
             bool is_typename = _tokenTable[currentToken].m_Type == TK_Typename;
             bool is_identifier = _tokenTable[currentToken+1].m_Type == TK_Identifier;
@@ -323,13 +350,14 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
         }
     }
 
-    while (state == PS_Expression)
+    while (state == PS_Expression || state == PS_ExpressionParamList)
     {
         // 0) end of statement
         {
-            bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndStatement;
+            bool is_endstatement = (state == PS_ExpressionParamList) ? false : _tokenTable[currentToken].m_Type == TK_EndStatement;
             bool is_endparams = _tokenTable[currentToken].m_Type == TK_EndParams;
-            if (is_endstatement || is_endparams)
+            bool is_endarray = _tokenTable[currentToken].m_Type == TK_EndArray;
+            if (is_endstatement || is_endparams || is_endarray)
             {
                 state = PS_Statement;
                 ++currentToken;
@@ -350,7 +378,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                     return;
                 }
 
-                _payload->m_Self.m_Value += _tokenTable[currentToken].m_Value + ", ";
+                _payload->m_Self.m_Value += _tokenTable[currentToken].m_Value + " ";
                 _payload->m_Self.m_Type = NT_LiteralConstant;
             }
         }

@@ -104,6 +104,7 @@ enum SParserState
     PS_Statement,
     PS_Parameters,
     PS_Expression,
+    PS_ExpressionParamList,
     PS_OptionalExpression,
     PS_Statements,
 };
