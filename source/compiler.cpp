@@ -246,54 +246,43 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
         }
     }
 
-    if (state == PS_Expression)
+    while (state == PS_Expression)
     {
-        // 0) end of statement
+        // 0) end of statement or separator
         {
             bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndStatement;
+            bool is_separator = _tokenTable[currentToken].m_Type == TK_Separator;
+            bool is_beginblock = _tokenTable[currentToken].m_Type == TK_BeginBlock;
+            bool is_endblock = _tokenTable[currentToken].m_Type == TK_EndBlock;
             if (is_endstatement)
             {
                 state = PS_Statement;
                 ++currentToken;
                 return;
             }
+            else if (is_separator || is_beginblock || is_endblock)
+                ++currentToken;
         }
 
         // 1) expression term
         {
-            bool is_beginblock = _tokenTable[currentToken].m_Type == TK_BeginBlock;
-            bool is_endblock = _tokenTable[currentToken].m_Type == TK_EndBlock;
             //bool is_identifier = _tokenTable[currentToken+1].m_Type == TK_Identifier;
-
-            if (is_beginblock || is_endblock)
-                ++currentToken;
-
             bool is_string = _tokenTable[currentToken].m_Type == TK_LitString;
             bool is_numeric = _tokenTable[currentToken].m_Type == TK_LitNumeric;
             if (is_string || is_numeric)
             {
-                if (_payload)
+                if (!_payload)
                 {
-                    _payload->m_Self.m_Value = _tokenTable[currentToken].m_Value;
-                    _payload->m_Self.m_Type = NT_LiteralConstant;
-                    // Advance
-                    ++currentToken;
-                    // TODO: This is temporary, we're supposed to loop further here
-                    state = PS_Statement;
+                    std::cout << "ERROR: Found standalone expression" << std::endl;
+                    return;
                 }
-                else
-                {
-                    std::cout << "Found standalone expression" << std::endl;
-                }
-                return;
+
+                _payload->m_Self.m_Value += _tokenTable[currentToken].m_Value + " ";
+                _payload->m_Self.m_Type = NT_LiteralConstant;
             }
         }
 
-        // Unknown
-        {
-            ++currentToken;
-            return;
-        }
+        ++currentToken;
     }
 }
 
