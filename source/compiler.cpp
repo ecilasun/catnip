@@ -328,16 +328,6 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                     // Store
                     _ast.emplace_back(nodeAssign);
 
-                    // Skip the endstatement
-                    bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndStatement;
-                    if (is_endstatement)
-                    {
-                        // Back to statement
-                        state = PS_Statement;
-                        ++currentToken;
-                    }
-                    else
-                        std::cout << "Statement not terminated after assignment" << std::endl;
                     return;
                 }
             }
