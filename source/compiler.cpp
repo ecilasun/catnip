@@ -139,9 +139,9 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
     //                       do statement while (expression) ;
     //                       { statements }
     // optionalexpression -> expression
-    //                       ?
+    //                       (empty)
     // statements ---------> statements statement
-    //                       ?
+    //                       (empty)
     // expression ---------> expression term
 
     // Statement mode
@@ -151,12 +151,16 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
         {
             bool is_typename = _tokenTable[currentToken].m_Type == TK_Typename;
             bool is_identifier = _tokenTable[currentToken+1].m_Type == TK_Identifier;
+
             if (is_typename && is_identifier)
             {
-                // DECL(type, identifier)
+                // This is a function declaration if it's of the form: typename identifier (
+                bool is_functiondecl = _tokenTable[currentToken+2].m_Type == TK_BeginParams;
+
+                // DECL(typename, identifier) or FUNC(typename, identifier)
                 SASTNode node;
                 // Self is variable name
-                node.m_Self.m_Value = "DECL";
+                node.m_Self.m_Value = is_functiondecl ? "FUNC" : "DECL";
                 node.m_Self.m_Type = NT_VariableDeclaration;
                 // Type on left node
                 node.m_Left = new SASTNode();
@@ -173,6 +177,10 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 // Store
                 _ast.emplace_back(node);
                 currentToken += 2;
+
+                // TODO: Jump into statement block mode
+                if (is_functiondecl)
+                    return;
 
                 // expected ; or , or )
                 bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndStatement;
