@@ -47,28 +47,40 @@ enum ETokenType
     TK_Operator,
 
     // Further expanded types
+    TK_Keyword,
+    TK_AsmKeyword,
+    TK_Typename,
+
+    TK_OpLogicNegate,
     TK_OpAssignment,
+
     TK_OpCmpEqual,
     TK_OpCmpLess,
     TK_OpCmpGreater,
     TK_OpCmpNotEqual,
     TK_OpCmpGreaterEqual,
     TK_OpCmpLessEqual,
+
     TK_OpAdd,
     TK_OpSub,
     TK_OpMul,
     TK_OpDiv,
     TK_OpMod,
+
+    TK_OpBitNot,
+    TK_OpBitOr,
+    TK_OpBitAnd,
+    TK_OpBitXor,
+
     TK_EndStatement,
-    TK_Keyword,
-    TK_AsmKeyword,
-    TK_Typename,
+
     TK_BeginBlock,
     TK_EndBlock,
     TK_BeginParams,
     TK_EndParams,
     TK_BeginArray,
     TK_EndArray,
+
     TK_Separator,
 };
 

@@ -58,7 +58,14 @@
         "unordered_set": "cpp",
         "xhash": "cpp",
         "map": "cpp",
-        "xtree": "cpp"
+        "xtree": "cpp",
+        "array": "cpp",
+        "atomic": "cpp",
+        "condition_variable": "cpp",
+        "functional": "cpp",
+        "mutex": "cpp",
+        "shared_mutex": "cpp",
+        "unordered_map": "cpp"
     },
     "python.linting.pylintEnabled": false,
     "python.linting.flake8Enabled": true,

@@ -22,9 +22,9 @@ void draw_block(word x, word y)
 {
   word ix;
   word iy;
-  for (iy = y; iy < y + 16; iy = iy + 1)
+  for (iy = y; iy <= y + 15; iy = iy + 1)
   {
-    for (ix = x; ix < x + 16; ix = ix + 1)
+    for (ix = x; ix <= x + 15; ix = ix + 1)
     {
         /*asm
         {

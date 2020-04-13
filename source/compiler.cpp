@@ -6,7 +6,7 @@
 // ---------------------------------------------------------------------------
 
 std::string tokenizer_symbols = ",;{}()\\'\":";
-std::string tokenizer_operators = "< > ! ~ | & = == >= <= != ^ * + - / % [ ]";
+std::string tokenizer_operators = "! = == < > != >= <= + - * / % ~ | & ^ ; { } ( ) [ ]";
 std::string tokenizer_numerals = "0123456789";
 std::string tokenizer_hexNumerals = "0123456789xABCDEF";
 std::string tokenizer_keywords = "return for while do if continue break switch case asm";
@@ -59,34 +59,24 @@ void Tokenize(std::string &_inputStream, TTokenTable &_tokenTable)
         if (tokenizer_symbols.find(token) != std::string::npos)
             tokenEntry.m_Type = TK_Symbol;
 
+        if(token == "!")
+            tokenEntry.m_Type = TK_OpLogicNegate;
+        if(token == "=")
+            tokenEntry.m_Type = TK_OpAssignment;
+
         if(token == "==")
             tokenEntry.m_Type = TK_OpCmpEqual;
+        if(token == "<")
+            tokenEntry.m_Type = TK_OpCmpLess;
+        if(token == ">")
+            tokenEntry.m_Type = TK_OpCmpGreater;
         if(token == "!=")
             tokenEntry.m_Type = TK_OpCmpNotEqual;
         if(token == ">=")
             tokenEntry.m_Type = TK_OpCmpGreaterEqual;
         if(token == "<=")
             tokenEntry.m_Type = TK_OpCmpLessEqual;
-        if(token == ";")
-            tokenEntry.m_Type = TK_EndStatement;
-        if(token == "=")
-            tokenEntry.m_Type = TK_OpAssignment;
-        if(token == "(")
-            tokenEntry.m_Type = TK_BeginParams;
-        if(token == ")")
-            tokenEntry.m_Type = TK_EndParams;
-        if(token == "{")
-            tokenEntry.m_Type = TK_BeginBlock;
-        if(token == "}")
-            tokenEntry.m_Type = TK_EndBlock;
-        if(token == "[")
-            tokenEntry.m_Type = TK_BeginArray;
-        if(token == "]")
-            tokenEntry.m_Type = TK_EndArray;
-        if(token == "<")
-            tokenEntry.m_Type = TK_OpCmpLess;
-        if(token == ">")
-            tokenEntry.m_Type = TK_OpCmpGreater;
+
         if(token == "+")
             tokenEntry.m_Type = TK_OpAdd;
         if(token == "-")
@@ -97,6 +87,32 @@ void Tokenize(std::string &_inputStream, TTokenTable &_tokenTable)
             tokenEntry.m_Type = TK_OpDiv;
         if(token == "%")
             tokenEntry.m_Type = TK_OpMod;
+
+        if(token == "~")
+            tokenEntry.m_Type = TK_OpBitNot;
+        if(token == "|")
+            tokenEntry.m_Type = TK_OpBitOr;
+        if(token == "&")
+            tokenEntry.m_Type = TK_OpBitAnd;
+        if(token == "^")
+            tokenEntry.m_Type = TK_OpBitXor;
+
+        if(token == ";")
+            tokenEntry.m_Type = TK_EndStatement;
+
+        if(token == "{")
+            tokenEntry.m_Type = TK_BeginBlock;
+        if(token == "}")
+            tokenEntry.m_Type = TK_EndBlock;
+        if(token == "(")
+            tokenEntry.m_Type = TK_BeginParams;
+        if(token == ")")
+            tokenEntry.m_Type = TK_EndParams;
+        if(token == "[")
+            tokenEntry.m_Type = TK_BeginArray;
+        if(token == "]")
+            tokenEntry.m_Type = TK_EndArray;
+
         if(token == ",")
             tokenEntry.m_Type = TK_Separator;
 
@@ -343,28 +359,40 @@ static const char *s_typeAsString[]=
     "Operator",
 
     // Further expanded types
+    "Keyword",
+    "AsmKeyword",
+    "Typename",
+
+    "OpLogicNegate",
     "OpAssignment",
+
     "OpCmpEqual",
     "OpCmpLess",
     "OpCmpGreater",
     "OpCmpNotEqual",
     "OpCmpGreaterEqual",
     "OpCmpLessEqual",
+
     "OpAdd",
     "OpSub",
     "OpMul",
     "OpDiv",
     "OpMod",
+
+    "OpBitNot",
+    "OpBitOr",
+    "OpBitAnd",
+    "OpBitXor",
+
     "EndStatement",
-    "Keyword",
-    "AsmKeyword",
-    "Typename",
+
     "BeginBlock",
     "EndBlock",
     "BeginParams",
     "EndParams",
     "BeginArray",
     "EndArray",
+
     "Separator",
 };
 
