@@ -126,7 +126,7 @@ void Tokenize(std::string &_inputStream, TTokenTable &_tokenTable)
 // Convert tokens to abstract syntax tree
 // ---------------------------------------------------------------------------
 
-void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SParserState &state, uint32_t &currentToken, SASTNode *_payload)
+void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SParserState &state, uint32_t &currentToken, SASTContext *_context)
 {
     // statement ----------> typename identifier ;
     //                       typename identifier [ numericliteral ] ;
@@ -144,237 +144,218 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
     //                       (empty)
     // expression ---------> expression term
 
-    // Parameter mode
-    while(state == PS_Parameters)
+    // INITIALIZER LIST
+    while (state == PS_InitializerList)
     {
-        // 0) end of parameter list
+        if (_context->m_AssignmentTargetNodeIndex < 0)
         {
-            bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndParams;
-            if (is_endstatement)
-            {
-                state = PS_Statement;
-                ++currentToken;
-                return;
-            }
+            _context->m_ErrorString = "Can't assign without a valid target (please check left hand side of the statement)";
+            _context->m_HasError++;
+            return;
         }
 
-        // 1) parameter entry
-        bool is_typename = _tokenTable[currentToken].m_Type == TK_Typename;
-        bool is_identifier = _tokenTable[currentToken+1].m_Type == TK_Identifier;
-        if (is_typename, is_identifier)
+        // ;
+        bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndStatement;
+        // }
+        bool is_endblock = _tokenTable[currentToken].m_Type == TK_EndBlock;
+        // ,
+        bool is_separator = _tokenTable[currentToken].m_Type == TK_Separator;
+
+        if (is_endstatement)
         {
-            SASTNode node;
-            // Self is variable name
-            node.m_Self.m_Value = "PARAM";
-            node.m_Self.m_Type = NT_VariableDeclaration;
-            // Type on left node
-            node.m_Left = new SASTNode();
-            node.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
-            node.m_Left->m_Self.m_Type = NT_TypeName;
-            // Identifier on right node
-            node.m_Right = new SASTNode();
-            node.m_Right->m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
-            node.m_Right->m_Self.m_Type = NT_Identifier;
-            // Store
-            _ast.emplace_back(node);
-            currentToken += 2;
-        }
-        else
             ++currentToken;
-    }
-
-    // Statement mode
-    if (state == PS_Statement)
-    {
-        // 0) identifier (
-        // or builtin (
-        {
-            bool is_identifier = _tokenTable[currentToken].m_Type == TK_Identifier;
-            bool is_builtin = _tokenTable[currentToken].m_Type == TK_Keyword;
-            bool is_beginparams = _tokenTable[currentToken+1].m_Type == TK_BeginParams;
-            if ((is_identifier||is_builtin) && is_beginparams)
-            {
-                SASTNode nodeCall;
-                // Self is variable name
-                nodeCall.m_Self.m_Value = "FUNCCALL";
-                nodeCall.m_Self.m_Type = NT_VariableDeclaration;
-                // Type on left node
-                nodeCall.m_Left = new SASTNode();
-                nodeCall.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
-                nodeCall.m_Left->m_Self.m_Type = NT_TypeName;
-                // Parameters on right node (comma separated, not evaluated)
-                nodeCall.m_Right = new SASTNode();
-                state = PS_ExpressionParamList;
-                currentToken+=2; // Skip identifier and beginparams
-                ParseAndGenerateAST(_tokenTable, _ast, state, currentToken, nodeCall.m_Right);
-                // Store
-                _ast.emplace_back(nodeCall);
-
-                return;
-            }
+            // Expecting: STATEMENT
+            state = PS_Statement;
+            return;
         }
 
-        // 1) identifier =
+        if (!is_endblock && !is_separator)
         {
-            bool is_identifier = _tokenTable[currentToken].m_Type == TK_Identifier;
-            bool is_assignop = _tokenTable[currentToken+1].m_Type == TK_OpAssignment;
-            if (is_identifier && is_assignop)
+            bool is_intliteral = _tokenTable[currentToken].m_Type == TK_LitNumeric;
+            if (is_intliteral)
             {
-                SASTNode nodeAssign;
-                nodeAssign.m_Self.m_Value = "ASSIGN";
-                nodeAssign.m_Self.m_Type = NT_OpAssignment;
-                // Left: identifier
-                nodeAssign.m_Left = new SASTNode();
-                nodeAssign.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
-                nodeAssign.m_Left->m_Self.m_Type = NT_Identifier;
-                // Right: Resume parsing expression into right node
-                nodeAssign.m_Right = new SASTNode();
-                state = PS_Expression;
-                currentToken+=2; // Skip identifier and assignment operator and parse the expression
-                ParseAndGenerateAST(_tokenTable, _ast, state, currentToken, nodeAssign.m_Right);
-                // Store
-                _ast.emplace_back(nodeAssign);
-            }
-        }
-
-        // 2) identifier [ expression ] = expression;
-
-        // 3) typename identifier
-        {
-            bool is_typename = _tokenTable[currentToken].m_Type == TK_Typename;
-            bool is_identifier = _tokenTable[currentToken+1].m_Type == TK_Identifier;
-
-            if (is_typename && is_identifier)
-            {
-                // This is a function declaration if it's of the form: typename identifier (
-                bool is_functiondecl = _tokenTable[currentToken+2].m_Type == TK_BeginParams;
-
-                // DECL(typename, identifier) or FUNC(typename, identifier)
-                SASTNode node;
-                // Self is variable name
-                node.m_Self.m_Value = is_functiondecl ? "FUNCDEF" : "VARDECL";
-                node.m_Self.m_Type = NT_VariableDeclaration;
-                // Type on left node
-                node.m_Left = new SASTNode();
-                node.m_Left->m_Self.m_Value = _tokenTable[currentToken].m_Value;
-                node.m_Left->m_Self.m_Type = NT_TypeName;
-                // Element count on left of left node
-                node.m_Left->m_Left = new SASTNode();
-                node.m_Left->m_Left->m_Self.m_Value = "1";
-                node.m_Left->m_Left->m_Self.m_Type = NT_LiteralConstant;
-                // Identifier on right node
-                node.m_Right = new SASTNode();
-                node.m_Right->m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
-                node.m_Right->m_Self.m_Type = NT_Identifier;
-                // Store
-                _ast.emplace_back(node);
-                currentToken += 2;
-
-                // TODO: Jump into parameter parse mode
-                if (is_functiondecl)
+                if (_ast[_context->m_AssignmentTargetNodeIndex].m_Right->m_Left)
                 {
-                    state = PS_Parameters;
-                    return;
-                }
+                    uint32_t variablepointer = std::stoi(_ast[_context->m_AssignmentTargetNodeIndex].m_Right->m_Left->m_Self.m_Value) + _context->m_CurrentInitializerOffset;
+                    uint32_t variablestride = std::stoi(_ast[_context->m_AssignmentTargetNodeIndex].m_Left->m_Right->m_Self.m_Value);
 
-                // expected ; or , or )
-                bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndStatement;
-                // or expected =
-                bool is_assignment = _tokenTable[currentToken].m_Type == TK_OpAssignment;
-                // or expected [
-                bool is_beginarray = _tokenTable[currentToken].m_Type == TK_BeginArray;
-                // or expected (
-                bool is_beginparams = _tokenTable[currentToken].m_Type == TK_BeginParams;
+                    if (variablestride == 4) // DWORD/PTR
+                    {
+                        bool is_hex = _tokenTable[currentToken].m_Value.find("x") != std::string::npos;
+                        unsigned long val = std::stoul(_tokenTable[currentToken].m_Value, nullptr, is_hex ? 16 : 10);
+                        _context->m_VariableStore[variablepointer+0] = (val&0xFF000000)>>24;
+                        _context->m_VariableStore[variablepointer+1] = (val&0x00FF0000)>>16;
+                        _context->m_VariableStore[variablepointer+2] = (val&0x0000FF00)>>8;
+                        _context->m_VariableStore[variablepointer+3] = (val&0x000000FF);
+                    }
 
-                // typename identifier ;
-                if (is_endstatement)
-                {
-                    // Advance
-                    currentToken++;
-                    return;
-                }
+                    if (variablestride == 2) // WORD
+                    {
+                        bool is_hex = _tokenTable[currentToken].m_Value.find("x") != std::string::npos;
+                        unsigned long val = std::stoul(_tokenTable[currentToken].m_Value, nullptr, is_hex ? 16 : 10);
+                        if (val > 0x0000FFFF)
+                        {
+                            _context->m_ErrorString = "Assigning a value larger than WORD to WORD storage";
+                            _context->m_HasError++;
+                            return;
+                        }
+                        _context->m_VariableStore[variablepointer+0] = (val&0x0000FF00)>>8;
+                        _context->m_VariableStore[variablepointer+1] = (val&0x000000FF);
+                    }
 
-                // Update array size
-                std::string variableName = "";
-                if (is_beginarray)
-                {
-                    node.m_Left->m_Left->m_Self.m_Value = _tokenTable[currentToken+1].m_Value;
-                    currentToken+=3;
-                    is_assignment = _tokenTable[currentToken].m_Type == TK_OpAssignment;
-                    variableName = _tokenTable[currentToken-4].m_Value;
+                    if (variablestride == 1) // BYTE / CHAR
+                    {
+                        bool is_hex = _tokenTable[currentToken].m_Value.find("x") != std::string::npos;
+                        unsigned long val = std::stoul(_tokenTable[currentToken].m_Value, nullptr, is_hex ? 16 : 10);
+                        if (val > 0x000000FF)
+                        {
+                            _context->m_ErrorString = "Assigning a value larger than BYTE to BYTE storage";
+                            _context->m_HasError++;
+                            return;
+                        }
+                        _context->m_VariableStore[variablepointer+0] = (val&0x000000FF);
+                       
+                    }
+
+                    _context->m_CurrentInitializerOffset += variablestride;
                 }
                 else
                 {
-                    variableName = _tokenTable[currentToken-1].m_Value;
-                }
-                
-
-                // typename identifier = expression ;
-                if (is_assignment)
-                {
-                    // ASSIGN(identifier, expression)
-                    SASTNode nodeAssign;
-                    nodeAssign.m_Self.m_Value = "ASSIGN";
-                    nodeAssign.m_Self.m_Type = NT_OpAssignment;
-                    // Left: identifier
-                    nodeAssign.m_Left = new SASTNode();
-                    nodeAssign.m_Left->m_Self.m_Value = variableName;
-                    nodeAssign.m_Left->m_Self.m_Type = NT_Identifier;
-                    // Right: Resume parsing expression into right node
-                    nodeAssign.m_Right = new SASTNode();
-                    state = PS_Expression;
-                    currentToken++; // Skip assignment operator and parse the expression
-                    ParseAndGenerateAST(_tokenTable, _ast, state, currentToken, nodeAssign.m_Right);
-                    // Store
-                    _ast.emplace_back(nodeAssign);
-
+                    _context->m_ErrorString = "Malformed AST, can't initialize left hand side since variable is inaccessible";
+                    _context->m_HasError++;
                     return;
                 }
-            }
-        }
-
-        // Unknown
-        {
-            ++currentToken;
-            return;
-        }
-    }
-
-    while (state == PS_Expression || state == PS_ExpressionParamList)
-    {
-        // 0) end of statement
-        {
-            bool is_endstatement = (state == PS_ExpressionParamList) ? false : _tokenTable[currentToken].m_Type == TK_EndStatement;
-            bool is_endparams = _tokenTable[currentToken].m_Type == TK_EndParams;
-            bool is_endarray = _tokenTable[currentToken].m_Type == TK_EndArray;
-            if (is_endstatement || is_endparams || is_endarray)
-            {
-                state = PS_Statement;
-                ++currentToken;
-                return;
-            }
-        }
-
-        // 1) expression term
-        {
-            bool is_separator = _tokenTable[currentToken].m_Type == TK_Separator;
-            bool is_beginblock = _tokenTable[currentToken].m_Type == TK_BeginBlock;
-            bool is_endblock = _tokenTable[currentToken].m_Type == TK_EndBlock;
-            if (!is_separator && !is_beginblock && !is_endblock)
-            {
-                if (!_payload)
-                {
-                    std::cout << "ERROR: Found standalone expression" << std::endl;
-                    return;
-                }
-
-                _payload->m_Self.m_Value += _tokenTable[currentToken].m_Value + " ";
-                _payload->m_Self.m_Type = NT_LiteralConstant;
             }
         }
 
         ++currentToken;
     }
+
+    // STATEMENT MODE
+    while (state == PS_Statement)
+    {
+        // ;
+        bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndStatement;
+        // }
+        bool is_endblock = _tokenTable[currentToken].m_Type == TK_EndBlock;
+        if (is_endstatement || is_endblock)
+        {
+            ++currentToken;
+            // Expecting: STATEMENT
+            state = PS_Statement;
+            return;
+        }
+
+        // {
+        bool is_beginblock = _tokenTable[currentToken].m_Type == TK_BeginBlock;
+        if (is_beginblock)
+        {
+            ++currentToken;
+            // Expecting: STATEMENT
+            state = PS_Statement;
+            return;
+        }
+
+        // typename
+        bool is_typename = _tokenTable[currentToken].m_Type == TK_Typename;
+        if(is_typename)
+        {
+            ++currentToken;
+
+            // identifier
+            bool is_identifier = _tokenTable[currentToken].m_Type == TK_Identifier;
+            if (is_identifier)
+            {
+                ++currentToken;
+
+                std::string variabledim = "1";
+                std::string variablename = _tokenTable[currentToken-1].m_Value;
+                std::string variabletype = _tokenTable[currentToken-2].m_Value;
+
+                // [
+                bool is_beginarray = _tokenTable[currentToken].m_Type == TK_BeginArray;
+                if (is_beginarray)
+                {
+                    ++currentToken;
+
+                    // numliteral
+                    bool is_numlit = _tokenTable[currentToken].m_Type == TK_LitNumeric;
+                    if (is_numlit)
+                    {
+                        ++currentToken;
+
+                        // Set array dimension
+                        variabledim = _tokenTable[currentToken-1].m_Value;
+
+                        // ]
+                        bool is_endarray = _tokenTable[currentToken].m_Type == TK_EndArray;
+                        if (is_endarray)
+                        {
+                            ++currentToken;
+                        }
+                        else
+                        {
+                            _context->m_ErrorString = "Expected ] after numeric literal";
+                            _context->m_HasError++;
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        _context->m_ErrorString = "Expected numeric literal after [";
+                        _context->m_HasError++;
+                        return;
+                    }
+                }
+
+                uint32_t variablestride = variabletype=="byte" ? 1 : 2;
+                variablestride = (variabletype=="byteptr" || variabletype=="wordptr") ? 4 : variablestride;
+
+                SASTNode nodeDecl;
+                nodeDecl.m_Self.m_Value = "DECL";                                          // Declaration
+                nodeDecl.m_Self.m_Type = NT_VariableDeclaration;
+                nodeDecl.m_Left = new SASTNode();                                          // TypeName
+                nodeDecl.m_Left->m_Self.m_Value = variabletype;
+                nodeDecl.m_Left->m_Self.m_Type = NT_Identifier;
+                nodeDecl.m_Left->m_Left = new SASTNode();                                  // Count
+                nodeDecl.m_Left->m_Left->m_Self.m_Value = variabledim;
+                nodeDecl.m_Left->m_Left->m_Self.m_Type = NT_LiteralConstant;
+                nodeDecl.m_Left->m_Right = new SASTNode();                                 // Stride
+                nodeDecl.m_Left->m_Right->m_Self.m_Value = std::to_string(variablestride);
+                nodeDecl.m_Left->m_Right->m_Self.m_Type = NT_LiteralConstant;
+                nodeDecl.m_Right = new SASTNode();                                         // VariableName
+                nodeDecl.m_Right->m_Self.m_Value = variablename;
+                nodeDecl.m_Right->m_Self.m_Type = NT_Identifier;
+                nodeDecl.m_Right->m_Left = new SASTNode();                                 // VariableStorage
+                nodeDecl.m_Right->m_Left->m_Self.m_Value = std::to_string(_context->m_VariableStoreCursor);
+                nodeDecl.m_Right->m_Left->m_Self.m_Type = NT_VariablePointer;
+                _ast.emplace_back(nodeDecl);
+                // Align cursor so that next allocation starts at a 2 byte boundary
+                uint32_t alignedsize = EAlignUp(std::stoi(variabledim)*variablestride, 2);
+                _context->m_VariableStoreCursor += alignedsize;
+
+                // =
+                bool is_assignop = _tokenTable[currentToken].m_Type == TK_OpAssignment;
+                if (is_assignop)
+                {
+                    ++currentToken;
+
+                    _context->m_AssignmentTargetNodeIndex = _ast.size()-1;
+
+                    // initializerlist
+                    // Gather initializer list
+                    state = PS_InitializerList;
+                    _context->m_CurrentInitializerOffset = 0;
+                    return;
+                }
+            }
+
+            continue;
+        }
+
+        ++currentToken;
+    }
+
 }
 
 // ---------------------------------------------------------------------------
@@ -527,12 +508,19 @@ int CompileCode(char *_inputname, char *_outputname)
 #endif
 
     TAbstractSyntaxTree ast;
+    SASTContext astcontext;
+    astcontext.m_VariableStore = new uint8_t[65536];
     // Start with 'statement' state at token 0
     SParserState state = PS_Statement;
     uint32_t tokenIndex = 0;
     while (tokenIndex < tokentable.size())
     {
-        ParseAndGenerateAST(tokentable, ast, state, tokenIndex, nullptr);
+        ParseAndGenerateAST(tokentable, ast, state, tokenIndex, &astcontext);
+        if (astcontext.m_HasError)
+        {
+            std::cout << "ERROR: " << astcontext.m_ErrorString << std::endl;
+            break;
+        }
     }
 
 #if defined(DEBUG)

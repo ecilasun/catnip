@@ -5,6 +5,12 @@
 #include "inttypes.h"
 
 // ---------------------------------------------------------------------------
+// Usefult macros
+// ---------------------------------------------------------------------------
+
+#define EAlignUp(_x_, _align_) ((_x_ + (_align_ - 1)) & (~(_align_ - 1)))
+
+// ---------------------------------------------------------------------------
 // Symbol table structs/enums
 // ---------------------------------------------------------------------------
 
@@ -103,6 +109,7 @@ enum SParserState
     PS_Unknown,
     PS_Statement,
     PS_Parameters,
+    PS_InitializerList,
     PS_Expression,
     PS_ExpressionParamList,
     PS_OptionalExpression,
@@ -113,8 +120,10 @@ enum EASTNodeType
 {
     NT_Unknown,
     NT_VariableDeclaration,
+    NT_Initializer,
     NT_TypeName,
     NT_Identifier,
+    NT_VariablePointer,
     NT_OpAssignment,
     NT_LiteralConstant,
     NT_Expression,
@@ -133,9 +142,19 @@ struct SASTNode
     SASTNode *m_Right{nullptr};
 };
 
+struct SASTContext
+{
+    uint8_t *m_VariableStore{nullptr};          // Array of bytes used as variable declaration/initialization pool during AST generation
+    std::string m_ErrorString;                  // Containst the error string if the m_HasError flag is nonzero
+    uint32_t m_HasError{0};                     // Nonzero if there is an error during AST generation
+    uint32_t m_VariableStoreCursor{0};          // Advances every time a persistent value is declared
+    int32_t m_AssignmentTargetNodeIndex{-1};    // Previous node that's the recipient of an assignment operation
+    uint32_t m_CurrentInitializerOffset{0};     // Variable initialization list cursor
+};
+
 typedef std::vector<struct SASTNode> TAbstractSyntaxTree;
 
-void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SParserState &state, uint32_t &currentToken, SASTNode *_payload);
+void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SParserState &state, uint32_t &currentToken, SASTContext *_context);
 
 // ---------------------------------------------------------------------------
 // Semantic analyzer structs/enums
