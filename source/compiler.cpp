@@ -9,9 +9,9 @@ std::string tokenizer_symbols = ",;{}()\\'\":";
 std::string tokenizer_operators = "! = == < > != >= <= + - * / % ~ | & ^ ; { } ( ) [ ]";
 std::string tokenizer_numerals = "0123456789";
 std::string tokenizer_hexNumerals = "0123456789xABCDEF";
-std::string tokenizer_keywords = "return for while do if continue break switch case asm";
-std::string tokenizer_asmkeywords = "ldd ldw ldb stw stb out in jmp jmpif call callif ret cmp test vsync fsel";
-std::string tokenizer_typenames = "dword dwordptr word wordptr byte byteptr void";
+std::string tokenizer_keywords = "return for while do if continue break switch case asm ";
+std::string tokenizer_asmkeywords = "ldd ldw ldb stw stb out in jmp jmpif call callif ret cmp test vsync fsel ";
+std::string tokenizer_typenames = "dword dwordptr word wordptr byte byteptr void ";
 
 void Tokenize(std::string &_inputStream, TTokenTable &_tokenTable)
 {
@@ -48,11 +48,12 @@ void Tokenize(std::string &_inputStream, TTokenTable &_tokenTable)
         if (tokenizer_numerals.find_first_of(token[0]) != std::string::npos)
             tokenEntry.m_Type = TK_LitNumeric;
 
-        if (tokenizer_keywords.find(token) != std::string::npos)
+        std::string tokenaswholeword = token+" ";
+        if (tokenizer_keywords.find(tokenaswholeword) != std::string::npos)
             tokenEntry.m_Type = TK_Keyword;
-        if (tokenizer_asmkeywords.find(token) != std::string::npos)
+        if (tokenizer_asmkeywords.find(tokenaswholeword) != std::string::npos)
             tokenEntry.m_Type = TK_AsmKeyword;
-        if (tokenizer_typenames.find(token) != std::string::npos)
+        if (tokenizer_typenames.find(tokenaswholeword) != std::string::npos)
             tokenEntry.m_Type = TK_Typename;
         if (tokenizer_operators.find(token) != std::string::npos)
             tokenEntry.m_Type = TK_Operator;
@@ -173,7 +174,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 _ast.emplace_back(node);
                 currentToken += 2;
 
-                // expected ;
+                // expected ; or , or )
                 bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndStatement;
                 // or expected =
                 bool is_assignment = _tokenTable[currentToken].m_Type == TK_OpAssignment;
@@ -251,17 +252,12 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
         // 0) end of statement or separator
         {
             bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndStatement;
-            bool is_separator = _tokenTable[currentToken].m_Type == TK_Separator;
-            bool is_beginblock = _tokenTable[currentToken].m_Type == TK_BeginBlock;
-            bool is_endblock = _tokenTable[currentToken].m_Type == TK_EndBlock;
             if (is_endstatement)
             {
                 state = PS_Statement;
                 ++currentToken;
                 return;
             }
-            else if (is_separator || is_beginblock || is_endblock)
-                ++currentToken;
         }
 
         // 1) expression term
