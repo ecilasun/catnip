@@ -14,14 +14,14 @@ void draw_block(word x, word y)
   {
     for (ix = x; ix <= x + 15; ix = ix + 1)
     {
-        VRAM[ix+iy*256] = testsprite[ix%16];
+         VRAM[ix+iy*256] = testsprite[ix%16];
     }
   }
 }
 
 void main(){
   testglobal = 0;
-  if (testglobal >= 0)
+  if(testglobal >= 0)
   {
     draw_block(64, 16);
     draw_block(32, 48);

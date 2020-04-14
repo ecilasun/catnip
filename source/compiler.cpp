@@ -9,9 +9,9 @@ std::string tokenizer_symbols = ",;{}()\\'\":";
 std::string tokenizer_operators = "! = == < > != >= <= + - * / % ~ | & ^ ; { } ( ) [ ]";
 std::string tokenizer_numerals = "0123456789";
 std::string tokenizer_hexNumerals = "0123456789xABCDEF";
-std::string tokenizer_keywords = "return for while do if continue break switch case asm ";
-std::string tokenizer_asmkeywords = "ldd ldw ldb stw stb out in jmp jmpif call callif ret cmp test vsync fsel ";
-std::string tokenizer_typenames = "dword dwordptr word wordptr byte byteptr void ";
+std::string tokenizer_keywords = " return for while do if continue break switch case asm ";
+std::string tokenizer_asmkeywords = " ldd ldw ldb stw stb out in jmp jmpif call callif ret cmp test vsync fsel ";
+std::string tokenizer_typenames = " dword dwordptr word wordptr byte byteptr void ";
 
 void Tokenize(std::string &_inputStream, TTokenTable &_tokenTable)
 {
@@ -48,7 +48,7 @@ void Tokenize(std::string &_inputStream, TTokenTable &_tokenTable)
         if (tokenizer_numerals.find_first_of(token[0]) != std::string::npos)
             tokenEntry.m_Type = TK_LitNumeric;
 
-        std::string tokenaswholeword = token+" ";
+        std::string tokenaswholeword = " "+token+" ";
         if (tokenizer_keywords.find(tokenaswholeword) != std::string::npos)
             tokenEntry.m_Type = TK_Keyword;
         if (tokenizer_asmkeywords.find(tokenaswholeword) != std::string::npos)
@@ -143,6 +143,83 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
     // statements ---------> statements statement
     //                       (empty)
     // expression ---------> expression term
+
+    // EXPRESSION
+    while (state == PS_Expression)
+    {
+        if (_context->m_AssignmentTargetNodeIndex < 0)
+        {
+            _context->m_ErrorString = "There's nowhere for this expression to go";
+            _context->m_HasError++;
+            return;
+        }
+
+        // ;
+        bool is_endstatement = _tokenTable[currentToken].m_Type == TK_EndStatement;
+        // )
+        bool is_endparams = _tokenTable[currentToken].m_Type == TK_EndParams;
+        // ]
+        bool is_endarray = _tokenTable[currentToken].m_Type == TK_EndArray;
+
+        if (is_endstatement || is_endparams || is_endarray)
+        {
+            ++currentToken;
+            // Expecting: STATEMENT
+            state = PS_Statement;
+            return;
+        }
+
+        // TODO: Scan to the end and collect the expression backwards while building the tree
+
+        // numericliteral
+        bool is_numlit = _tokenTable[currentToken].m_Type == TK_LitNumeric;
+        if (is_numlit)
+        {
+            ++currentToken;
+            if (_ast[_context->m_AssignmentTargetNodeIndex].m_Right)
+            {
+                _ast[_context->m_AssignmentTargetNodeIndex].m_Right->m_Self.m_Value += _tokenTable[currentToken-1].m_Value + " ";
+                _ast[_context->m_AssignmentTargetNodeIndex].m_Right->m_Self.m_Type = NT_Expression;
+                continue;
+            }
+            else
+            {
+                _context->m_ErrorString = "Malformed AST, can't initialize left hand side since variable is inaccessible";
+                _context->m_HasError++;
+                return;
+            }
+        }
+
+        ++currentToken;
+    }
+
+    // PARAMETER LIST
+    while (state == PS_ParameterList)
+    {
+        if (_context->m_AssignmentTargetNodeIndex < 0)
+        {
+            _context->m_ErrorString = "Can't list parameters without a valid target (please check left hand side of the statement)";
+            _context->m_HasError++;
+            return;
+        }
+
+        // )
+        bool is_endparams = _tokenTable[currentToken].m_Type == TK_EndParams;
+        // ,
+        bool is_separator = _tokenTable[currentToken].m_Type == TK_Separator;
+
+        if (is_endparams)
+        {
+            ++currentToken;
+            // Expecting: STATEMENT
+            state = PS_Statement;
+            return;
+        }
+
+        /// TODO
+
+        ++currentToken;
+    }
 
     // INITIALIZER LIST
     while (state == PS_InitializerList)
@@ -241,6 +318,8 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
         if (is_endstatement || is_endblock)
         {
             ++currentToken;
+            // Reset this across statements to prevent assignment across statements
+            _context->m_AssignmentTargetNodeIndex = -1;
             // Expecting: STATEMENT
             state = PS_Statement;
             return;
@@ -258,12 +337,14 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
 
         // typename
         bool is_typename = _tokenTable[currentToken].m_Type == TK_Typename;
+        bool is_identifier = _tokenTable[currentToken].m_Type == TK_Identifier;
+        bool is_builtin = _tokenTable[currentToken].m_Type == TK_Keyword;
         if(is_typename)
         {
             ++currentToken;
 
             // identifier
-            bool is_identifier = _tokenTable[currentToken].m_Type == TK_Identifier;
+            is_identifier = _tokenTable[currentToken].m_Type == TK_Identifier;
             if (is_identifier)
             {
                 ++currentToken;
@@ -271,6 +352,21 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 std::string variabledim = "1";
                 std::string variablename = _tokenTable[currentToken-1].m_Value;
                 std::string variabletype = _tokenTable[currentToken-2].m_Value;
+
+                // (
+                bool is_beginparams = _tokenTable[currentToken].m_Type == TK_BeginParams;
+                if (is_beginparams)
+                {
+                    ++currentToken;
+
+                    // Target function definition to receive the parameter list
+                    _context->m_AssignmentTargetNodeIndex = _ast.size()-1;
+
+                    // Gather parameters
+                    state = PS_ParameterList;
+                    _context->m_CurrentInitializerOffset = 0;
+                    return;
+                }
 
                 // [
                 bool is_beginarray = _tokenTable[currentToken].m_Type == TK_BeginArray;
@@ -349,8 +445,81 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                     return;
                 }
             }
+            else
+            {
+                _context->m_ErrorString = "Expected identifier after typename";
+                _context->m_HasError++;
+                return;
+            }
 
             continue;
+        }
+        else if (is_identifier || is_builtin) // identifier / keyword
+        {
+            ++currentToken;
+
+            // (
+            bool is_beginparams = _tokenTable[currentToken].m_Type == TK_BeginParams;
+            if (is_beginparams)
+            {
+                ++currentToken;
+
+                // Target function definition to receive the parameter list
+                _context->m_AssignmentTargetNodeIndex = _ast.size()-1;
+
+                // Gather parameters
+                state = PS_ParameterList;
+                _context->m_CurrentInitializerOffset = 0;
+                return;
+            }
+
+            // [
+            bool is_beginarray = _tokenTable[currentToken].m_Type == TK_BeginArray;
+            if (is_beginarray)
+            {
+                ++currentToken;
+
+                int K = currentToken;
+                while (K>0 && _tokenTable[K].m_Type != TK_EndStatement && _tokenTable[K].m_Type != TK_BeginBlock)
+                    --K;
+                _context->m_ErrorString = "Array indexing not implemented yet: ";
+                for (int i=K+1;i<=currentToken;++i)
+                     _context->m_ErrorString += _tokenTable[i].m_Value;
+                _context->m_HasError++;
+                return;
+            }
+
+            // =
+            bool is_assignment = _tokenTable[currentToken].m_Type == TK_OpAssignment;
+            if (is_assignment)
+            {
+                ++currentToken;
+
+                SASTNode nodeDecl;
+                nodeDecl.m_Self.m_Value = "ASSIGN";                                        // Assignment
+                nodeDecl.m_Self.m_Type = NT_VariableDeclaration;
+                nodeDecl.m_Left = new SASTNode();                                          // VariableName
+                nodeDecl.m_Left->m_Self.m_Value = _tokenTable[currentToken-2].m_Value;
+                nodeDecl.m_Left->m_Self.m_Type = NT_OpAssignment;
+                nodeDecl.m_Right = new SASTNode();                                         // Expression
+                nodeDecl.m_Right->m_Self.m_Value = "";
+                nodeDecl.m_Right->m_Self.m_Type = NT_Unknown;
+                _ast.emplace_back(nodeDecl);
+
+                // Target assignment op to receive the expressions
+                _context->m_AssignmentTargetNodeIndex = _ast.size()-1;
+
+                state = PS_Expression;
+                return;
+            }
+
+            // BINARYOP (>= <= == != < >)
+        }
+        else
+        {
+            _context->m_ErrorString = "Expected identifier, builtin or typename as first item of statement, found: " + _tokenTable[currentToken-1].m_Value + " '" + _tokenTable[currentToken].m_Value + "'";
+            _context->m_HasError++;
+            return;
         }
 
         ++currentToken;
