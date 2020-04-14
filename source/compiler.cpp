@@ -121,6 +121,18 @@ void Tokenize(std::string &_inputStream, TTokenTable &_tokenTable)
     }
 }
 
+void ReportError(SASTContext * _context, TTokenTable &_tokenTable, uint32_t _currentToken, const char *_message)
+{
+    int K = _currentToken;
+    while (K>0 && _tokenTable[K].m_Type != TK_EndStatement && _tokenTable[K].m_Type != TK_BeginBlock)
+        --K;
+    _context->m_ErrorString = "------------------------------ERROR---------------------------------------------------\n" + std::string(_message) + ":\n";
+    for (int i=K+1;i<=_currentToken;++i)
+            _context->m_ErrorString += _tokenTable[i].m_Value+" ";
+    _context->m_ErrorString += "\n--------------------------------------------------------------------------------------";
+    _context->m_HasError++;
+}
+
 // ---------------------------------------------------------------------------
 // Syntax analyzer
 // Convert tokens to abstract syntax tree
@@ -149,8 +161,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
     {
         if (_context->m_AssignmentTargetNodeIndex < 0)
         {
-            _context->m_ErrorString = "There's nowhere for this expression to go";
-            _context->m_HasError++;
+            ReportError(_context, _tokenTable, currentToken, "There's nowhere for this expression to go");
             return;
         }
 
@@ -184,8 +195,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
             }
             else
             {
-                _context->m_ErrorString = "Malformed AST, can't initialize left hand side since variable is inaccessible";
-                _context->m_HasError++;
+                ReportError(_context, _tokenTable, currentToken, "Malformed AST, can't initialize left hand side since variable is inaccessible");
                 return;
             }
         }
@@ -198,8 +208,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
     {
         if (_context->m_AssignmentTargetNodeIndex < 0)
         {
-            _context->m_ErrorString = "Can't list parameters without a valid target (please check left hand side of the statement)";
-            _context->m_HasError++;
+            ReportError(_context, _tokenTable, currentToken, "Can't list parameters without a valid target (please check left hand side of the statement)");
             return;
         }
 
@@ -216,7 +225,16 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
             return;
         }
 
-        /// TODO
+        if (_ast[_context->m_AssignmentTargetNodeIndex].m_Right->m_Left)
+        {
+            _ast[_context->m_AssignmentTargetNodeIndex].m_Right->m_Left->m_Self.m_Value += _tokenTable[currentToken].m_Value + " ";
+            _ast[_context->m_AssignmentTargetNodeIndex].m_Right->m_Left->m_Self.m_Type = NT_Expression;
+        }
+        else
+        {
+            ReportError(_context, _tokenTable, currentToken, "Malformed AST, can't populate parameters since function definition node didn't allocate space");
+            return;
+        }
 
         ++currentToken;
     }
@@ -226,8 +244,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
     {
         if (_context->m_AssignmentTargetNodeIndex < 0)
         {
-            _context->m_ErrorString = "Can't assign without a valid target (please check left hand side of the statement)";
-            _context->m_HasError++;
+            ReportError(_context, _tokenTable, currentToken, "Can't assign without a valid target (please check left hand side of the statement");
             return;
         }
 
@@ -272,8 +289,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                         unsigned long val = std::stoul(_tokenTable[currentToken].m_Value, nullptr, is_hex ? 16 : 10);
                         if (val > 0x0000FFFF)
                         {
-                            _context->m_ErrorString = "Assigning a value larger than WORD to WORD storage";
-                            _context->m_HasError++;
+                            ReportError(_context, _tokenTable, currentToken, "Assigning a value larger than WORD to WORD storage");
                             return;
                         }
                         _context->m_VariableStore[variablepointer+0] = (val&0x0000FF00)>>8;
@@ -286,8 +302,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                         unsigned long val = std::stoul(_tokenTable[currentToken].m_Value, nullptr, is_hex ? 16 : 10);
                         if (val > 0x000000FF)
                         {
-                            _context->m_ErrorString = "Assigning a value larger than BYTE to BYTE storage";
-                            _context->m_HasError++;
+                            ReportError(_context, _tokenTable, currentToken, "Assigning a value larger than BYTE to BYTE storage");
                             return;
                         }
                         _context->m_VariableStore[variablepointer+0] = (val&0x000000FF);
@@ -298,8 +313,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 }
                 else
                 {
-                    _context->m_ErrorString = "Malformed AST, can't initialize left hand side since variable is inaccessible";
-                    _context->m_HasError++;
+                    ReportError(_context, _tokenTable, currentToken, "Malformed AST, can't initialize left hand side since variable is inaccessible");
                     return;
                 }
             }
@@ -318,6 +332,12 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
         if (is_endstatement || is_endblock)
         {
             ++currentToken;
+            _context->m_BlockDepth--;
+            if (_context->m_BlockDepth<0)
+            {
+                ReportError(_context, _tokenTable, currentToken, "Statement block depth is negative, please check for mismatching { }");
+                return;
+            }
             // Reset this across statements to prevent assignment across statements
             _context->m_AssignmentTargetNodeIndex = -1;
             // Expecting: STATEMENT
@@ -329,6 +349,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
         bool is_beginblock = _tokenTable[currentToken].m_Type == TK_BeginBlock;
         if (is_beginblock)
         {
+            _context->m_BlockDepth++;
             ++currentToken;
             // Expecting: STATEMENT
             state = PS_Statement;
@@ -359,12 +380,25 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 {
                     ++currentToken;
 
+                    SASTNode nodeDef;
+                    nodeDef.m_Self.m_Value = "FUNC";                                          // Function definition
+                    nodeDef.m_Self.m_Type = NT_FunctionDefinition;
+                    nodeDef.m_Left = new SASTNode();                                          // TypeName
+                    nodeDef.m_Left->m_Self.m_Value = variabletype;
+                    nodeDef.m_Left->m_Self.m_Type = NT_TypeName;
+                    nodeDef.m_Right = new SASTNode();                                         // FunctionName
+                    nodeDef.m_Right->m_Self.m_Value = variablename;
+                    nodeDef.m_Right->m_Self.m_Type = NT_Identifier;
+                    nodeDef.m_Right->m_Left = new SASTNode();
+                    nodeDef.m_Right->m_Left->m_Self.m_Value = "";
+                    nodeDef.m_Right->m_Left->m_Self.m_Type = NT_Unknown;
+                    _ast.emplace_back(nodeDef);
+
                     // Target function definition to receive the parameter list
                     _context->m_AssignmentTargetNodeIndex = _ast.size()-1;
 
                     // Gather parameters
                     state = PS_ParameterList;
-                    _context->m_CurrentInitializerOffset = 0;
                     return;
                 }
 
@@ -391,15 +425,13 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                         }
                         else
                         {
-                            _context->m_ErrorString = "Expected ] after numeric literal";
-                            _context->m_HasError++;
+                            ReportError(_context, _tokenTable, currentToken, "Expected ] after numeric literal");
                             return;
                         }
                     }
                     else
                     {
-                        _context->m_ErrorString = "Expected numeric literal after [";
-                        _context->m_HasError++;
+                        ReportError(_context, _tokenTable, currentToken, "Expected numeric literal after [");
                         return;
                     }
                 }
@@ -412,7 +444,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 nodeDecl.m_Self.m_Type = NT_VariableDeclaration;
                 nodeDecl.m_Left = new SASTNode();                                          // TypeName
                 nodeDecl.m_Left->m_Self.m_Value = variabletype;
-                nodeDecl.m_Left->m_Self.m_Type = NT_Identifier;
+                nodeDecl.m_Left->m_Self.m_Type = NT_TypeName;
                 nodeDecl.m_Left->m_Left = new SASTNode();                                  // Count
                 nodeDecl.m_Left->m_Left->m_Self.m_Value = variabledim;
                 nodeDecl.m_Left->m_Left->m_Self.m_Type = NT_LiteralConstant;
@@ -447,8 +479,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
             }
             else
             {
-                _context->m_ErrorString = "Expected identifier after typename";
-                _context->m_HasError++;
+                ReportError(_context, _tokenTable, currentToken, "Expected identifier after typename");
                 return;
             }
 
@@ -464,12 +495,25 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
             {
                 ++currentToken;
 
+                SASTNode nodeDef;
+                nodeDef.m_Self.m_Value = "CALL";                                          // Function call
+                nodeDef.m_Self.m_Type = NT_FunctionDefinition;
+                nodeDef.m_Left = new SASTNode();                                          // FunctionName
+                nodeDef.m_Left->m_Self.m_Value = _tokenTable[currentToken-2].m_Value;
+                nodeDef.m_Left->m_Self.m_Type = NT_Identifier;
+                nodeDef.m_Right = new SASTNode();                                         // ReturnType
+                nodeDef.m_Right->m_Self.m_Value = "";
+                nodeDef.m_Right->m_Self.m_Type = NT_TypeName;
+                nodeDef.m_Right->m_Left = new SASTNode();
+                nodeDef.m_Right->m_Self.m_Value = "";
+                nodeDef.m_Right->m_Self.m_Type = NT_Unknown;
+                _ast.emplace_back(nodeDef);
+
                 // Target function definition to receive the parameter list
                 _context->m_AssignmentTargetNodeIndex = _ast.size()-1;
 
                 // Gather parameters
                 state = PS_ParameterList;
-                _context->m_CurrentInitializerOffset = 0;
                 return;
             }
 
@@ -479,13 +523,8 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
             {
                 ++currentToken;
 
-                int K = currentToken;
-                while (K>0 && _tokenTable[K].m_Type != TK_EndStatement && _tokenTable[K].m_Type != TK_BeginBlock)
-                    --K;
-                _context->m_ErrorString = "Array indexing not implemented yet: ";
-                for (int i=K+1;i<=currentToken;++i)
-                     _context->m_ErrorString += _tokenTable[i].m_Value;
-                _context->m_HasError++;
+                ReportError(_context, _tokenTable, currentToken, "Array indexing not implemented yet");
+
                 return;
             }
 
@@ -517,8 +556,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
         }
         else
         {
-            _context->m_ErrorString = "Expected identifier, builtin or typename as first item of statement, found: " + _tokenTable[currentToken-1].m_Value + " '" + _tokenTable[currentToken].m_Value + "'";
-            _context->m_HasError++;
+            ReportError(_context, _tokenTable, currentToken, "Expected identifier, builtin or typename as first item of statement");
             return;
         }
 
@@ -687,9 +725,15 @@ int CompileCode(char *_inputname, char *_outputname)
         ParseAndGenerateAST(tokentable, ast, state, tokenIndex, &astcontext);
         if (astcontext.m_HasError)
         {
-            std::cout << "ERROR: " << astcontext.m_ErrorString << std::endl;
+            std::cout << astcontext.m_ErrorString << std::endl;
             break;
         }
+    }
+
+    if (astcontext.m_BlockDepth != 0)
+    {
+        ReportError(&astcontext, tokentable, tokenIndex, "Mismatching { } at the end of program");
+        std::cout << astcontext.m_ErrorString << std::endl;
     }
 
 #if defined(DEBUG)

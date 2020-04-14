@@ -45,6 +45,27 @@ To emulate the generated ROM file, assuming you're at the root directory of the 
 .\build\release\catnip.exe .\test\video.rom
 ```
 
+To compile a .c file into an .asm file, use the following command line:
+
+```
+.\build\release\catnip.exe .\test\simplest.c .\tes\simplest.asm
+```
+
+## Known issues / notes regarding C compiler
+
+Catnip includes a very small subset of C that it can compile into asm for convenience. However this compiler is still under development and doesn't currently work fully. Here's a list of notes regarding what currently works and what doesn't work:
+
+* Preprocessor: There are no preprocessor directives yet (#include, #define etc)
+* Parser: Tokenizing works to full capacity
+* Symbols: There's a very basic 64K pool for initial variable values at the moment
+* AST: The AST generator does a very minimal job currently
+  * Can parse variable generation and initial value assignments (including initializer lists) for byte/word/dword and byteptr/wordptr types
+  * Can distinguish between function declaration and variable definitions
+  * Can report some basic errors
+  * Will currently not detect missing initial value in variable declarations
+* Assembly: The code generator is not implemented yet, as it depends on a full, well formed AST
+* Linker: Currently only a single translation unit is compiled and there's no file include support
+
 ## Emulator shortcuts
 
 The emulator can be shut down using the `ESC` key.
