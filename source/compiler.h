@@ -119,6 +119,7 @@ enum SParserState
 enum EASTNodeType
 {
     NT_Unknown,
+    NT_BinaryOperator,
     NT_FunctionDefinition,
     NT_VariableDeclaration,
     NT_Initializer,
@@ -147,10 +148,11 @@ struct SASTContext
 {
     uint8_t *m_VariableStore{nullptr};          // Array of bytes used as variable declaration/initialization pool during AST generation
     std::string m_ErrorString;                  // Containst the error string if the m_HasError flag is nonzero
+    std::string m_LHS;                          // Used during expression gather
     uint32_t m_HasError{0};                     // Nonzero if there is an error during AST generation
-    uint32_t m_BlockDepth{0};                   // Depth of current statement block (zero=root)
+    int32_t m_BlockDepth{0};                    // Depth of current statement block (zero=root)
     uint32_t m_VariableStoreCursor{0};          // Advances every time a persistent value is declared
-    int32_t m_AssignmentTargetNodeIndex{-1};    // Previous node that's the recipient of an assignment operation
+    SASTNode *m_AssignmentTargetNode{nullptr};  // Previous node that's the recipient of an assignment operation
     uint32_t m_CurrentInitializerOffset{0};     // Variable initialization list cursor
 };
 

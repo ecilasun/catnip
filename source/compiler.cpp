@@ -159,7 +159,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
     // EXPRESSION
     while (state == PS_Expression)
     {
-        if (_context->m_AssignmentTargetNodeIndex < 0)
+        if (_context->m_AssignmentTargetNode == nullptr)
         {
             ReportError(_context, _tokenTable, currentToken, "There's nowhere for this expression to go");
             return;
@@ -175,29 +175,58 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
         if (is_endstatement || is_endparams || is_endarray)
         {
             ++currentToken;
+
+            if (_context->m_LHS != "")
+            {
+                SASTNode *nodeOp = _context->m_AssignmentTargetNode;
+                nodeOp->m_Self.m_Value = _context->m_LHS;                                 // Leftovers
+                nodeOp->m_Self.m_Type = NT_Unknown;
+            }
+
             // Expecting: STATEMENT
             state = PS_Statement;
             return;
         }
 
-        // TODO: Scan to the end and collect the expression backwards while building the tree
+        // +
+        bool is_opadd = _tokenTable[currentToken].m_Type == TK_OpAdd;
+        // -
+        bool is_opsub = _tokenTable[currentToken].m_Type == TK_OpSub;
+        // *
+        bool is_opmul = _tokenTable[currentToken].m_Type == TK_OpMul;
+        // /
+        bool is_opdiv = _tokenTable[currentToken].m_Type == TK_OpDiv;
 
-        // numericliteral
-        bool is_numlit = _tokenTable[currentToken].m_Type == TK_LitNumeric;
-        if (is_numlit)
+        if (is_opadd || is_opsub || is_opmul || is_opdiv)
         {
             ++currentToken;
-            if (_ast[_context->m_AssignmentTargetNodeIndex].m_Right)
+
+            if (_context->m_AssignmentTargetNode)
             {
-                _ast[_context->m_AssignmentTargetNodeIndex].m_Right->m_Self.m_Value += _tokenTable[currentToken-1].m_Value + " ";
-                _ast[_context->m_AssignmentTargetNodeIndex].m_Right->m_Self.m_Type = NT_Expression;
+                SASTNode *nodeOp = _context->m_AssignmentTargetNode;
+                nodeOp->m_Self.m_Value = "BINOP";                                         // Binary Operator
+                nodeOp->m_Self.m_Type = NT_BinaryOperator;
+                nodeOp->m_Left = new SASTNode();                                          // TypeName
+                nodeOp->m_Left->m_Self.m_Value = _context->m_LHS;
+                nodeOp->m_Left->m_Self.m_Type = NT_TypeName;
+                nodeOp->m_Right = new SASTNode();                                         // FunctionName
+                nodeOp->m_Right->m_Self.m_Value = "";
+                nodeOp->m_Right->m_Self.m_Type = NT_Unknown;
+
+                _context->m_AssignmentTargetNode = nodeOp->m_Right;
+                _context->m_LHS = "";
+
                 continue;
             }
             else
             {
-                ReportError(_context, _tokenTable, currentToken, "Malformed AST, can't initialize left hand side since variable is inaccessible");
+                ReportError(_context, _tokenTable, currentToken, "Malformed AST, can't write operator since the parent didn't allocate space");
                 return;
             }
+        }
+        else
+        {
+            _context->m_LHS += _tokenTable[currentToken].m_Value;
         }
 
         ++currentToken;
@@ -206,7 +235,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
     // PARAMETER LIST
     while (state == PS_ParameterList)
     {
-        if (_context->m_AssignmentTargetNodeIndex < 0)
+        if (_context->m_AssignmentTargetNode == nullptr)
         {
             ReportError(_context, _tokenTable, currentToken, "Can't list parameters without a valid target (please check left hand side of the statement)");
             return;
@@ -225,10 +254,10 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
             return;
         }
 
-        if (_ast[_context->m_AssignmentTargetNodeIndex].m_Right->m_Left)
+        if (_context->m_AssignmentTargetNode)
         {
-            _ast[_context->m_AssignmentTargetNodeIndex].m_Right->m_Left->m_Self.m_Value += _tokenTable[currentToken].m_Value + " ";
-            _ast[_context->m_AssignmentTargetNodeIndex].m_Right->m_Left->m_Self.m_Type = NT_Expression;
+            _context->m_AssignmentTargetNode->m_Self.m_Value += _tokenTable[currentToken].m_Value + " ";
+            _context->m_AssignmentTargetNode->m_Self.m_Type = NT_Expression;
         }
         else
         {
@@ -242,7 +271,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
     // INITIALIZER LIST
     while (state == PS_InitializerList)
     {
-        if (_context->m_AssignmentTargetNodeIndex < 0)
+        if (_context->m_AssignmentTargetNode == nullptr)
         {
             ReportError(_context, _tokenTable, currentToken, "Can't assign without a valid target (please check left hand side of the statement");
             return;
@@ -268,10 +297,10 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
             bool is_intliteral = _tokenTable[currentToken].m_Type == TK_LitNumeric;
             if (is_intliteral)
             {
-                if (_ast[_context->m_AssignmentTargetNodeIndex].m_Right->m_Left)
+                if (_context->m_AssignmentTargetNode)
                 {
-                    uint32_t variablepointer = std::stoi(_ast[_context->m_AssignmentTargetNodeIndex].m_Right->m_Left->m_Self.m_Value) + _context->m_CurrentInitializerOffset;
-                    uint32_t variablestride = std::stoi(_ast[_context->m_AssignmentTargetNodeIndex].m_Left->m_Right->m_Self.m_Value);
+                    uint32_t variablepointer = std::stoi(_context->m_AssignmentTargetNode->m_Right->m_Left->m_Self.m_Value) + _context->m_CurrentInitializerOffset;
+                    uint32_t variablestride = std::stoi(_context->m_AssignmentTargetNode->m_Left->m_Right->m_Self.m_Value);
 
                     if (variablestride == 4) // DWORD/PTR
                     {
@@ -332,14 +361,14 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
         if (is_endstatement || is_endblock)
         {
             ++currentToken;
-            _context->m_BlockDepth--;
+            _context->m_BlockDepth -= is_endblock ? 1 : 0;
             if (_context->m_BlockDepth<0)
             {
                 ReportError(_context, _tokenTable, currentToken, "Statement block depth is negative, please check for mismatching { }");
                 return;
             }
             // Reset this across statements to prevent assignment across statements
-            _context->m_AssignmentTargetNodeIndex = -1;
+            _context->m_AssignmentTargetNode = nullptr;
             // Expecting: STATEMENT
             state = PS_Statement;
             return;
@@ -395,7 +424,7 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                     _ast.emplace_back(nodeDef);
 
                     // Target function definition to receive the parameter list
-                    _context->m_AssignmentTargetNodeIndex = _ast.size()-1;
+                    _context->m_AssignmentTargetNode = nodeDef.m_Right->m_Left;
 
                     // Gather parameters
                     state = PS_ParameterList;
@@ -457,7 +486,6 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 nodeDecl.m_Right->m_Left = new SASTNode();                                 // VariableStorage
                 nodeDecl.m_Right->m_Left->m_Self.m_Value = std::to_string(_context->m_VariableStoreCursor);
                 nodeDecl.m_Right->m_Left->m_Self.m_Type = NT_VariablePointer;
-                _ast.emplace_back(nodeDecl);
                 // Align cursor so that next allocation starts at a 2 byte boundary
                 uint32_t alignedsize = EAlignUp(std::stoi(variabledim)*variablestride, 2);
                 _context->m_VariableStoreCursor += alignedsize;
@@ -468,14 +496,16 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 {
                     ++currentToken;
 
-                    _context->m_AssignmentTargetNodeIndex = _ast.size()-1;
+                    _context->m_AssignmentTargetNode = &nodeDecl;
 
                     // initializerlist
                     // Gather initializer list
                     state = PS_InitializerList;
                     _context->m_CurrentInitializerOffset = 0;
-                    return;
                 }
+
+                _ast.emplace_back(nodeDecl);
+                return;
             }
             else
             {
@@ -505,12 +535,12 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 nodeDef.m_Right->m_Self.m_Value = "";
                 nodeDef.m_Right->m_Self.m_Type = NT_TypeName;
                 nodeDef.m_Right->m_Left = new SASTNode();
-                nodeDef.m_Right->m_Self.m_Value = "";
-                nodeDef.m_Right->m_Self.m_Type = NT_Unknown;
+                nodeDef.m_Right->m_Left->m_Self.m_Value = "";
+                nodeDef.m_Right->m_Left->m_Self.m_Type = NT_Unknown;
                 _ast.emplace_back(nodeDef);
 
                 // Target function definition to receive the parameter list
-                _context->m_AssignmentTargetNodeIndex = _ast.size()-1;
+                _context->m_AssignmentTargetNode = nodeDef.m_Right->m_Left;
 
                 // Gather parameters
                 state = PS_ParameterList;
@@ -546,8 +576,9 @@ void ParseAndGenerateAST(TTokenTable &_tokenTable, TAbstractSyntaxTree &_ast, SP
                 _ast.emplace_back(nodeDecl);
 
                 // Target assignment op to receive the expressions
-                _context->m_AssignmentTargetNodeIndex = _ast.size()-1;
+                _context->m_AssignmentTargetNode = nodeDecl.m_Right;
 
+                _context->m_LHS = "";
                 state = PS_Expression;
                 return;
             }
