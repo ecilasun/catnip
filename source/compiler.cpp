@@ -19,13 +19,25 @@ void Tokenize(std::string &_inputStream, TTokenTable &_tokenTable)
     
     std::string str = _inputStream;
 
-    // Strip comments
+    // Strip multiline comments
     do {
         size_t foundStart = str.find("/*");
         if (foundStart != std::string::npos)
         {
-            size_t foundEnd = str.find("*/");
+            size_t foundEnd = str.find("*/", foundStart);
             str = str.substr(0, foundStart) + str.substr(foundEnd+2);
+        }
+        else
+            break;
+    } while(str.length() != 0);
+
+    // Strip single line comments
+    do {
+        size_t foundStart = str.find("//");
+        if (foundStart != std::string::npos)
+        {
+            size_t foundEnd = str.find("\r", foundStart);
+            str = str.substr(0, foundStart) + str.substr(foundEnd+1);
         }
         else
             break;
