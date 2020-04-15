@@ -1,4 +1,5 @@
 #include "compiler.h"
+#include "../build/release/source/cparse.hpp"
 
 // ---------------------------------------------------------------------------
 // Lexical analyzer
@@ -716,7 +717,17 @@ void DebugDumpAST(SASTNode &_root)
 
 int CompileCode(char *_inputname, char *_outputname)
 {
-    // Read ROM file
+#if defined(USE_GENERATED_PARSER)
+
+    extern FILE *yyin;
+    yyin = fopen(_inputname, "r");
+    int res = yyparse();
+    fclose(yyin);
+    return res;
+
+#else
+
+    // Read C file
     FILE *inputfile = fopen(_inputname, "rb");
     if (inputfile == nullptr)
     {
@@ -789,4 +800,6 @@ int CompileCode(char *_inputname, char *_outputname)
 #endif
 
     return 0;
+
+#endif // GENERATED_PARSER
 }

@@ -26,7 +26,7 @@
         {
             "label": "clean",
             "type": "shell",
-            "command": "python waf clean --passlimit clean",
+            "command": "python waf clean",
             "group": {
                 "kind": "build",
                 "isDefault": true
