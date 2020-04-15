@@ -11,39 +11,57 @@ digit [0-9,x]
 %%
 [ \t]			;
 [ \n]   	{ yylineno = yylineno + 1;}
-dword		return DWORD;
-word		return WORD;
-byte 		return BYTE;
-dwordptr	return DWORDPTR;
-wordptr		return WORDPTR;
-byteptr 	return BYTEPTR;
-void 		return VOID;
+
+case        return CASE;
+default     return DEFAULT;
+if          return IF;
+else        return ELSE;
+switch      return SWITCH;
+while       return WHILE;
+do          return DO;
+for         return FOR;
+goto        return GOTO;
+continue    return CONTINUE;
+break       return BREAK;
+return      return RETURN;
+char        return CHAR;
+short       return SHORT;
+int         return INT;
+long        return LONG;
+signed      return SIGNED;
+unsigned    return UNSIGNED;
+float       return FLOAT;
+double      return DOUBLE;
+const       return CONST;
+volatile    return VOLATILE;
+void        return VOID;
+
 for 		return FOR;
 while		return WHILE;
-if		return IF;
-do		return DO;
+if		    return IF;
+do		    return DO;
 return  	return RETURN;
 break		return BREAK;
-define  	return DEFINE;
-include 	return INCLUDE;
 case 		return CASE;
 switch		return SWITCH;
-main		return MAIN;
 default 	return DEFAULT;
 continue 	return CONTINUE;
 else		return ELSE;
 struct 		return STRUCT;
-{digit}+    return NUM;
-{alpha}({alpha}|{digit})* return ID;
-"<="   		return LE;
-">="    	return GE;
-"=="    	return EQ;
-"!="    	return NE;
-">"		return GT;
-"<"		return LT;
-\.     		return DOT;
-[!%]		return ID;
+
+"<="   		return LE_OP;
+">="    	return GE_OP;
+"=="    	return EQ_OP;
+"!="    	return NE_OP;
+">" 		return GREATER_OP;
+"<"	    	return LESS_OP;
+
 \/\/.* 			 ;
 \/\*(.*\n)*.*\*\/ 	 ;
+
+{digit}+    return CONSTANT;
+{alpha}({alpha}|{digit})* return IDENTIFIER;
+[!%]		return IDENTIFIER;
+
 .      		return yytext[0];
 %%

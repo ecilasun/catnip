@@ -1,5 +1,10 @@
 #include "compiler.h"
+
+#define USE_GENERATED_PARSER
+
+#if defined(USE_GENERATED_PARSER)
 #include "../build/release/source/cparse.hpp"
+#endif
 
 // ---------------------------------------------------------------------------
 // Lexical analyzer
