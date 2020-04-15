@@ -158,6 +158,7 @@ loop:
 	// 	putchar(c1);
 }
 
+int line = 0;
 int column = 0;
 
 void count()
@@ -166,11 +167,14 @@ void count()
 
 	for (i = 0; yytext[i] != '\0'; i++)
 		if (yytext[i] == '\n')
+		{
 			column = 0;
+			++line;
+		}
 		else if (yytext[i] == '\t')
 			column += 8 - (column % 8);
 		else
-			column++;
+			++column;
 
 	ECHO;
 }
