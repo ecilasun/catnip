@@ -1,67 +1,176 @@
+D			[0-9]
+L			[a-zA-Z_]
+H			[a-fA-F0-9]
+E			[Ee][+-]?{D}+
+FS			(f|F|l|L)
+IS			(u|U|l|L)*
+
 %{
+// Based on https://www.lysator.liu.se/c/ANSI-C-grammar-l.html
+
+#include <stdio.h>
 #include <io.h>
 #include "cparse.hpp"
+
+int check_type();
+void comment();
+void count();
+
 %}
 
-%option noyywrap
 %option nounistd
+%option noyywrap
 
-alpha [a-zA-Z]
-digit [0-9,x]
 %%
-[ \t]			;
-[ \n]   	{ yylineno = yylineno + 1;}
+"/*"			{ comment(); }
 
-case        return CASE;
-default     return DEFAULT;
-if          return IF;
-else        return ELSE;
-switch      return SWITCH;
-while       return WHILE;
-do          return DO;
-for         return FOR;
-goto        return GOTO;
-continue    return CONTINUE;
-break       return BREAK;
-return      return RETURN;
-char        return CHAR;
-short       return SHORT;
-int         return INT;
-long        return LONG;
-signed      return SIGNED;
-unsigned    return UNSIGNED;
-float       return FLOAT;
-double      return DOUBLE;
-const       return CONST;
-volatile    return VOLATILE;
-void        return VOID;
+"auto"			{ count();  return(AUTO); }
+"break"			{ count();  return(BREAK); }
+"case"			{ count();  return(CASE); }
+"char"			{ count();  return(CHAR); }
+"const"			{ count();  return(CONST); }
+"continue"		{ count();  return(CONTINUE); }
+"default"		{ count();  return(DEFAULT); }
+"do"			{ count();  return(DO); }
+"double"		{ count();  return(DOUBLE); }
+"else"			{ count();  return(ELSE); }
+"enum"			{ count();  return(ENUM); }
+"extern"		{ count();  return(EXTERN); }
+"float"			{ count();  return(FLOAT); }
+"for"			{ count();  return(FOR); }
+"goto"			{ count();  return(GOTO); }
+"if"			{ count();  return(IF); }
+"int"			{ count();  return(INT); }
+"long"			{ count();  return(LONG); }
+"register"		{ count();  return(REGISTER); }
+"return"		{ count();  return(RETURN); }
+"short"			{ count();  return(SHORT); }
+"signed"		{ count();  return(SIGNED); }
+"sizeof"		{ count();  return(SIZEOF); }
+"static"		{ count();  return(STATIC); }
+"struct"		{ count();  return(STRUCT); }
+"switch"		{ count();  return(SWITCH); }
+"typedef"		{ count();  return(TYPEDEF); }
+"union"			{ count();  return(UNION); }
+"unsigned"		{ count();  return(UNSIGNED); }
+"void"			{ count();  return(VOID); }
+"volatile"		{ count();  return(VOLATILE); }
+"while"			{ count();  return(WHILE); }
 
-for 		return FOR;
-while		return WHILE;
-if		    return IF;
-do		    return DO;
-return  	return RETURN;
-break		return BREAK;
-case 		return CASE;
-switch		return SWITCH;
-default 	return DEFAULT;
-continue 	return CONTINUE;
-else		return ELSE;
-struct 		return STRUCT;
+{L}({L}|{D})*	{ count();  return(check_type()); }
 
-"<="   		return LE_OP;
-">="    	return GE_OP;
-"=="    	return EQ_OP;
-"!="    	return NE_OP;
-">" 		return GREATER_OP;
-"<"	    	return LESS_OP;
+0[xX]{H}+{IS}?	{ count();  return(CONSTANT); }
+0{D}+{IS}?		{ count();  return(CONSTANT); }
+{D}+{IS}?		{ count();  return(CONSTANT); }
+L?'(\\.|[^\\'])+'	{ count();  return(CONSTANT); }
 
-\/\/.* 			 ;
-\/\*(.*\n)*.*\*\/ 	 ;
+{D}+{E}{FS}?	{ count();  return(CONSTANT); }
+{D}*"."{D}+({E})?{FS}?	{ count();  return(CONSTANT); }
+{D}+"."{D}*({E})?{FS}?	{ count();  return(CONSTANT); }
 
-{digit}+    return CONSTANT;
-{alpha}({alpha}|{digit})* return IDENTIFIER;
-[!%]		return IDENTIFIER;
+L?\"(\\.|[^\\"])*\"	{ count();  return(STRING_LITERAL); }
 
-.      		return yytext[0];
+"..."			{ count();  return(ELLIPSIS); }
+">>="			{ count();  return(RIGHT_ASSIGN); }
+"<<="			{ count();  return(LEFT_ASSIGN); }
+"+="			{ count();  return(ADD_ASSIGN); }
+"-="			{ count();  return(SUB_ASSIGN); }
+"*="			{ count();  return(MUL_ASSIGN); }
+"/="			{ count();  return(DIV_ASSIGN); }
+"%="			{ count();  return(MOD_ASSIGN); }
+"&="			{ count();  return(AND_ASSIGN); }
+"^="			{ count();  return(XOR_ASSIGN); }
+"|="			{ count();  return(OR_ASSIGN); }
+">>"			{ count();  return(RIGHT_OP); }
+"<<"			{ count();  return(LEFT_OP); }
+"++"			{ count();  return(INC_OP); }
+"--"			{ count();  return(DEC_OP); }
+"->"			{ count();  return(PTR_OP); }
+"&&"			{ count();  return(AND_OP); }
+"||"			{ count();  return(OR_OP); }
+"<="			{ count();  return(LE_OP); }
+">="			{ count();  return(GE_OP); }
+"=="			{ count();  return(EQ_OP); }
+"!="			{ count();  return(NE_OP); }
+";"				{ count();  return(';'); }
+("{"|"<%")		{ count();  return('{'); }
+("}"|"%>")		{ count();  return('}'); }
+","				{ count();  return(','); }
+":"				{ count();  return(':'); }
+"="				{ count();  return('='); }
+"("				{ count();  return('('); }
+")"				{ count();  return(')'); }
+("["|"<:")		{ count();  return('['); }
+("]"|":>")		{ count();  return(']'); }
+"."			{ count();  return('.'); }
+"&"			{ count();  return('&'); }
+"!"			{ count();  return('!'); }
+"~"			{ count();  return('~'); }
+"-"			{ count();  return('-'); }
+"+"			{ count();  return('+'); }
+"*"			{ count();  return('*'); }
+"/"			{ count();  return('/'); }
+"%"			{ count();  return('%'); }
+"<"			{ count();  return('<'); }
+">"			{ count();  return('>'); }
+"^"			{ count();  return('^'); }
+"|"			{ count();  return('|'); }
+"?"			{ count();  return('?'); }
+
+[ \t\v\n\f]		{ /*count(); }
+.			{ /* ignore bad characters */ }
+
 %%
+
+int check_type()
+{
+/*
+* pseudo code --- this is what it should check
+*
+*	if (yytext == type_name)
+*		return(TYPE_NAME);
+*
+*	return(IDENTIFIER);
+*/
+
+/*
+*	it actually will only return IDENTIFIER
+*/
+
+	return(IDENTIFIER);
+}
+
+void comment()
+{
+	char c, c1;
+
+loop:
+	while ((c = yyinput()) != '*' && c != 0)
+		;//putchar(c);
+
+	if ((c1 = yyinput()) != '/' && c != 0)
+	{
+		unput(c1);
+		goto loop;
+	}
+
+	// if (c != 0)
+	// 	putchar(c1);
+}
+
+int column = 0;
+
+void count()
+{
+	int i;
+
+	for (i = 0; yytext[i] != '\0'; i++)
+		if (yytext[i] == '\n')
+			column = 0;
+		else if (yytext[i] == '\t')
+			column += 8 - (column % 8);
+		else
+			column++;
+
+	ECHO;
+}

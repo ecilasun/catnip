@@ -1,4 +1,6 @@
 %{
+// Based on https://www.lysator.liu.se/c/ANSI-C-grammar-l.html
+
 #include <stdio.h>
 #include <stdlib.h>
 
