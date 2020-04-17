@@ -1,6 +1,6 @@
 
 #include <vector>
-#if defined(CAT_LINUX)
+#if defined(CAT_LINUX) || defined(CAT_MACOSX)
 #include "string.h"
 #include "stdio.h"
 #endif

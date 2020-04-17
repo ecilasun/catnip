@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <iostream>
-#if defined(CAT_LINUX)
+#if defined(CAT_LINUX) || defined(CAT_MACOSX)
 #include <string.h>
 #endif
 #include <string>

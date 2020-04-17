@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#if defined(CAT_LINUX)
+#if defined(CAT_LINUX) || defined(CAT_MACOSX)
   #include <SDL2/SDL.h>
 #else
   #include "../SDL/SDL.h"

@@ -11,14 +11,14 @@ top = '.'
 
 
 def options(opt):
-    if platform.system() == 'Linux':
+    if platform.system() in ['Linux','Darwin']:
         opt.load('clang++')
     else:
         opt.load('msvc')
 
 
 def configure(conf):
-    if platform.system() == 'Linux':
+    if platform.system() in ['Linux','Darwin']:
         conf.load('clang++')
     else:
         conf.find_program('win_flex', path_list='win_flex_bison', exts='.exe')
@@ -28,7 +28,7 @@ def configure(conf):
 
 class build_lex(Task):
     color = 'PINK'
-    if platform.system() == 'Linux':
+    if platform.system() in ['Linux','Darwin']:
         run_str = 'lexx -o ${TGT} ${SRC}'
     else:
         run_str = '${WIN_FLEX} -o ${TGT} ${SRC}'
@@ -36,31 +36,34 @@ class build_lex(Task):
 
 class build_yacc(Task):
     color = 'PINK'
-    if platform.system() == 'Linux':
+    if platform.system() in ['Linux','Darwin']:
         run_str = 'bison -d -o ${TGT} ${SRC}'
     else:
         run_str = '${WIN_BISON} -d -o ${TGT} ${SRC}'
 
 
 @extension('.l')
-def build_lex_source(self, node):
+def build_flex_source(self, node):
     self.create_task('build_lex', node, node.change_ext('.cpp'))
 
 
 @extension('.y')
-def build_lex_source(self, node):
+def build_bison_source(self, node):
     self.create_task('build_yacc', node, node.change_ext('.cpp'))
 
 
 def build(ctx):
 
-    if platform.system() == 'Linux':
-        platform_defines = ['_CRT_SECURE_NO_WARNINGS', 'CAT_LINUX', 'DEBUG']
+    if platform.system() in ['Linux','Darwin']:
+        if platform.system() == 'Darwin':
+            platform_defines = ['_CRT_SECURE_NO_WARNINGS', 'CAT_MACOSX', 'DEBUG']
+        else:
+            platform_defines = ['_CRT_SECURE_NO_WARNINGS', 'CAT_LINUX', 'DEBUG']
         compile_flags = ['-std=c++17']
         linker_flags = []
 
-        ctx(source=glob.glob('source/*.y'), target='cyacc', before='cxx')
         ctx(source=glob.glob('source/*.l'), target='clexx', before='cxx')
+        ctx(source=glob.glob('source/*.y'), target='cyacc', before='cxx')
 
         generatedsource = glob.glob('build/release/source/*.cpp')
 
