@@ -59,7 +59,7 @@ void count();
 "volatile"		{ count();  return(VOLATILE); }
 "while"			{ count();  return(WHILE); }
 
-{L}({L}|{D})*	{ count();  yylval.string = yytext; return(IDENTIFIER); }
+{L}({L}|{D})*	{ count();  sscanf(yytext, "%s", yylval.string); return(IDENTIFIER); }
 
 0[xX]{H}+{IS}?	{ count();  sscanf(yytext, "%x", &yylval.numeric); return(CONSTANT); }
 0{D}+{IS}?		{ count();  yylval.numeric = atoi(yytext); return(CONSTANT); }
@@ -70,7 +70,7 @@ L?'(\\.|[^\\'])+'	{ count();  return(CONSTANT); }
 {D}*"."{D}+({E})?{FS}?	{ count();  return(CONSTANT); }
 {D}+"."{D}*({E})?{FS}?	{ count();  return(CONSTANT); }
 
-L?\"(\\.|[^\\"])*\"	{ count(); yylval.string = yytext; return(STRING_LITERAL); }
+L?\"(\\.|[^\\"])*\"	{ count(); sscanf(yytext, "%s", yylval.string); return(STRING_LITERAL); }
 
 "..."			{ count();  return(ELLIPSIS); }
 ">>="			{ count();  return(RIGHT_ASSIGN); }

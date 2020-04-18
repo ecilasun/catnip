@@ -16,7 +16,7 @@ int err=0;
 
 %union
 {
-	char *string;
+	char string[128];
 	unsigned int numeric;
 }
 
