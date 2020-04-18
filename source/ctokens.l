@@ -12,6 +12,8 @@ IS			(u|U|l|L)*
 #include <io.h>
 #include "cparse.hpp"
 
+extern YYSTYPE yylval;
+
 int check_type();
 void comment();
 void count();
@@ -57,18 +59,18 @@ void count();
 "volatile"		{ count();  return(VOLATILE); }
 "while"			{ count();  return(WHILE); }
 
-{L}({L}|{D})*	{ count();  return(check_type()); }
+{L}({L}|{D})*	{ count();  yylval.string = yytext; return(IDENTIFIER); }
 
-0[xX]{H}+{IS}?	{ count();  return(CONSTANT); }
-0{D}+{IS}?		{ count();  return(CONSTANT); }
-{D}+{IS}?		{ count();  return(CONSTANT); }
+0[xX]{H}+{IS}?	{ count();  sscanf(yytext, "%x", &yylval.numeric); return(CONSTANT); }
+0{D}+{IS}?		{ count();  yylval.numeric = atoi(yytext); return(CONSTANT); }
+{D}+{IS}?		{ count();  yylval.numeric = atoi(yytext); return(CONSTANT); }
 L?'(\\.|[^\\'])+'	{ count();  return(CONSTANT); }
 
 {D}+{E}{FS}?	{ count();  return(CONSTANT); }
 {D}*"."{D}+({E})?{FS}?	{ count();  return(CONSTANT); }
 {D}+"."{D}*({E})?{FS}?	{ count();  return(CONSTANT); }
 
-L?\"(\\.|[^\\"])*\"	{ count();  return(STRING_LITERAL); }
+L?\"(\\.|[^\\"])*\"	{ count(); yylval.string = yytext; return(STRING_LITERAL); }
 
 "..."			{ count();  return(ELLIPSIS); }
 ">>="			{ count();  return(RIGHT_ASSIGN); }
@@ -117,7 +119,7 @@ L?\"(\\.|[^\\"])*\"	{ count();  return(STRING_LITERAL); }
 "|"			{ count();  return('|'); }
 "?"			{ count();  return('?'); }
 
-[ \t\v\n\f]		{ /*count(); }
+[ \t\v\n\f]		{ count(); }
 .			{ /* ignore bad characters */ }
 
 %%

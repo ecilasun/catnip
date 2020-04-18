@@ -4,16 +4,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int yylex(void);
+extern int yylex(void);
 void yyerror(const char *);
 
 extern FILE *yyin;
 extern char *yytext;
 extern FILE *fp;
 int err=0;
+
 %}
 
-%token IDENTIFIER CONSTANT STRING_LITERAL SIZEOF
+%union
+{
+	char *string;
+	unsigned int numeric;
+}
+
+%token <string> IDENTIFIER
+%token <numeric> CONSTANT
+%token <string> STRING_LITERAL
+%token SIZEOF
 %token PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LESS_OP GREATER_OP LE_OP GE_OP EQ_OP NE_OP
 %token AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
@@ -29,9 +39,9 @@ int err=0;
 %%
 
 primary_expression
-	: IDENTIFIER
-	| CONSTANT
-	| STRING_LITERAL
+	: IDENTIFIER { printf("[identifier:%s] ",$1); }
+	| CONSTANT { printf("[constant:%u] ",$1); }
+	| STRING_LITERAL { printf("[str:%s] ",$1); }
 	| '(' expression ')'
 	;
 
@@ -430,17 +440,10 @@ function_definition
 	;
 
 %%
-// extern char yytext[];
-// extern int column;
-// yyerror(s)
-// char *s;
-// {
-// 	fflush(stdout);
-// 	printf("\n%*s\n%*s\n", column, "^", column, s);
-// }
 
 int parseC90()
 {
+
 	if (!yyparse() && err==0)
 		printf("\nC90: no errors!\n");
 	else
@@ -448,7 +451,7 @@ int parseC90()
 
 	return 0;
 }
-         
+
 extern int yylineno;
 void yyerror(const char *s) {
 	printf("%d : %s %s\n", yylineno, s, yytext );

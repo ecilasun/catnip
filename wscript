@@ -11,14 +11,14 @@ top = '.'
 
 
 def options(opt):
-    if platform.system() in ['Linux','Darwin']:
+    if platform.system() in ['Linux', 'Darwin']:
         opt.load('clang++')
     else:
         opt.load('msvc')
 
 
 def configure(conf):
-    if platform.system() in ['Linux','Darwin']:
+    if platform.system() in ['Linux', 'Darwin']:
         conf.load('clang++')
     else:
         conf.find_program('win_flex', path_list='win_flex_bison', exts='.exe')
@@ -28,7 +28,7 @@ def configure(conf):
 
 class build_lex(Task):
     color = 'PINK'
-    if platform.system() in ['Linux','Darwin']:
+    if platform.system() in ['Linux', 'Darwin']:
         run_str = 'lexx -o ${TGT} ${SRC}'
     else:
         run_str = '${WIN_FLEX} -o ${TGT} ${SRC}'
@@ -36,7 +36,7 @@ class build_lex(Task):
 
 class build_yacc(Task):
     color = 'PINK'
-    if platform.system() in ['Linux','Darwin']:
+    if platform.system() in ['Linux', 'Darwin']:
         run_str = 'bison -d -o ${TGT} ${SRC}'
     else:
         run_str = '${WIN_BISON} -d -o ${TGT} ${SRC}'
@@ -54,7 +54,7 @@ def build_bison_source(self, node):
 
 def build(ctx):
 
-    if platform.system() in ['Linux','Darwin']:
+    if platform.system() in ['Linux', 'Darwin']:
         if platform.system() == 'Darwin':
             platform_defines = ['_CRT_SECURE_NO_WARNINGS', 'CAT_MACOSX', 'DEBUG']
         else:
@@ -62,8 +62,7 @@ def build(ctx):
         compile_flags = ['-std=c++17']
         linker_flags = []
 
-        ctx(source=glob.glob('source/*.l'), target='clexx', before='cxx')
-        ctx(source=glob.glob('source/*.y'), target='cyacc', before='cxx')
+        ctx(source=glob.glob('source/*.y') + glob.glob('source/*.l'), name='parsercode', before='cxx')
 
         generatedsource = glob.glob('build/release/source/*.cpp')
 
@@ -76,7 +75,7 @@ def build(ctx):
             includes=['source', 'includes'],
             libpath=[],
             lib=['SDL2'],
-            use=['cyacc', 'clexx'])
+            use=['parsercode'])
     else:
         platform_defines = ['_CRT_SECURE_NO_WARNINGS', 'CAT_WINDOWS']
         win_sdk_lib_path = '$(ProgramFiles)/Windows Kits/10/Lib/10.0.18362.0/um/x64/'
@@ -98,8 +97,7 @@ def build(ctx):
             source=ctx.root.find_resource(os.path.join(sdlpath, 'SDL2.dll')),
             target='SDL2.dll', is_copy=True, before='cxx')
 
-        ctx(source=glob.glob('source/*.y'), target='cyacc', before='cxx')
-        ctx(source=glob.glob('source/*.l'), target='clexx', before='cxx')
+        ctx(source=glob.glob('source/*.y') + glob.glob('source/*.l'), name='parsercode', before='cxx')
 
         generatedsource = glob.glob('build/release/source/*.cpp')
 
@@ -112,4 +110,4 @@ def build(ctx):
             includes=includes,
             libpath=[win_sdk_lib_path, os.path.abspath('SDL')],
             lib=libs,
-            use=['cyacc', 'clexx'])
+            use=['parsercode'])
