@@ -9,7 +9,11 @@ IS			(u|U|l|L)*
 // Based on https://www.lysator.liu.se/c/ANSI-C-grammar-l.html
 
 #include <stdio.h>
+#if defined(CAT_WINDOWS)
 #include <io.h>
+#else
+#include <unistd.h>
+#endif
 #include "cparse.hpp"
 
 extern YYSTYPE yylval;

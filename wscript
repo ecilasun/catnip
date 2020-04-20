@@ -29,7 +29,7 @@ def configure(conf):
 class build_lex(Task):
     color = 'PINK'
     if platform.system() in ['Linux', 'Darwin']:
-        run_str = 'lexx -o ${TGT} ${SRC}'
+        run_str = 'flex -o ${TGT} ${SRC}'
     else:
         run_str = '${WIN_FLEX} -o ${TGT} ${SRC}'
 
