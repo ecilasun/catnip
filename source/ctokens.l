@@ -12,7 +12,11 @@ IS	((u|U)|(u|U)?(l|L|ll|LL)|(l|L|ll|LL)(u|U))
 // 2nd revision: Based on https://gist.github.com/codebrainz/2933703
 
 #include <stdio.h>
+#if defined(CAT_WINDOWS)
 #include <io.h>
+#else
+#include <unistd.h>
+#endif
 #include "cparse.hpp"
 
 extern YYSTYPE yylval;
