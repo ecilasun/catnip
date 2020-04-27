@@ -1,11 +1,13 @@
 %{
-// Based on https://www.lysator.liu.se/c/ANSI-C-grammar-l.html
+// 1st revisioon: Based on https://www.lysator.liu.se/c/ANSI-C-grammar-l.html
+// 2nd revision: Based on https://gist.github.com/codebrainz/2933703
 
 #include <stdio.h>
 #include <stdlib.h>
 
 extern int yylex(void);
 void yyerror(const char *);
+int yyparse(void);
 
 extern FILE *yyin;
 extern char *yytext;
@@ -29,7 +31,7 @@ int err=0;
 %token SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
 %token XOR_ASSIGN OR_ASSIGN TYPE_NAME
 
-%token TYPEDEF EXTERN STATIC AUTO REGISTER
+%token TYPEDEF EXTERN STATIC AUTO REGISTER INLINE RESTRICT
 %token CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID
 %token STRUCT UNION ENUM ELLIPSIS
 
@@ -54,6 +56,8 @@ postfix_expression
 	| postfix_expression PTR_OP IDENTIFIER
 	| postfix_expression INC_OP
 	| postfix_expression DEC_OP
+	| '(' type_name ')' '{' initializer_list '}'
+	| '(' type_name ')' '{' initializer_list ',' '}'
 	;
 
 argument_expression_list
@@ -187,6 +191,8 @@ declaration_specifiers
 	| type_specifier declaration_specifiers
 	| type_qualifier
 	| type_qualifier declaration_specifiers
+	| function_specifier
+	| function_specifier declaration_specifiers
 	;
 
 init_declarator_list
@@ -263,6 +269,8 @@ struct_declarator
 enum_specifier
 	: ENUM '{' enumerator_list '}'
 	| ENUM IDENTIFIER '{' enumerator_list '}'
+	| ENUM '{' enumerator_list ',' '}'
+	| ENUM IDENTIFIER '{' enumerator_list ',' '}'
 	| ENUM IDENTIFIER
 	;
 
@@ -278,7 +286,12 @@ enumerator
 
 type_qualifier
 	: CONST
+	| RESTRICT
 	| VOLATILE
+	;
+
+function_specifier
+	: INLINE
 	;
 
 declarator
@@ -289,7 +302,13 @@ declarator
 direct_declarator
 	: IDENTIFIER
 	| '(' declarator ')'
-	| direct_declarator '[' constant_expression ']'
+	| direct_declarator '[' type_qualifier_list assignment_expression ']'
+	| direct_declarator '[' type_qualifier_list ']'
+	| direct_declarator '[' assignment_expression ']'
+	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'
+	| direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'
+	| direct_declarator '[' type_qualifier_list '*' ']'
+	| direct_declarator '[' '*' ']'
 	| direct_declarator '[' ']'
 	| direct_declarator '(' parameter_type_list ')'
 	| direct_declarator '(' identifier_list ')'
@@ -344,9 +363,11 @@ abstract_declarator
 direct_abstract_declarator
 	: '(' abstract_declarator ')'
 	| '[' ']'
-	| '[' constant_expression ']'
+	| '[' assignment_expression ']'
 	| direct_abstract_declarator '[' ']'
-	| direct_abstract_declarator '[' constant_expression ']'
+	| direct_abstract_declarator '[' assignment_expression ']'
+	| '[' '*' ']'
+	| direct_abstract_declarator '[' '*' ']'
 	| '(' ')'
 	| '(' parameter_type_list ')'
 	| direct_abstract_declarator '(' ')'
@@ -361,7 +382,23 @@ initializer
 
 initializer_list
 	: initializer
+	| designation initializer
 	| initializer_list ',' initializer
+	| initializer_list ',' designation initializer
+	;
+
+designation
+	: designator_list '='
+	;
+
+designator_list
+	: designator
+	| designator_list designator
+	;
+
+designator
+	: '[' constant_expression ']'
+	| '.' IDENTIFIER
 	;
 
 statement
@@ -381,19 +418,17 @@ labeled_statement
 
 compound_statement
 	: '{' '}'
-	| '{' statement_list '}'
-	| '{' declaration_list '}'
-	| '{' declaration_list statement_list '}'
+	| '{' block_item_list '}'
 	;
 
-declaration_list
+block_item_list
+	: block_item
+	| block_item_list block_item
+	;
+
+block_item
 	: declaration
-	| declaration_list declaration
-	;
-
-statement_list
-	: statement
-	| statement_list statement
+	| statement
 	;
 
 expression_statement
@@ -407,11 +442,14 @@ selection_statement
 	| SWITCH '(' expression ')' statement
 	;
 
+
 iteration_statement
 	: WHILE '(' expression ')' statement
 	| DO statement WHILE '(' expression ')' ';'
 	| FOR '(' expression_statement expression_statement ')' statement
 	| FOR '(' expression_statement expression_statement expression ')' statement
+	| FOR '(' declaration expression_statement ')' statement
+	| FOR '(' declaration expression_statement expression ')' statement
 	;
 
 jump_statement
@@ -435,10 +473,13 @@ external_declaration
 function_definition
 	: declaration_specifiers declarator declaration_list compound_statement
 	| declaration_specifiers declarator compound_statement
-	| declarator declaration_list compound_statement
-	| declarator compound_statement
 	;
 
+
+declaration_list
+	: declaration
+	| declaration_list declaration
+	;
 %%
 
 int parseC90()
@@ -456,4 +497,4 @@ extern int yylineno;
 void yyerror(const char *s) {
 	printf("%d : %s %s\n", yylineno, s, yytext );
 	err++;
-}         
+}

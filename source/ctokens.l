@@ -1,12 +1,15 @@
-D			[0-9]
-L			[a-zA-Z_]
-H			[a-fA-F0-9]
-E			[Ee][+-]?{D}+
-FS			(f|F|l|L)
-IS			(u|U|l|L)*
+D	[0-9]
+L	[a-zA-Z_]
+H	[a-fA-F0-9]
+E	([Ee][+-]?{D}+)
+P	([Pp][+-]?{D}+)
+FS	(f|F|l|L)
+IS	((u|U)|(u|U)?(l|L|ll|LL)|(l|L|ll|LL)(u|U))
+
 
 %{
-// Based on https://www.lysator.liu.se/c/ANSI-C-grammar-l.html
+// 1st revisioon: Based on https://www.lysator.liu.se/c/ANSI-C-grammar-l.html
+// 2nd revision: Based on https://gist.github.com/codebrainz/2933703
 
 #include <stdio.h>
 #include <io.h>
@@ -25,6 +28,7 @@ void count();
 
 %%
 "/*"			{ comment(); }
+"//"[^\n]*		{ /* consume //-comment */ }
 
 "auto"			{ count();  return(AUTO); }
 "break"			{ count();  return(BREAK); }
@@ -42,6 +46,8 @@ void count();
 "for"			{ count();  return(FOR); }
 "goto"			{ count();  return(GOTO); }
 "if"			{ count();  return(IF); }
+"inline"		{ count(); return(INLINE); }
+"restrict"		{ count(); return(RESTRICT); }
 "int"			{ count();  return(INT); }
 "long"			{ count();  return(LONG); }
 "register"		{ count();  return(REGISTER); }
@@ -61,16 +67,19 @@ void count();
 
 {L}({L}|{D})*	{ count();  sscanf(yytext, "%s", yylval.string); return(IDENTIFIER); }
 
-0[xX]{H}+{IS}?	{ count();  sscanf(yytext, "%x", &yylval.numeric); return(CONSTANT); }
-0{D}+{IS}?		{ count();  yylval.numeric = atoi(yytext); return(CONSTANT); }
-{D}+{IS}?		{ count();  yylval.numeric = atoi(yytext); return(CONSTANT); }
-L?'(\\.|[^\\'])+'	{ count();  return(CONSTANT); }
+0[xX]{H}+{IS}?		{ count(); sscanf(yytext, "%x", &yylval.numeric); return(CONSTANT); }
+0[0-7]*{IS}?		{ count(); yylval.numeric = atoi(yytext); return(CONSTANT); }
+[1-9]{D}*{IS}?		{ count(); yylval.numeric = atoi(yytext); return(CONSTANT); }
+L?'(\\.|[^\\'\n])+'	{ count(); return(CONSTANT); }
 
-{D}+{E}{FS}?	{ count();  return(CONSTANT); }
-{D}*"."{D}+({E})?{FS}?	{ count();  return(CONSTANT); }
-{D}+"."{D}*({E})?{FS}?	{ count();  return(CONSTANT); }
+{D}+{E}{FS}?				{ count(); return(CONSTANT); }
+{D}*"."{D}+{E}?{FS}?		{ count(); return(CONSTANT); }
+{D}+"."{D}*{E}?{FS}?		{ count(); return(CONSTANT); }
+0[xX]{H}+{P}{FS}?			{ count(); return(CONSTANT); }
+0[xX]{H}*"."{H}+{P}?{FS}?	{ count(); return(CONSTANT); }
+0[xX]{H}+"."{H}*{P}?{FS}?	{ count(); return(CONSTANT); }
 
-L?\"(\\.|[^\\"])*\"	{ count(); sscanf(yytext, "%s", yylval.string); return(STRING_LITERAL); }
+L?\"(\\.|[^\\"\n])*\"	{ count(); sscanf(yytext, "%s", yylval.string); return(STRING_LITERAL); }
 
 "..."			{ count();  return(ELLIPSIS); }
 ">>="			{ count();  return(RIGHT_ASSIGN); }
@@ -144,20 +153,14 @@ int check_type()
 
 void comment()
 {
-	char c, c1;
-
-loop:
-	while ((c = yyinput()) != '*' && c != 0)
-		;//putchar(c);
-
-	if ((c1 = yyinput()) != '/' && c != 0)
+	char c, prev = 0;
+	while ((c = yyinput()) != 0)      /* (EOF maps to 0) */
 	{
-		unput(c1);
-		goto loop;
+		if (c == '/' && prev == '*')
+			return;
+		prev = c;
 	}
-
-	// if (c != 0)
-	// 	putchar(c1);
+	printf("ERROR: unterminated comment");
 }
 
 int line = 0;
