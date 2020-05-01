@@ -29,13 +29,17 @@ int err=0;
 %token PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LESS_OP GREATER_OP LE_OP GE_OP EQ_OP NE_OP
 %token AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
-%token XOR_ASSIGN OR_ASSIGN TYPE_NAME
+%token XOR_ASSIGN OR_ASSIGN TYPEDEF_NAME
 
 %token TYPEDEF EXTERN STATIC AUTO REGISTER INLINE RESTRICT
 %token CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID
+%token BYTE WORD DWORD BOOL COMPLEX IMAGINARY
 %token STRUCT UNION ENUM ELLIPSIS
 
 %token CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
+
+%nonassoc NO_ELSE
+%nonassoc ELSE
 
 %start translation_unit
 %%
@@ -223,14 +227,20 @@ type_specifier
 	| DOUBLE
 	| SIGNED
 	| UNSIGNED
+	| BOOL
+	| COMPLEX
+	| IMAGINARY
+	| BYTE
+	| WORD
+	| DWORD
 	| struct_or_union_specifier
 	| enum_specifier
-	| TYPE_NAME
+	| TYPEDEF_NAME
 	;
 
 struct_or_union_specifier
-	: struct_or_union IDENTIFIER '{' struct_declaration_list '}'
-	| struct_or_union '{' struct_declaration_list '}'
+	: struct_or_union '{' struct_declaration_list '}'
+	| struct_or_union IDENTIFIER '{' struct_declaration_list '}'
 	| struct_or_union IDENTIFIER
 	;
 
@@ -249,10 +259,10 @@ struct_declaration
 	;
 
 specifier_qualifier_list
-	: type_specifier specifier_qualifier_list
-	| type_specifier
-	| type_qualifier specifier_qualifier_list
+	: type_specifier
+	| type_specifier specifier_qualifier_list
 	| type_qualifier
+	| type_qualifier specifier_qualifier_list
 	;
 
 struct_declarator_list
@@ -302,17 +312,18 @@ declarator
 direct_declarator
 	: IDENTIFIER
 	| '(' declarator ')'
-	| direct_declarator '[' type_qualifier_list assignment_expression ']'
+	| direct_declarator '[' ']'
 	| direct_declarator '[' type_qualifier_list ']'
 	| direct_declarator '[' assignment_expression ']'
+	| direct_declarator '[' type_qualifier_list assignment_expression ']'
+	| direct_declarator '[' STATIC assignment_expression ']'
 	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'
 	| direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'
-	| direct_declarator '[' type_qualifier_list '*' ']'
 	| direct_declarator '[' '*' ']'
-	| direct_declarator '[' ']'
+	| direct_declarator '[' type_qualifier_list '*' ']'
 	| direct_declarator '(' parameter_type_list ')'
-	| direct_declarator '(' identifier_list ')'
 	| direct_declarator '(' ')'
+	| direct_declarator '(' identifier_list ')'
 	;
 
 pointer
@@ -340,8 +351,8 @@ parameter_list
 
 parameter_declaration
 	: declaration_specifiers declarator
-	| declaration_specifiers abstract_declarator
 	| declaration_specifiers
+	| declaration_specifiers abstract_declarator
 	;
 
 identifier_list
@@ -437,7 +448,7 @@ expression_statement
 	;
 
 selection_statement
-	: IF '(' expression ')' statement
+	: IF '(' expression ')' statement %prec NO_ELSE
 	| IF '(' expression ')' statement ELSE statement
 	| SWITCH '(' expression ')' statement
 	;
@@ -471,10 +482,9 @@ external_declaration
 	;
 
 function_definition
-	: declaration_specifiers declarator declaration_list compound_statement
-	| declaration_specifiers declarator compound_statement
+	: declaration_specifiers declarator compound_statement
+	| declaration_specifiers declarator declaration_list compound_statement
 	;
-
 
 declaration_list
 	: declaration

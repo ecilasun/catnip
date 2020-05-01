@@ -21,9 +21,9 @@ IS	((u|U)|(u|U)?(l|L|ll|LL)|(l|L|ll|LL)(u|U))
 
 extern YYSTYPE yylval;
 
-int check_type();
 void comment();
 void count();
+int check_type();
 
 %}
 
@@ -36,6 +36,7 @@ void count();
 
 "auto"			{ count();  return(AUTO); }
 "break"			{ count();  return(BREAK); }
+"byte"			{ count();  return(BYTE); }
 "case"			{ count();  return(CASE); }
 "char"			{ count();  return(CHAR); }
 "const"			{ count();  return(CONST); }
@@ -43,6 +44,7 @@ void count();
 "default"		{ count();  return(DEFAULT); }
 "do"			{ count();  return(DO); }
 "double"		{ count();  return(DOUBLE); }
+"dword"			{ count();  return(DWORD); }
 "else"			{ count();  return(ELSE); }
 "enum"			{ count();  return(ENUM); }
 "extern"		{ count();  return(EXTERN); }
@@ -51,10 +53,10 @@ void count();
 "goto"			{ count();  return(GOTO); }
 "if"			{ count();  return(IF); }
 "inline"		{ count(); return(INLINE); }
-"restrict"		{ count(); return(RESTRICT); }
 "int"			{ count();  return(INT); }
 "long"			{ count();  return(LONG); }
 "register"		{ count();  return(REGISTER); }
+"restrict"		{ count(); return(RESTRICT); }
 "return"		{ count();  return(RETURN); }
 "short"			{ count();  return(SHORT); }
 "signed"		{ count();  return(SIGNED); }
@@ -68,8 +70,12 @@ void count();
 "void"			{ count();  return(VOID); }
 "volatile"		{ count();  return(VOLATILE); }
 "while"			{ count();  return(WHILE); }
+"_Bool"			{ count();  return(BOOL); }
+"_Complex"		{ count();  return(COMPLEX); }
+"_Imaginary"	{ count();  return(IMAGINARY); }
+"word"			{ count();  return(WORD); }
 
-{L}({L}|{D})*	{ count();  sscanf(yytext, "%s", yylval.string); return(IDENTIFIER); }
+{L}({L}|{D})*	{ count();  sscanf(yytext, "%s", yylval.string); return check_type(); }
 
 0[xX]{H}+{IS}?		{ count(); sscanf(yytext, "%x", &yylval.numeric); return(CONSTANT); }
 0[0-7]*{IS}?		{ count(); yylval.numeric = atoi(yytext); return(CONSTANT); }
@@ -126,8 +132,8 @@ L?\"(\\.|[^\\"\n])*\"	{ count(); sscanf(yytext, "%s", yylval.string); return(STR
 "*"			{ count();  return('*'); }
 "/"			{ count();  return('/'); }
 "%"			{ count();  return('%'); }
-"<"			{ count();  return('<'); }
-">"			{ count();  return('>'); }
+"<"			{ count();  return(LESS_OP); }
+">"			{ count();  return(GREATER_OP); }
 "^"			{ count();  return('^'); }
 "|"			{ count();  return('|'); }
 "?"			{ count();  return('?'); }
@@ -139,18 +145,9 @@ L?\"(\\.|[^\\"\n])*\"	{ count(); sscanf(yytext, "%s", yylval.string); return(STR
 
 int check_type()
 {
-/*
-* pseudo code --- this is what it should check
-*
-*	if (yytext == type_name)
-*		return(TYPE_NAME);
-*
-*	return(IDENTIFIER);
-*/
-
-/*
-*	it actually will only return IDENTIFIER
-*/
+	// TODO: Or any of the previous typedefs / structs / unions
+	if (yytext == "byte" || yytext == "word" || yytext == "dword" || yytext == "char" || yytext == "short" || yytext == "int" || yytext == "long" || yytext == "double" || yytext == "_Bool" || yytext == "_Complex" || yytext == "_Imaginary")
+		return(TYPEDEF_NAME);
 
 	return(IDENTIFIER);
 }
