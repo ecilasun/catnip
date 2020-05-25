@@ -69,7 +69,13 @@ struct expression
 };
 
 #define o(n) \
-template<typename... T>\
+inline bool is_##n(const identifier& i) { return i.type == id_type::n; }
+ENUM_IDENTIFIERS(o)
+#undef o
+
+#define o(n) \
+inline bool is_##n(const expression& e) { return e.type == ex_type::n; } \
+template<typename... T> \
 inline expression e_##n(T&&... args) { return expression(ex_type::n, std::forward<T>(args)...); }
 ENUM_EXPRESSIONS(o)
 #undef o
@@ -79,6 +85,9 @@ struct function
 	std::string name;
 	expression code;
 	unsigned num_vars = 0, num_params = 0;
+	bool pure = false, pure_known = false;
+
+	expression maketemp() { expression r(identifier{id_type::variable, num_vars, "$C" + std::to_string(num_vars)}); ++num_vars; return r; }
 };
 
 struct lexcontext;
@@ -152,67 +161,76 @@ namespace yy { conj_parser::symbol_type yylex(lexcontext& ctx); }
 %left '(' '['
 
 %type<long>			NUMCONST
-%type<std::string>	IDENTIFIER STRINGCONST
-%type<expression>	expr exprs c_expr1 stmt var_defs var_def1 com_stmt
+%type<std::string>	IDENTIFIER STRINGCONST identifier1
+%type<expression>	expr expr1 exprs exprs1 c_expr1 p_expr1 stmt stmt1 var_defs var_def1 com_stmt
 
 %%
 
-library:		{ ++ctx; } functions { --ctx; };
-functions:		functions IDENTIFIER { ctx.defun($2); ++ctx; } paramdecls ':' stmt { ctx.add_function(M($2), M($6)); --ctx; }
-|				%empty;
-paramdecls:		paramdecl
-|				%empty;
-paramdecl:		paramdecl ',' IDENTIFIER	{ ctx.defparm($3); }
-|				IDENTIFIER					{ ctx.defparm($1); };
-stmt:			com_stmt  '}'				{ $$ = M($1); --ctx; }
-|				"if" '(' exprs ')' stmt		{ $$ = e_cand(M($3), M($5)); }
-|				"while" '(' exprs ')' stmt	{ $$ = e_loop(M($3), M($5)); }
-|				"return" exprs ';'			{ $$ = e_ret(M($2)); }
-|				exprs ';'					{ $$ = M($1); }
-|				';'							{ };
-com_stmt:		'{'							{ $$ = e_comma(); ++ctx; }
-|				com_stmt stmt				{ $$ = M($1); $$.params.push_back(M($2)); };
-var_defs:		"var" var_def1				{ $$ = e_comma(M($2)); }
-|				var_defs ',' var_def1		{ $$ = M($1); $$.params.push_back(M($3)); };
-var_def1:		IDENTIFIER '=' expr			{ $$ = ctx.def($1) %= M($3); }
-|				IDENTIFIER					{ $$ = ctx.def($1) %= 0L; };
-exprs:			var_defs					{ $$ = M($1); }
-|				expr						{ $$ = M($1); }
-|				expr ',' c_expr1			{ $$ = e_comma(M($1)); $$.params.splice($$.params.end(), M($3.params)); };
-c_expr1:		expr						{ $$ = e_comma(M($1)); }
-|				c_expr1 ',' expr			{ $$ = M($1); $$.params.push_back(M($3)); };
-expr:			NUMCONST					{ $$ = $1; }
-|				STRINGCONST					{ $$ = M($1); }
-|				IDENTIFIER					{ $$ = ctx.use($1); }
-|				'(' expr ')'				{ $$ = M($2); }
-|				expr '[' exprs ']'			{ $$ = e_deref(e_add(M($1), M($3))); }
-|				expr '(' ')'				{ $$ = e_fcall(M($1)); }
-|				expr '(' c_expr1 ')'		{ $$ = e_fcall(M($1)); $$.params.splice($$.params.end(), M($3.params)); }
-|				expr '=' expr				{ $$ = M($1) %= M($3); }
-|				expr '+' expr				{ $$ = e_add(M($1), M($3)); }
-|				expr '-' expr %prec '+'		{ $$ = e_add(M($1), e_neg(M($3))); }
-|				expr "+=" expr				{ if(!$3.is_pure()) { $$ = ctx.temp() %= e_addrof(M($1)); $1 = e_deref($$.params.back()); }
-											  $$ = e_comma(M($$), M($1) %= e_add(C($1), M($3))); }
-|				expr "-=" expr				{ if(!$3.is_pure()) { $$ = ctx.temp() %= e_addrof(M($1)); $1 = e_deref($$.params.back()); }
-											  $$ = e_comma(M($$), M($1) %= e_add(C($1), e_neg(M($3)))); }
-|				"++" expr					{ if(!$2.is_pure()) { $$ = ctx.temp() %= e_addrof(M($2)); $2 = e_deref($$.params.back()); }
-											  $$ = e_comma(M($$), M($2) %= e_add(C($2), 1L)); }
-|				"--" expr %prec "++"		{ if(!$2.is_pure()) { $$ = ctx.temp() %= e_addrof(M($2)); $2 = e_deref($$.params.back()); }
-											  $$ = e_comma(M($$), M($2) %= e_add(C($2), -1L)); }
-|				expr "++"					{ if(!$1.is_pure()) { $$ = ctx.temp() %= e_addrof(M($1)); $1 = e_deref($$.params.back()); }
-											  auto i = ctx.temp(); $$ = e_comma(M($$), C(i) %= C($1), C($1) %= e_add(C($1), 1L), C(i)); }
-|				expr "--" %prec "++"		{ if(!$1.is_pure()) { $$ = ctx.temp() %= e_addrof(M($1)); $1 = e_deref($$.params.back()); }
-											  auto i = ctx.temp(); $$ = e_comma(M($$), C(i) %= C($1), C($1) %= e_add(C($1), -1L), C(i)); }
-|				expr "||" expr				{ $$ = e_cor(M($1), M($3)); }
-|				expr "&&" expr				{ $$ = e_cand(M($1), M($3)); }
-|				expr "==" expr				{ $$ = e_eq(M($1), M($3)); }
-|				expr "!=" expr %prec "=="	{ $$ = e_eq(e_eq(M($1), M($3)), 0L); }
-|				'&' expr					{ $$ = e_addrof(M($2)); }
-|				'*' expr %prec '&'			{ $$ = e_deref(M($2)); }
-|				'-' expr %prec '&'			{ $$ = e_neg(M($2)); }
-|				'!' expr %prec '&'			{ $$ = e_eq(M($2), 0L); }
-|				expr '?' expr ':' expr		{ auto i = ctx.temp();
-											  $$ = e_comma(e_cor(e_cand(M($1), e_comma(C(i) %= M($3), 1L)), C(i) %= M($5)), C(i)); };
+library:										{ ++ctx; } functions { --ctx; };
+functions:										functions identifier1 { ctx.defun($2); ++ctx; } paramdecls colon1 stmt1 { ctx.add_function(M($2), M($6)); --ctx; }
+|												%empty;
+paramdecls:										paramdecl | %empty;
+paramdecl:										paramdecl ',' identifier1	{ ctx.defparm($3); }
+|												IDENTIFIER					{ ctx.defparm($1); };
+identifier1:		error {}			|		IDENTIFIER					{ $$ = M($1); };
+colon1:				error {}			|		':';
+semicolon1:			error {}			|		';';
+cl_brace1:			error {}			|		'}';
+cl_bracket1:		error {}			|		']';
+cl_parens1:			error {}			|		')';
+stmt1:				error {}			|		stmt						{ $$ = M($1); };
+exprs1:				error {}			|		exprs						{ $$ = M($1); };
+expr1:				error {}			|		expr						{ $$ = M($1); };
+p_expr1:			error {}			|		'(' exprs1 cl_parens1		{ $$ = M($2); };
+stmt:											com_stmt cl_brace1			{ $$ = M($1); --ctx; }
+|												"if" p_expr1 stmt1			{ $$ = e_cand(M($2), M($3)); }
+|												"while" p_expr1 stmt1		{ $$ = e_loop(M($2), M($3)); }
+|												"return" exprs1 semicolon1	{ $$ = e_ret(M($2)); }
+|												exprs semicolon1			{ $$ = M($1); }
+|												';'							{ };
+com_stmt:										'{'							{ $$ = e_comma(); ++ctx; }
+|												com_stmt stmt				{ $$ = M($1); $$.params.push_back(M($2)); };
+var_defs:										"var" var_def1				{ $$ = e_comma(M($2)); }
+|												var_defs ',' var_def1		{ $$ = M($1); $$.params.push_back(M($3)); };
+var_def1:										identifier1 '=' expr1		{ $$ = ctx.def($1) %= M($3); }
+|												identifier1					{ $$ = ctx.def($1) %= 0L; };
+exprs:											var_defs					{ $$ = M($1); }
+|												expr						{ $$ = M($1); }
+|												expr ',' c_expr1			{ $$ = e_comma(M($1)); $$.params.splice($$.params.end(), M($3.params)); };
+c_expr1:										expr1						{ $$ = e_comma(M($1)); }
+|												c_expr1 ',' expr1			{ $$ = M($1); $$.params.push_back(M($3)); };
+expr:											NUMCONST					{ $$ = $1; }
+|												STRINGCONST					{ $$ = M($1); }
+|												IDENTIFIER					{ $$ = ctx.use($1); }
+|												'(' expr cl_parens1			{ $$ = M($2); }
+|												expr '[' exprs1 cl_bracket1	{ $$ = e_deref(e_add(M($1), M($3))); }
+|												expr '(' ')'				{ $$ = e_fcall(M($1)); }
+|												expr '(' c_expr1 cl_parens1	{ $$ = e_fcall(M($1)); $$.params.splice($$.params.end(), M($3.params)); }
+|	expr '=' error {$$=M($1);}			|		expr '=' expr				{ $$ = M($1) %= M($3); }
+|	expr '+' error {$$=M($1);}			|		expr '+' expr				{ $$ = e_add(M($1), M($3)); }
+|	expr '-' error {$$=M($1);}			|		expr '-' expr %prec '+'		{ $$ = e_add(M($1), e_neg(M($3))); }
+|	expr "+=" error {$$=M($1);}			|		expr "+=" expr				{ if(!$3.is_pure()) { $$ = ctx.temp() %= e_addrof(M($1)); $1 = e_deref($$.params.back()); }
+																			  $$ = e_comma(M($$), M($1) %= e_add(C($1), M($3))); }
+|	expr "-=" error {$$=M($1);}			|		expr "-=" expr				{ if(!$3.is_pure()) { $$ = ctx.temp() %= e_addrof(M($1)); $1 = e_deref($$.params.back()); }
+																			  $$ = e_comma(M($$), M($1) %= e_add(C($1), e_neg(M($3)))); }
+|	"++" error {}						|		"++" expr					{ if(!$2.is_pure()) { $$ = ctx.temp() %= e_addrof(M($2)); $2 = e_deref($$.params.back()); }
+																			  $$ = e_comma(M($$), M($2) %= e_add(C($2), 1L)); }
+|	"--" error {}						|		"--" expr %prec "++"		{ if(!$2.is_pure()) { $$ = ctx.temp() %= e_addrof(M($2)); $2 = e_deref($$.params.back()); }
+																			  $$ = e_comma(M($$), M($2) %= e_add(C($2), -1L)); }
+|												expr "++"					{ if(!$1.is_pure()) { $$ = ctx.temp() %= e_addrof(M($1)); $1 = e_deref($$.params.back()); }
+																			  auto i = ctx.temp(); $$ = e_comma(M($$), C(i) %= C($1), C($1) %= e_add(C($1), 1L), C(i)); }
+|												expr "--" %prec "++"		{ if(!$1.is_pure()) { $$ = ctx.temp() %= e_addrof(M($1)); $1 = e_deref($$.params.back()); }
+																			  auto i = ctx.temp(); $$ = e_comma(M($$), C(i) %= C($1), C($1) %= e_add(C($1), -1L), C(i)); }
+|	expr "||" error {$$=M($1);}			|		expr "||" expr				{ $$ = e_cor(M($1), M($3)); }
+|	expr "&&" error {$$=M($1);}			|		expr "&&" expr				{ $$ = e_cand(M($1), M($3)); }
+|	expr "==" error {$$=M($1);}			|		expr "==" expr				{ $$ = e_eq(M($1), M($3)); }
+|	expr "!=" error {$$=M($1);}			|		expr "!=" expr %prec "=="	{ $$ = e_eq(e_eq(M($1), M($3)), 0L); }
+|	'&' error {}						|		'&' expr					{ $$ = e_addrof(M($2)); }
+|	'*' error {}						|		'*' expr %prec '&'			{ $$ = e_deref(M($2)); }
+|	'-' error {}						|		'-' expr %prec '&'			{ $$ = e_neg(M($2)); }
+|	'!' error {}						|		'!' expr %prec '&'			{ $$ = e_eq(M($2), 0L); }
+|	expr '?' error {$$=M($1);}			|		expr '?' expr ':' expr		{ auto i = ctx.temp();
+																			  $$ = e_comma(e_cor(e_cand(M($1), e_comma(C(i) %= M($3), 1L)), C(i) %= M($5)), C(i)); };
 
 %%
 
@@ -270,18 +288,175 @@ void yy::conj_parser::error(const location_type& l, const std::string& m)
 }
 
 #include <fstream>
+#include <memory>
+#include <unordered_map>
+#include <functional>
+#include <numeric>
+#include <set>
+
+/* Global Data */
+std::vector<function> func_list;
+
+static bool pure_fcall(const expression& exp)
+{
+	if(const auto& p = exp.params.front(); is_ident(p) && is_function(p.ident))
+		if(auto called_function = p.ident.index; called_function < func_list.size())
+			if (const auto& f = func_list[called_function]; f.pure_known && f.pure)
+				return true;
+	return false;
+}
 
 bool expression::is_pure() const
 {
 	for(const auto& e : params) if (!e.is_pure()) return false;
 	switch(type)
 	{
-		case ex_type::fcall:	return false;
+		case ex_type::fcall:	return pure_fcall(*this);
 		case ex_type::copy:		return false;
 		case ex_type::ret:		return false;
 		case ex_type::loop:		return false;
 		default:				return true;
 	}
+}
+
+template<typename F, typename B, typename... A>
+static decltype(auto) callv(F&& func, B&& def, A&&... args)
+{
+	if constexpr(std::is_invocable_r_v<B,F,A...>) { return std::forward<F>(func)(std::forward<A>(args)...); }
+	else
+	{
+		static_assert(std::is_void_v<std::invoke_result_t<F,A...>>);
+		std::forward<F>(func)(std::forward<A>(args)...); return std::forward<B>(def);
+	}
+}
+
+template<typename E, typename... F>
+static bool for_all_expr(E& p, bool inclusive, F&&... funcs)
+{
+	static_assert(std::conjunction_v<std::is_invocable<F, expression>...>);
+	return std::any_of(p.params.begin(), p.params.end(), [&](E& e) { return for_all_expr(e, true, funcs...); })
+		|| (inclusive && ... && callv(funcs, false, p));
+}
+
+static void findpurefunctions()
+{
+	for (auto& f : func_list) f.pure_known = f.pure = false;
+	do { } while(std::count_if(func_list.begin(), func_list.end(), [&](function& f)
+	{
+		std::cerr << "Identifying " << f.name << "\n";
+		bool unknown_functions = false;
+		bool side_effects = for_all_expr(f.code, true, [&](const expression& exp)
+		{
+			if (f.pure_known) return false;
+			if (is_copy(exp)) { return for_all_expr(exp.params.back(), true, is_deref); }
+			if (is_fcall(exp))
+			{
+				const auto& e = exp.params.front();
+				if (is_ident(e) || !is_function(e.ident)) return true;
+				const auto& u = func_list[e.ident.index];
+				if (u.pure_known && !u.pure) return true;
+				if (!u.pure_known && e.ident.index != (&f - &func_list[0])) // Recursions ignored
+				{
+					std::cerr << "Function " << f.name << " calls unknown function " << u.name << "\n";
+					unknown_functions = true;
+				}
+			}
+			return false;
+		});
+		for (auto& f : func_list)
+			if (!f.pure_known)
+				std::cerr << "Could not figure out whether " << f.name << " is a pure function\n";
+		if (side_effects || !unknown_functions)
+		{
+			f.pure_known = true;
+			f.pure = !side_effects;
+			std::cerr << "Function " << f.name << (f.pure ? " is pure\n" : " may have side-effects\n");
+			return true;
+		}
+		return false;
+	}));
+}
+
+std::string stringify(const expression& e, bool stmt);
+std::string stringify_op(const expression& e, const char *sep, const char *delim, bool stmt = false, unsigned first=0, unsigned limit=~0U)
+{
+	std::string result(1, delim[0]);
+	const char *fsep = "";
+	for(const auto& p : e.params) {
+		if(first) { --first; continue; }
+		if(!limit--) break;
+		result += fsep; fsep = sep; result += stringify(p, stmt);
+	}
+	if (stmt) result += sep; 
+	result += delim[1];
+	return result;
+}
+std::string stringify(const expression& e, bool stmt = false)
+{
+	auto expect1 = [&]{ return e.params.empty() ? "?" : e.params.size()==1 ? stringify(e.params.front()) : stringify_op(e, "??", "()"); };
+	switch (e.type)
+	{
+		// Atoms
+		case ex_type::nop:				return "";
+		case ex_type::string:			return "\"" + e.strvalue + "\"";
+		case ex_type::number:			return std::to_string(e.numvalue);
+		case ex_type::ident:			return "?FPVS"[(int)e.ident.type] + std::to_string(e.ident.index) + "\"" + e.ident.name + "\"";
+		// Binary & misc
+		case ex_type::add:				return stringify_op(e, " + ",  "()");
+		case ex_type::eq:				return stringify_op(e, " == ", "()");
+		case ex_type::cand:				return stringify_op(e, " && ", "()");
+		case ex_type::cor:				return stringify_op(e, " || ", "()");
+		case ex_type::comma:			return stmt ? stringify_op(e, "; ", "{}", true) : stringify_op(e, ", ", "()");
+		// Unary
+		case ex_type::neg:				return "-(" + expect1() + ")";
+		case ex_type::deref:			return "*(" + expect1() + ")";
+		case ex_type::addrof:			return "&(" + expect1() + ")";
+		// Special
+		case ex_type::copy:				return "(" + stringify(e.params.back()) + " = " + stringify(e.params.front()) + ")";
+		case ex_type::fcall:			return "(" + (e.params.empty() ? "?" : stringify(e.params.front())) + ")" + stringify_op(e, ", ", "()", false, 1);
+		case ex_type::loop:				return "white " + stringify(e.params.front()) + " " + stringify_op(e, "; ", "{}", true, 1);
+		case ex_type::ret:				return "return " + expect1();
+	}
+
+	return "?";
+}
+
+static std::string stringify(const function& f)
+{
+	return stringify(f.code, true);
+}
+
+#include "textbox.hpp"
+
+static std::string stringify_tree(const function& f)
+{
+	textbox result;
+	result.putbox(2,0,create_tree_graph(f.code, 200-2,
+		[](const expression& e)
+		{
+			std::string p = stringify(e), k = p;
+			switch(e.type)
+			{
+				#define o(n) case ex_type::n: k.assign(#n,sizeof(#n)-1); break;
+				ENUM_EXPRESSIONS(o)
+				#undef o
+			}
+			return e.params.empty() ? (k + " " + p) : std::move(k);
+		},
+		[](const expression& e) { return std::make_pair(e.params.cbegin(), e.params.cend()); },
+		[](const expression& e) { return e.params.size() >= 1; },
+		[](const expression&  ) { return true; },
+		[](const expression& e) { return e.type == ex_type::loop; }));
+	return "function " + f.name + ":\n" + stringify(f) + "\n" + result.to_string();
+}
+
+static bool equal(const expression& a, const expression& b)
+{
+	return (a.type == b.type) &&
+		(!is_ident(a) || (a.ident.type == b.ident.type && a.ident.index == b.ident.index)) &&
+		(!is_string(a) || a.strvalue == b.strvalue ) &&
+		(!is_number(a) || a.numvalue == b.numvalue ) &&
+		std::equal(a.params.begin(), a.params.end(), b.params.begin(), b.params.end(), equal);
 }
 
 int goparse(const char *_inputname)
@@ -298,7 +473,9 @@ int goparse(const char *_inputname)
 	yy::conj_parser parser(ctx);
 	parser.parse();
 
-	std::vector<function> func_list = std::move(ctx.func_list);
+	func_list = std::move(ctx.func_list);
+
+	for (const auto& f : func_list) std::cerr << stringify_tree(f);
 
 	return 0;
 }
