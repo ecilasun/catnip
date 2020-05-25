@@ -65,6 +65,8 @@ struct expression
 	expression(long v)				: type(ex_type::number), numvalue(v) {}
 
 	bool is_pure() const;
+	bool is_compiletime_expr() const;
+
 	expression operator %=(expression&& b) && { return expression(ex_type::copy, std::move(b), std::move(*this)); }
 };
 
@@ -319,6 +321,27 @@ bool expression::is_pure() const
 	}
 }
 
+bool expression::is_compiletime_expr() const
+{
+	for (const auto& e : params) if (!e.is_compiletime_expr()) return false;
+	switch(type)
+	{
+		case ex_type::number:
+		case ex_type::string:
+		case ex_type::add:
+		case ex_type::neg:
+		case ex_type::cand:
+		case ex_type::cor:
+		case ex_type::comma:
+		case ex_type::nop:
+			return true;
+		case ex_type::ident:
+			return is_function(ident);
+		default:
+			return false;
+	}
+}
+
 template<typename F, typename B, typename... A>
 static decltype(auto) callv(F&& func, B&& def, A&&... args)
 {
@@ -356,10 +379,10 @@ static void findpurefunctions()
 			if (is_fcall(exp))
 			{
 				const auto& e = exp.params.front();
-				if (is_ident(e) || !is_function(e.ident)) return true;
+				if (e.is_compiletime_expr()) return true;
 				const auto& u = func_list[e.ident.index];
 				if (u.pure_known && !u.pure) return true;
-				if (!u.pure_known && e.ident.index != (&f - &func_list[0])) // Recursions ignored
+				if (!u.pure_known && e.ident.index != std::size_t(&f - &func_list[0])) // Recursions ignored
 				{
 					std::cerr << "Function " << f.name << " calls unknown function " << u.name << "\n";
 					unknown_functions = true;
@@ -482,7 +505,7 @@ static void constantfolding(expression& e, function& f)
 			if (is_copy(*i))
 			{
 				auto assign = M(*i); *i = e_comma();
-				if(assign.params.front().is_pure())
+				if(assign.params.front().is_compiletime_expr())
 				{
 					i->params.push_back(C(assign.params.front()));
 					i->params.push_front(M(assign));
@@ -507,11 +530,23 @@ static void constantfolding(expression& e, function& f)
 		expr_vec comma_params;
 		for (expr_vec::iterator i=e.params.begin(); i!=end; ++i)
 		{
-			if (is_comma(*i) && i->params.size() > 1)
-				comma_params.splice(comma_params.end(), i->params, i->params.begin(), std::prev(i->params.end()));
+			if(std::next(i) == end)
+			{
+				if (is_comma(*i) && i->params.size() > 1)
+					comma_params.splice(comma_params.end(), i->params, i->params.begin(), std::prev(i->params.end()));
+			}
+			else if (!(i->is_compiletime_expr()))
+			{
+				expression temp = f.maketemp();
+				if (is_comma(*i) && i->params.size() > 1)
+					comma_params.splice(comma_params.end(), i->params, i->params.begin(), std::prev(i->params.end()));
+				comma_params.insert(comma_params.end(), C(temp) %= M(*i));
+				*i = M(temp);
+			}
 		}
 		if (comma_params.empty())
 		{
+			if(is_loop(e)) { for(auto& f : comma_params) e.params.push_back(C(f)); }
 			comma_params.push_back(M(e));
 			e = e_comma(M(comma_params));
 		}
@@ -582,8 +617,22 @@ static void constantfolding(expression& e, function& f)
 		break;
 		// Drop x=x (self assignment)
 		case ex_type::copy:
-			if (equal(e.params.front(), e.params.back()) && e.params.front().is_pure())
-				e = C(M(e.params.back()));
+		{
+			auto& tgt = e.params.back();
+			auto& src = e.params.front();
+			if (equal(tgt, src) && tgt.is_pure())
+				e = C(M(tgt));
+			else
+			{
+				expr_vec comma_params;
+				for_all_expr(src,true,[&](auto& e){ if(equal(e,tgt)) comma_params.push_back(C(e=f.maketemp()) %= C(tgt)); });
+				if (!comma_params.empty())
+				{
+					comma_params.push_back(M(e));
+					e = e_comma(M(comma_params));
+				}
+			}
+		}
 		break;
 		// Drop zero-count loops (with loop counter as literal)
 		case ex_type::loop:
@@ -657,11 +706,13 @@ static void constantfolding(expression& e, function& f)
 
 static void doconstantfolding()
 {
-	findpurefunctions();
-	/*for (function& f : func_list)
+	do { } while (std::any_of(func_list.begin(), func_list.end(), [&](function& f)
 	{
+		findpurefunctions();
+		std::string text_before = stringify(f);
 		for_all_expr(f.code, true, [&](expression& e) { constantfolding(e,f); });
-	}*/
+		return stringify(f) != text_before;
+	}));
 }
 
 int goparse(const char *_inputname)
