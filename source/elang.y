@@ -322,18 +322,22 @@ bool expression::is_pure() const
 template<typename F, typename B, typename... A>
 static decltype(auto) callv(F&& func, B&& def, A&&... args)
 {
-	if constexpr(std::is_invocable_r_v<B,F,A...>) { return std::forward<F>(func)(std::forward<A>(args)...); }
+	if constexpr(std::is_invocable_r_v<B,F,A...>)
+	{
+		return std::forward<F>(func)(std::forward<A>(args)...);
+	}
 	else
 	{
 		static_assert(std::is_void_v<std::invoke_result_t<F,A...>>);
-		std::forward<F>(func)(std::forward<A>(args)...); return std::forward<B>(def);
+		std::forward<F>(func)(std::forward<A>(args)...);
+		return std::forward<B>(def);
 	}
 }
 
 template<typename E, typename... F>
 static bool for_all_expr(E& p, bool inclusive, F&&... funcs)
 {
-	static_assert(std::conjunction_v<std::is_invocable<F, expression>...>);
+	static_assert(std::conjunction_v<std::is_invocable<F, expression&>...>);
 	return std::any_of(p.params.begin(), p.params.end(), [&](E& e) { return for_all_expr(e, true, funcs...); })
 		|| (inclusive && ... && callv(funcs, false, p));
 }
@@ -343,11 +347,11 @@ static void findpurefunctions()
 	for (auto& f : func_list) f.pure_known = f.pure = false;
 	do { } while(std::count_if(func_list.begin(), func_list.end(), [&](function& f)
 	{
+		if (f.pure_known) return false;
 		std::cerr << "Identifying " << f.name << "\n";
 		bool unknown_functions = false;
 		bool side_effects = for_all_expr(f.code, true, [&](const expression& exp)
 		{
-			if (f.pure_known) return false;
 			if (is_copy(exp)) { return for_all_expr(exp.params.back(), true, is_deref); }
 			if (is_fcall(exp))
 			{
@@ -459,6 +463,117 @@ static bool equal(const expression& a, const expression& b)
 		std::equal(a.params.begin(), a.params.end(), b.params.begin(), b.params.end(), equal);
 }
 
+static void constantfolding(expression& e, function& f)
+{
+	// Adopt all parameters of the same type
+	if (is_add(e) || is_comma(e) || is_cor(e) || is_cand(e))
+	{
+		for (auto j=e.params.end(); j!=e.params.begin(); )
+			if((--j)->type == e.type)
+			{
+				auto tmp(M(j->params));
+				e.params.splice(j=e.params.erase(j), std::move(tmp));
+			}
+	}
+
+	switch(e.type)
+	{
+		// Collapse addition of series of integer literals to a single literal, ignore zero sum
+		case ex_type::add:
+		{
+			long tmp = std::accumulate(e.params.begin(), e.params.end(), 0L,
+				[](long n, auto& p) { return is_number(p) ? n+p.numvalue : n; });
+			e.params.remove_if(is_number);
+			// Adopt all negated adds
+			for(auto j=e.params.begin(); j!=e.params.end(); ++j)
+				if (is_neg(*j) && is_add(j->params.front()))
+				{
+					auto tmp(std::move(j->params.front().params));
+					for (auto& p : tmp) p = e_neg(M(p));
+					e.params.splice(j=e.params.erase(j), std::move(tmp));
+				}
+			if (tmp!=0) e.params.push_back(tmp);
+			if (std::count_if(e.params.begin(), e.params.end(), is_neg) > long(e.params.size()/2))
+			{
+				for(auto& p : e.params) p = e_neg(M(p));
+				e = e_neg(M(e));
+			}
+		}
+		break;
+		// Replace negated integer constant with actual negative counterpart
+		case ex_type::neg:
+			if (is_number(e.params.front())) e = -e.params.front().numvalue;
+			else if(is_neg(e.params.front())) e = C(M(e.params.front().params.front()));
+		break;
+		// Drop integer-to-integer compares and replace with result of compare
+		case ex_type::eq:
+			if (is_number(e.params.front()) && is_number(e.params.back()))
+				e = long(e.params.front().numvalue == e.params.back().numvalue);
+			else if (equal(e.params.front(), e.params.back()) && e.params.front().is_pure())
+				e = 1L;
+		break;
+		// Reduce *&x to x
+		case ex_type::deref:
+			if (is_addrof(e.params.front())) e = C(M(e.params.front().params.front()));
+		break;
+		// Reduce &* to x
+		case ex_type::addrof:
+			if (is_deref(e.params.front())) e = C(M(e.params.front().params.front()));
+		break;
+		// If an integer literal is found in a series of && or ||, remove the rest of logic accordingly
+		case ex_type::cand:
+		case ex_type::cor:
+		{
+			auto value_kind = is_cand(e) ? [](long v) { return v!=0; } : [](long v) { return v==0; };
+			e.params.erase(std::remove_if(e.params.begin(), e.params.end(),
+							[&](expression& p) { return is_number(p) && value_kind(p.numvalue); }),
+						e.params.end());
+			if (auto i = std::find_if(e.params.begin(), e.params.end(),
+							[&](const expression& p) { return is_number(p) && !value_kind(p.numvalue); });
+						i != e.params.end())
+			{
+				while(i!=e.params.begin() && std::prev(i)->is_pure()) { --i; }
+				// Remove everything after and replace with a comma statement that produces 0(for &&) or 1(for ||)
+				e.params.erase(i, e.params.end());
+				e = e_comma(M(e), is_cand(e) ? 0L : 1L);
+			}
+		}
+		break;
+		// Drop x=x (self assignment)
+		case ex_type::copy:
+			if (equal(e.params.front(), e.params.back()) && e.params.front().is_pure())
+				e = C(M(e.params.back()));
+		break;
+		// Drop zero-count loops (with loop counter as literal)
+		case ex_type::loop:
+			if(is_number(e.params.front()) && !e.params.front().numvalue) { e = e_nop(); break; }
+		break;
+		default:
+		break;
+	}
+
+	switch (e.params.size())
+	{
+		case 1:
+			if (is_add(e)) e = C(M(e.params.front()));
+			else if (is_cor(e) || is_cand(e)) e = e_eq(e_eq(M(e.params.front()), 0L), 0L); // bool-cast
+			break;
+		case 0:
+			if (is_add(e) || is_cor(e)) e = 0L;
+			else if(is_cand(e)) e = 1L;
+			break;
+	}
+}
+
+static void doconstantfolding()
+{
+	findpurefunctions();
+	/*for (function& f : func_list)
+	{
+		for_all_expr(f.code, true, [&](expression& e) { constantfolding(e,f); });
+	}*/
+}
+
 int goparse(const char *_inputname)
 {
 	std::string filename = _inputname;
@@ -475,6 +590,14 @@ int goparse(const char *_inputname)
 
 	func_list = std::move(ctx.func_list);
 
+	// pre-optimization
+	std::cout << "Initial\n";
+	for (const auto& f : func_list) std::cerr << stringify_tree(f);
+
+	doconstantfolding();
+
+	// post-optimization
+	std::cout << "Final\n";
 	for (const auto& f : func_list) std::cerr << stringify_tree(f);
 
 	return 0;
