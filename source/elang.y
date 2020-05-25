@@ -547,6 +547,55 @@ static void constantfolding(expression& e, function& f)
 		// Drop zero-count loops (with loop counter as literal)
 		case ex_type::loop:
 			if(is_number(e.params.front()) && !e.params.front().numvalue) { e = e_nop(); break; }
+			[[fallthrough]];
+		// Remove all params following a return statement or following an infinite loop
+		case ex_type::comma:
+			for (auto i=e.params.begin(); i!=e.params.end(); )
+			{
+				if(is_loop(e))
+					{ if(i==e.params.begin()) {++i; continue; } }
+				else
+					{ if (std::next(i) == e.params.end()) break; }
+				if (i->is_pure())
+				{
+					i = e.params.erase(i);
+				}
+				else switch(i->type)
+				{
+					default:
+						++i;
+					break;
+					case ex_type::fcall:
+						if(!pure_fcall(e)) { ++i; break; }
+						[[fallthrough]];
+					case ex_type::add:
+					case ex_type::neg:
+					case ex_type::eq:
+					case ex_type::addrof:
+					case ex_type::deref:
+					case ex_type::comma:
+						auto tmp(std::move(i->params));
+						e.params.splice(i=e.params.erase(i), std::move(tmp));
+				}
+			}
+			if (auto r = std::find_if(e.params.begin(), e.params.end(),
+				[](const expression& e){ return is_ret(e) || (is_loop(e) && is_number(e.params.front()) && e.params.front().numvalue != 0); });
+				r != e.params.end() && ++r != e.params.end())
+			{
+				std::cerr << std::distance(r, e.params.end()) << " dead expression deleted\n";
+				e.params.erase(r, e.params.end());
+			}
+			// Remove cases such as x=(a=3, a)
+			if (e.params.size() == 2)
+			{
+				auto& last = e.params.back();
+				auto& prev = *std::next(e.params.rbegin());
+				if (is_copy(prev) && equal(prev.params.back(), last))
+					e.params.pop_back();
+			}
+			// Nothing much left, replace with param
+			if (e.params.size() == 1 && !is_loop(e))
+				e = C(M(e.params.front()));
 		break;
 		default:
 		break;
