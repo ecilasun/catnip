@@ -14,7 +14,7 @@ def options(opt):
     if platform.system() in ['Linux', 'Darwin']:
         opt.load('clang++')
     else:
-        opt.load('msvc')
+        opt.load('clang++') #msvc
 
 
 def configure(conf):
@@ -23,33 +23,21 @@ def configure(conf):
     else:
         conf.find_program('win_flex', path_list='win_flex_bison', exts='.exe')
         conf.find_program('win_bison', path_list='win_flex_bison', exts='.exe')
-        conf.load('msvc')
+        conf.find_program('win_re2c', path_list='win_re2c', exts='.exe')
+        conf.load('clang++') #msvc
 
 
-class build_lex(Task):
+class build_yacc_then_re2c(Task):
     color = 'PINK'
     if platform.system() in ['Linux', 'Darwin']:
-        run_str = 'flex -o ${TGT} ${SRC}'
+        run_str = ['bison ${SRC} -o ${SRC}.re', 're2c ${SRC}.re -o ${TGT}']
     else:
-        run_str = '${WIN_FLEX} -o ${TGT} ${SRC}'
-
-
-class build_yacc(Task):
-    color = 'PINK'
-    if platform.system() in ['Linux', 'Darwin']:
-        run_str = 'bison -d -o ${TGT} ${SRC}'
-    else:
-        run_str = '${WIN_BISON} -d -o ${TGT} ${SRC}'
-
-
-@extension('.l')
-def build_flex_source(self, node):
-    self.create_task('build_lex', node, node.change_ext('.cpp'))
+        run_str = ['${WIN_BISON} ${SRC} -o ${SRC}.re', '${WIN_RE2C} ${SRC}.re -o ${TGT}']
 
 
 @extension('.y')
 def build_bison_source(self, node):
-    self.create_task('build_yacc', node, node.change_ext('.cpp'))
+    self.create_task('build_yacc_then_re2c', node, node.change_ext('.cpp'))
 
 
 def build(ctx):
@@ -62,7 +50,7 @@ def build(ctx):
         compile_flags = ['-std=c++17']
         linker_flags = []
 
-        ctx(source=glob.glob('source/*.y') + glob.glob('source/*.l'), name='parsercode', before='cxx')
+        ctx(source=glob.glob('source/*.y'), name='parsercode', before='cxx')
 
         generatedsource = glob.glob('build/release/source/*.cpp')
 
@@ -85,19 +73,22 @@ def build(ctx):
         libs = ['user32', 'Comdlg32', 'gdi32', 'ole32', 'kernel32', 'winmm', 'ws2_32', 'SDL2']
 
         # RELEASE
-        # compile_flags = ['/permissive-', '/arch:AVX', '/GL', '/WX', '/Ox', '/Ot', '/Oy', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/EHsc', '/FS', '/D_SECURE_SCL 0']
+        # compile_flags = ['/permissive-', '/std:c++17', '/arch:AVX', '/GL', '/WX', '/Ox', '/Ot', '/Oy', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/EHsc', '/FS', '/D_SECURE_SCL 0']
         # linker_flags = ['/LTCG', '/RELEASE']
 
         # DEBUG
-        compile_flags = ['/permissive-', '/arch:AVX', '/GL', '/WX', '/Od', '/DDEBUG', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/Gs', '/EHsc', '/FS']
-        linker_flags = ['/DEBUG']
+        #compile_flags = ['/permissive-', '/std:c++17', '/arch:AVX', '/GL', '/WX', '/Od', '/DDEBUG', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/Gs', '/EHsc', '/FS']
+        #linker_flags = ['/DEBUG']
+
+        compile_flags = ['-std=c++17']
+        linker_flags = []
 
         sdlpath = os.path.abspath('SDL')
         ctx(features='subst',
             source=ctx.root.find_resource(os.path.join(sdlpath, 'SDL2.dll')),
             target='SDL2.dll', is_copy=True, before='cxx')
 
-        ctx(source=glob.glob('source/*.y') + glob.glob('source/*.l'), name='parsercode', before='cxx')
+        ctx(source=glob.glob('source/*.y'), target='parsercode', name='parsercode', before='cxx')
 
         generatedsource = glob.glob('build/release/source/*.cpp')
 

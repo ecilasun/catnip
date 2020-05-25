@@ -1,16 +1,23 @@
 #include "compiler.h"
 
-#include "../build/release/source/cparse.hpp"
+//#include "../build/release/source/cparse.hpp"
+//#include "../build/release/source/elang.hpp"
 
 // ------------------------------------------- BISON/FLEX
 
+//SCNode *g_root = nullptr, *g_trackingNode = nullptr;
+extern int goparse(const char *_inputname);
 int CompileCode(char *_inputname, char *_outputname)
 {
-	extern FILE *yyin;
+	goparse(_inputname);
+
+	/*extern FILE *yyin;
 	yyin = fopen(_inputname, "r");
 	int res = yyparse();
 	fclose(yyin);
-	return res;
+	//dumpNodes(g_root, 0);
+	return res;*/
+	return 0;
 }
 
 // ------------------------------------------- CUSTOM

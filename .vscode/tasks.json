@@ -16,7 +16,7 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "python waf build",
+            "command": "python waf build -v",
             "group": {
                 "kind": "build",
                 "isDefault": true
