@@ -476,6 +476,47 @@ static void constantfolding(expression& e, function& f)
 			}
 	}
 
+	// if copy (assign) is parameter for an expression (except command and addrof) then use a temp to hold the value of assign and distribute from there
+	if (!is_comma(e) && !is_addrof(e) && !e.params.empty())
+		for (auto i=e.params.begin(), j = (is_loop(e) ? std::next(i) : e.params.end()); i!=j; ++i)
+			if (is_copy(*i))
+			{
+				auto assign = M(*i); *i = e_comma();
+				if(assign.params.front().is_pure())
+				{
+					i->params.push_back(C(assign.params.front()));
+					i->params.push_front(M(assign));
+				}
+				else
+				{
+					expression temp = f.maketemp();
+					i->params.push_back(C(temp) %= M(assign.params.front()));
+					i->params.push_back(M(assign.params.back()) %= C(temp));
+					i->params.push_back(M(temp));
+				}
+			}
+
+	if (std::find_if(e.params.begin(), e.params.end(), is_comma) != e.params.end())
+	{
+		auto end = (is_cand(e) || is_cor(e) || is_loop(e)) ? std::next(e.params.begin()) : e.params.end();
+		for(;end!=e.params.begin();--end)
+		{
+			auto prev = std::prev(end);
+			if(is_comma(*prev) && prev->params.size() > 1) break;
+		}
+		expr_vec comma_params;
+		for (expr_vec::iterator i=e.params.begin(); i!=end; ++i)
+		{
+			if (is_comma(*i) && i->params.size() > 1)
+				comma_params.splice(comma_params.end(), i->params, i->params.begin(), std::prev(i->params.end()));
+		}
+		if (comma_params.empty())
+		{
+			comma_params.push_back(M(e));
+			e = e_comma(M(comma_params));
+		}
+	}
+
 	switch(e.type)
 	{
 		// Collapse addition of series of integer literals to a single literal, ignore zero sum
