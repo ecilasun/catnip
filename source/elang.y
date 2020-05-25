@@ -715,6 +715,119 @@ static void doconstantfolding()
 	}));
 }
 
+//#include "transform_iterator.hpp"
+#include <string_view>
+
+#define ENUM_STATEMENTS(o) \
+	o(0, nop) 		/* noop */ \
+	o(1, init)		/* p0 <- IDENT + value */ \
+	o(0, add)		/* p0 <- p1 + p2 */ \
+	o(0, neg)		/* p0 <- -p1 */ \
+	o(0, copy)		/* p0 <- p1 */ \
+	o(0, read)		/* p0 <- *p1 */ \
+	o(0, write)		/* *p0 <- p1 */ \
+	o(0, eq)		/* *p0 <- p1 == p2 */ \
+	o(1, ifnz)		/* if(p0 != 0) jmp branch */ \
+	o(0, fcall)		/* p0 <- call(p1, <LIST>) */ \
+	o(0, ret)		/* return p0 */
+
+#define o(_, n) n,
+enum class st_type { ENUM_STATEMENTS(o) };
+#undef o
+
+template<typename T, typename... Bad>
+using forbid1_t = std::enable_if_t<(... && !std::is_same_v<Bad, std::decay_t<T>>)>;
+template<typename...U>
+struct forbid_t {template<typename...T> using in = std::void_t<forbid1_t<T,U...>...>; };
+
+template<typename Iterator, typename PointedType, typename Category>
+using require_iterator_t = std::enable_if_t
+<  std::is_convertible_v<typename std::iterator_traits<Iterator>::value_type, PointedType>
+&& std::is_convertible_v<typename std::iterator_traits<Iterator>::iterator_category, Category>>;
+
+struct statement
+{
+	typedef unsigned reg_type;
+
+	st_type					type{st_type::nop};
+	std::string				ident{};
+	long					value{};
+	std::vector<reg_type>	params{};
+	statement*				next{nullptr};
+	statement*				cond{nullptr};
+
+	statement() {}
+	template<class...T, class=forbid_t<st_type,long,statement*>::in<T...>>
+	statement(st_type t, T&&...r) : statement(std::forward<T>(r)...) { type = t; }
+
+	template<class...T>
+	statement(reg_type tgt, T&&...r) : statement(&tgt, &tgt+1, std::forward<T>(r)...) { }
+
+	template<class...T, class=forbid_t<st_type,long>::in<T...>>
+	statement(std::string_view i, long v, T&&...r) : statement(st_type::init, ::forward<T>(r)...) { ident=i; value=v; }
+
+	template<class...T, class=forbid_t<st_type,statement*>::in<T...>>
+	statement(statement* b, T&&...r) : statement(st_type::ifnz, std::forward<T>(r)...) { cond=b; }
+
+	template<class...T, class It, class=require_iterator_t<It, reg_type, std::input_iterator_tag>>
+	statement(It begin, It end, T&&...r) : statement(std::forward<T>(r)...) { params.insert(params.begin(), begin, end); }
+
+	void dump(std::ostream& out)
+	{
+		switch(type)
+		{
+			#define o(_, n)  case st_type::n: out << "\t" #n "\t"; break;
+			ENUM_STATEMENTS(o)
+			#undef o
+		}
+		for(auto u : params) out << " R" << u;
+		if(type==st_type::init) { out << " \"" << ident << "\" " << value; }
+	}
+};
+
+#define o(_, n) \
+inline bool is_##n(const statement& s) { return s.type == st_type::n; }
+ENUM_STATEMENTS(o)
+#undef o
+
+struct compilation
+{
+	std::vector<std::unique_ptr<statement>> all_statements;
+
+	template<typename...T>
+	statement* createstatement(T&&... args)  { return createstatement(new statement(std::forward<T>(args)...)); }
+	statement* createstatement(statement* s) { return all_statements.emplace_back(s).get(); }
+
+	#define o(f, n) \
+	template<typename... T> \
+	inline statement* s_##n(T&&... args)	{ if constexpr(f) return createstatement(std::forward<T>(args)...); \
+											else return createstatement(st_type::n, std::forward<T>(args)...); }
+	ENUM_STATEMENTS(o)
+	#undef o
+
+	std::map<std::string, statement*> entry_points;
+
+	std::string string_constants;
+
+	void buildstrings()
+	{
+		std::vector<std::string> strings;
+		for (auto& f : func_list)
+			for_all_expr(f.code, true, is_string, [&](const expression& exp)
+			{
+				strings.push_back(exp.strvalue + '\0');
+			});
+		std::sort(strings.begin(), strings.end(),
+			[](const std::string& a, const std::string& b)
+			{
+				return a.size() == b.size() ? (a<b) : (a.size()>b.size());
+			});
+		for(const auto& s : strings)
+			if (string_constants.find(s) == string_constants.npos)
+				string_constants += s;
+	}
+};
+
 int goparse(const char *_inputname)
 {
 	std::string filename = _inputname;
