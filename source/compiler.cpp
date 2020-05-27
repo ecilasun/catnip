@@ -9,7 +9,7 @@
 extern int goparse(const char *_inputname);
 int CompileCode(char *_inputname, char *_outputname)
 {
-	goparse(_inputname);
+	//goparse(_inputname);
 
 	/*extern FILE *yyin;
 	yyin = fopen(_inputname, "r");
