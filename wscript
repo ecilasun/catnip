@@ -80,7 +80,7 @@ def build(ctx):
         #compile_flags = ['/permissive-', '/std:c++17', '/arch:AVX', '/GL', '/WX', '/Od', '/DDEBUG', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/Gs', '/EHsc', '/FS']
         #linker_flags = ['/DEBUG']
 
-        compile_flags = ['-std=c++17']
+        compile_flags = ['-std=c++17', '-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS']
         linker_flags = []
 
         sdlpath = os.path.abspath('SDL')
