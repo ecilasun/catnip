@@ -15,8 +15,8 @@ int main(int _argc, char **_argv)
 	}
 
 	if (strstr(_argv[1], ".c"))
-		return CompileCode(_argv[1], _argv[2]);	   // .C -> .ASM
-		//return CompileCode2(_argv[1], _argv[2]);	   // .C -> .ASM
+		//return CompileCode(_argv[1], _argv[2]);	   // .C -> .ASM
+		return CompileCode2(_argv[1], _argv[2]);	   // .C -> .ASM
 	else if (strstr(_argv[1], ".asm"))
 		return compile_asm(_argv[1], _argv[2]);	 // .ASM -> .ROM/.MIF
 	else
