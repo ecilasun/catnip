@@ -14,7 +14,7 @@ def options(opt):
     if platform.system() in ['Linux', 'Darwin']:
         opt.load('clang++')
     else:
-        opt.load('clang++') #msvc
+        opt.load('msvc') #clang++
 
 
 def configure(conf):
@@ -24,7 +24,7 @@ def configure(conf):
         conf.find_program('win_flex', path_list='win_flex_bison', exts='.exe')
         conf.find_program('win_bison', path_list='win_flex_bison', exts='.exe')
         conf.find_program('win_re2c', path_list='win_re2c', exts='.exe')
-        conf.load('clang++') #msvc
+        conf.load('msvc') #clang++
 
 
 class build_yacc_then_re2c(Task):
@@ -72,16 +72,17 @@ def build(ctx):
         includes = ['source', 'includes', winsdkinclude, wsdkincludeshared]
         libs = ['user32', 'Comdlg32', 'gdi32', 'ole32', 'kernel32', 'winmm', 'ws2_32', 'SDL2']
 
-        # RELEASE
+        # RELEASE - vcc
         # compile_flags = ['/permissive-', '/std:c++17', '/arch:AVX', '/GL', '/WX', '/Ox', '/Ot', '/Oy', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/EHsc', '/FS', '/D_SECURE_SCL 0']
         # linker_flags = ['/LTCG', '/RELEASE']
 
-        # DEBUG
-        #compile_flags = ['/permissive-', '/std:c++17', '/arch:AVX', '/GL', '/WX', '/Od', '/DDEBUG', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/Gs', '/EHsc', '/FS']
-        #linker_flags = ['/DEBUG']
+        # DEBUG - vcc
+        compile_flags = ['/permissive-', '/std:c++17', '/arch:AVX', '/GL', '/WX', '/Od', '/DDEBUG', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/Gs', '/EHsc', '/FS']
+        linker_flags = ['/DEBUG']
 
-        compile_flags = ['-std=c++17', '-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS']
-        linker_flags = []
+        # RELEASE - clang
+        # compile_flags = ['-std=c++17', '-g', '-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS', '-DDEBUG', '-D_SECURE_SCL=0']
+        # linker_flags = [''] # '-stdlib=libc++'
 
         sdlpath = os.path.abspath('SDL')
         ctx(features='subst',

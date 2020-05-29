@@ -43,7 +43,8 @@ yy::elang_parser::symbol_type yy::yylex(LexerContext& ctx)
     const char* anchor = ctx.cursor;
     ctx.loc.step();
 
-%{ /* Begin re2c lexer */
+/* %{
+
 re2c:yyfill:enable   = 0;
 re2c:define:YYCTYPE  = "char";
 re2c:define:YYCURSOR = "ctx.cursor";
@@ -51,7 +52,8 @@ re2c:define:YYCURSOR = "ctx.cursor";
 // Keywords:
 "noop"                	{ return elang_parser::make_NOOP(ctx.loc); }
 
-%} /* End lexer */
+%} */
+	return elang_parser::make_NOOP(ctx.loc);
 }
 
 void yy::elang_parser::error(const location_type& l, const std::string& m)

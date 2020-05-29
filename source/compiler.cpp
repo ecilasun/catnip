@@ -24,10 +24,10 @@ int CompileCode(char *_inputname, char *_outputname)
 
 std::string builtin_typequalifier = " const restrict volatile ";
 std::string builtin_storageclass = " typedef extern static auto register ";
-std::string builtin_typeidentifier = " void byte word dword ";
+std::string builtin_typeidentifier = " void char short int ";
 std::string builtin_keywords = " for while if else break return continue ";
 std::string builtin_numerals = "0123456789";
-std::string builtin_markers = " ( ) [ ] { } : = >= <= == != *= += -= ++ -- * / + - ; ^ ~ ! | || & && , ";
+std::string builtin_markers = " ? ( ) [ ] { } : = >= <= == != *= += -= ++ -- * / + - ; ^ ~ ! | || & && , ";
 std::string builtin_whitespace = " \t\r\n";
 
 enum class EGrammarNodeType : uint32_t
@@ -41,6 +41,9 @@ enum class EGrammarNodeType : uint32_t
 	TypeName,
 	Keyword,
 	Identifier,
+	Dereference,
+	AddressOf,
+	QuestionMark,
 	OpenParenthesis,
 	CloseParenthesis,
 	OpenBracket,
@@ -95,6 +98,9 @@ std::string grammarnodetypenames[]=
 	"TypeName",
 	"Keyword",
 	"Identifier",
+	"Dereference",
+	"AddressOf",
+	"QuestionMark",
 	"OpenParenthesis",
 	"CloseParenthesis",
 	"OpenBracket",
@@ -150,7 +156,7 @@ struct SGrammarNode
 void Tokenize(std::string &input, EGrammarNodes &nodes)
 {
 	// Split input string into tokens including whitespace (carriage return/line feed/tab/space)
-	std::regex words_symbols_whitespace("(\\w+)|(>=)|(<=)|(==)|(!=)|(\\+=)|(\\-=)|(\\*=)|(/=)|(/\\*)|(\\*/)|(\\+\\+)|(\\-\\-)|(//)|[ \r\n\t]|[\"';=\\[\\]\\{\\},:\\+\\-<>~!%^&\\*\\(\\)]");
+	std::regex words_symbols_whitespace("(\\w+)|(>=)|(<=)|(==)|(!=)|(\\+=)|(\\-=)|(\\*=)|(/=)|(/\\*)|(\\*/)|(\\+\\+)|(\\-\\-)|(//)|[ \r\n\t]|[\"';=\\[\\]\\{\\},:\\+\\-<>~!?%^&\\*\\(\\)]");
 
 	auto beg = std::sregex_iterator(input.begin(), input.end(), words_symbols_whitespace);
 	//auto end = std::sregex_iterator();
@@ -256,6 +262,8 @@ void Tokenize(std::string &input, EGrammarNodes &nodes)
 				SGrammarNode node;
 				node.word = currentword;
 
+				if (currentword == "?")
+					node.type = EGrammarNodeType::QuestionMark;
 				if (currentword == "(")
 					node.type = EGrammarNodeType::OpenParenthesis;
 				if (currentword == ")")
@@ -401,227 +409,37 @@ int CompileCode2(char *_inputname, char *_outputname)
 		tok = 0;
 		if (nodes.size() != 0) do
 		{
-			// ---------------------------------------- DeclSpec
-			// storage_class_specifier declaration_specifiers
-			if (nodes[tok].type == EGrammarNodeType::StorageClass &&
-				nodes[tok+1].type == EGrammarNodeType::DeclSpec)
+			// Pointer type
+			if (nodes[tok].type == EGrammarNodeType::TypeName && 
+				nodes[tok+1].type == EGrammarNodeType::Mul)
 			{
 				SGrammarNode vardecl;
-				vardecl.type = EGrammarNodeType::DeclSpec;
-				vardecl.word = "DSPEC";
-				vardecl.subnodes.emplace_back(nodes[tok]);
-				vardecl.subnodes.emplace_back(nodes[tok+1]);
-				nodes[tok] = vardecl;
-				nodes.erase(nodes.begin()+tok+1);
-			}
-			// storage_class_specifier
-			if (nodes[tok].type == EGrammarNodeType::StorageClass)
-			{
-				SGrammarNode vardecl;
-				vardecl.type = EGrammarNodeType::DeclSpec;
-				vardecl.word = "DSPEC";
-				vardecl.subnodes.emplace_back(nodes[tok]);
-				nodes[tok] = vardecl;
-			}
-			// type_specifier declaration_specifiers
-			if (nodes[tok].type == EGrammarNodeType::TypeName &&
-				nodes[tok+1].type == EGrammarNodeType::DeclSpec)
-			{
-				SGrammarNode vardecl;
-				vardecl.type = EGrammarNodeType::DeclSpec;
-				vardecl.word = "DSPEC";
-				vardecl.subnodes.emplace_back(nodes[tok]);
-				vardecl.subnodes.emplace_back(nodes[tok+1]);
-				nodes[tok] = vardecl;
-				nodes.erase(nodes.begin()+tok+1);
-			}
-			// type_specifier
-			if (nodes[tok].type == EGrammarNodeType::TypeName)
-			{
-				SGrammarNode vardecl;
-				vardecl.type = EGrammarNodeType::DeclSpec;
-				vardecl.word = "DSPEC";
-				vardecl.subnodes.emplace_back(nodes[tok]);
-				nodes[tok] = vardecl;
-			}
-			// type_qualifier declaration_specifiers
-			if (nodes[tok].type == EGrammarNodeType::TypeQualifier &&
-				nodes[tok+1].type == EGrammarNodeType::DeclSpec)
-			{
-				SGrammarNode vardecl;
-				vardecl.type = EGrammarNodeType::DeclSpec;
-				vardecl.word = "DSPEC";
-				vardecl.subnodes.emplace_back(nodes[tok]);
-				vardecl.subnodes.emplace_back(nodes[tok+1]);
-				nodes[tok] = vardecl;
-				nodes.erase(nodes.begin()+tok+1);
-			}
-			// type_qualifier
-			if (nodes[tok].type == EGrammarNodeType::TypeQualifier)
-			{
-				SGrammarNode vardecl;
-				vardecl.type = EGrammarNodeType::DeclSpec;
-				vardecl.word = "DSPEC";
-				vardecl.subnodes.emplace_back(nodes[tok]);
-				nodes[tok] = vardecl;
+				vardecl.type = EGrammarNodeType::Pointer;
+				vardecl.word = "pointer";
+				//vardecl.subnodes.emplace_back(nodes[tok]);
+				//vardecl.subnodes.emplace_back(nodes[tok+1]);
+				//nodes.erase(nodes.begin()+tok+1);
+				nodes[tok+1] = vardecl;
 			}
 
-			// ---------------------------------------- Pointer
-			// '*'
-			// '*' type_qualifier_list
-			// '*' pointer
-			// '*' type_qualifier_list pointer
-
-			// ---------------------------------------- DirectDecl
-			// IDENTIFIER
-			if (nodes[tok].type == EGrammarNodeType::Identifier)
+			// Pointer dereference
+			if (nodes[tok].type == EGrammarNodeType::Mul &&
+				nodes[tok+1].type == EGrammarNodeType::Identifier)
 			{
-				SGrammarNode vardecl;
-				vardecl.type = EGrammarNodeType::DeclSpec;
-				vardecl.word = "DDECL";
-				vardecl.subnodes.emplace_back(nodes[tok]);
-				nodes[tok] = vardecl;
-			}
-			// '(' declarator ')'
-			// direct_declarator '[' type_qualifier_list assignment_expression ']'
-			// direct_declarator '[' type_qualifier_list ']'
-			// direct_declarator '[' assignment_expression ']'
-			// direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'
-			// direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'
-			// direct_declarator '[' type_qualifier_list '*' ']'
-			// direct_declarator '[' '*' ']'
-			// direct_declarator '[' ']'
-			// direct_declarator '(' parameter_type_list ')'
-			// direct_declarator '(' identifier_list ')'
-			// direct_declarator '(' ')'
-
-			// ---------------------------------------- AssignmentExpression
-			// conditional_expression
-			/*if (nodes[tok].type == EGrammarNodeType::ConditionalExpression)
-			{
-			}*/
-			// unary_expression assignment_operator assignment_expression
-			/*if (nodes[tok].type == EGrammarNodeType::UnaryExpression && 
-				nodes[tok+1].type == EGrammarNodeType::AssignOp &&
-				nodes[tok+2].type == EGrammarNodeType::AssignmentExpression)
-			{
-			}*/
-
-			// ---------------------------------------- Declarator
-			// pointer direct_declarator
-			// direct_declarator
-
-			// ---------------------------------------- Initializer
-			// assignment_expression
-			/*if (nodes[tok].type == EGrammarNodeType::AssignmentExpression)
-			{
-			}*/
-			// '{' initializer_list '}'
-			/*if (nodes[tok].type == EGrammarNodeType::OpenCurlyBracket &&
-				nodes[tok+1].type == EGrammarNodeType::InitializerList &&
-				nodes[tok+2].type == EGrammarNodeType::CloseCurlyBracket &&)
-			{
-			}*/
-			// '{' initializer_list ',' '}'
-			/*if (nodes[tok].type == EGrammarNodeType::OpenCurlyBracket &&
-				nodes[tok+1].type == EGrammarNodeType::InitializerList &&
-				nodes[tok+2].type == EGrammarNodeType::Separator &&
-				nodes[tok+3].type == EGrammarNodeType::CloseCurlyBracket &&)
-			{
-			}*/
-
-			// ---------------------------------------- InitializerList
-			// initializer_list ',' designation initializer
-			/*if (nodes[tok].type == EGrammarNodeType::InitializerList &&
-				nodes[tok+1].type == EGrammarNodeType::Separator &&
-				nodes[tok+2].type == EGrammarNodeType::Designation && 
-				nodes[tok+3].type == EGrammarNodeType::Initializer)
-			{
-			}*/
-			// initializer_list ',' initializer
-			/*if (nodes[tok].type == EGrammarNodeType::InitializerList &&
-				nodes[tok+1].type == EGrammarNodeType::Separator &&
-				nodes[tok+2].type == EGrammarNodeType::Initializer)
-			{
-			}*/
-			// designation initializer
-			/*if (nodes[tok].type == EGrammarNodeType::Designation &&
-				nodes[tok+1].type == EGrammarNodeType::Initializer)
-			{
-			}*/
-			// initializer
-			/*if (nodes[tok].type == EGrammarNodeType::Initializer)
-			{
-			}*/
-
-			// ---------------------------------------- InitDecl
-			// declarator '=' initializer
-			if (nodes[tok].type == EGrammarNodeType::Declarator && 
-				nodes[tok].type == EGrammarNodeType::Initializer)
-			{
-			}
-			// declarator
-			if (nodes[tok].type == EGrammarNodeType::Declarator)
-			{
-			}
-
-			// ---------------------------------------- InitDeclList
-			// init_declarator
-			if (nodes[tok].type == EGrammarNodeType::InitDecl)
-			{
-				SGrammarNode vardecl;
-				vardecl.type = EGrammarNodeType::InitDeclList;
-				vardecl.word = "IDECLLIST";
-				vardecl.subnodes.emplace_back(nodes[tok]);
-				nodes[tok] = vardecl;
-			}
-			// init_declarator_list ',' init_declarator
-			if (nodes[tok].type == EGrammarNodeType::InitDeclList &&
-				nodes[tok].type == EGrammarNodeType::Separator &&
-				nodes[tok+1].type == EGrammarNodeType::InitDecl)
-			{
-				SGrammarNode vardecl;
-				vardecl.type = EGrammarNodeType::InitDeclList;
-				vardecl.word = "IDECLLIST";
-				vardecl.subnodes.emplace_back(nodes[tok]);
-				vardecl.subnodes.emplace_back(nodes[tok+1]);
-				vardecl.subnodes.emplace_back(nodes[tok+2]);
-				nodes[tok] = vardecl;
-				nodes.erase(nodes.begin()+tok+1);
-				nodes.erase(nodes.begin()+tok+1);
-			}
-
-			// ---------------------------------------- Declaration
-			// declaration_specifiers ';'
-			if (nodes[tok].type == EGrammarNodeType::DeclSpec &&
-				nodes[tok+1].type == EGrammarNodeType::EndStatement)
-			{
-				SGrammarNode vardecl;
-				vardecl.type = EGrammarNodeType::Declaration;
-				vardecl.word = "DECL";
-				vardecl.subnodes.emplace_back(nodes[tok]);
-				vardecl.subnodes.emplace_back(nodes[tok+1]);
-				nodes[tok] = vardecl;
-				nodes.erase(nodes.begin()+tok+1);
-			}
-			// declaration_specifiers init_declarator_list ';'
-			if (nodes[tok].type == EGrammarNodeType::DeclSpec &&
-				nodes[tok+1].type == EGrammarNodeType::InitDeclList &&
-				nodes[tok+2].type == EGrammarNodeType::EndStatement)
-			{
-				SGrammarNode vardecl;
-				vardecl.type = EGrammarNodeType::Declaration;
-				vardecl.word = "DECL";
-				vardecl.subnodes.emplace_back(nodes[tok]);
-				vardecl.subnodes.emplace_back(nodes[tok+1]);
-				vardecl.subnodes.emplace_back(nodes[tok+2]);
-				nodes[tok] = vardecl;
-				nodes.erase(nodes.begin()+tok+1);
-				nodes.erase(nodes.begin()+tok+1);
+				if (tok==0 || nodes[tok-1].type != EGrammarNodeType::Identifier)
+				{
+					SGrammarNode vardecl;
+					vardecl.type = EGrammarNodeType::Dereference;
+					vardecl.word = "deref";
+					//vardecl.subnodes.emplace_back(nodes[tok]);
+					//vardecl.subnodes.emplace_back(nodes[tok+1]);
+					//nodes.erase(nodes.begin()+tok+1);
+					nodes[tok] = vardecl;
+				}
 			}
 
 			tok++;
-		} while (tok>=nodes.size());
+		} while (tok<nodes.size());
 
 		if (nodes.size() == oldsize)
 			break;
