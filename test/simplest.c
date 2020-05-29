@@ -1,11 +1,4 @@
 int Test:
 {
-	
+	int somevar;
 }
-
-int Test2:
-{
-	
-}
-
-!

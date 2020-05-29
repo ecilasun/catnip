@@ -1,26 +1,8 @@
 #include "compiler.h"
 
-//#include "../build/release/source/cparse.hpp"
-//#include "../build/release/source/elang.hpp"
-
-// ------------------------------------------- BISON/FLEX
-
-//SCNode *g_root = nullptr, *g_trackingNode = nullptr;
-extern int goparse(const char *_inputname);
-int CompileCode(char *_inputname, char *_outputname)
-{
-	//goparse(_inputname);
-
-	/*extern FILE *yyin;
-	yyin = fopen(_inputname, "r");
-	int res = yyparse();
-	fclose(yyin);
-	//dumpNodes(g_root, 0);
-	return res;*/
-	return 0;
-}
-
-// ------------------------------------------- CUSTOM
+// ----------------------------------------------------------------------------------------------------------------------
+// Tokens, nodes etc
+// ----------------------------------------------------------------------------------------------------------------------
 
 std::string builtin_typequalifier = " const restrict volatile ";
 std::string builtin_storageclass = " typedef extern static auto register ";
@@ -74,6 +56,7 @@ enum class EGrammarNodeType : uint32_t
 	Separator,
 
 	// 
+	VariableDeclaration,
 	Assignment,
 	FunctionHeader,
 	FunctionBegin,
@@ -132,6 +115,7 @@ std::string grammarnodetypenames[]=
 	"Separator",
 
 	// 
+	"VariableDeclaration",
 	"Assignment",
 	"FunctionHeader",
 	"FunctionBegin",
@@ -146,6 +130,10 @@ std::string grammarnodetypenames[]=
 	"Return",
 };
 
+// ----------------------------------------------------------------------------------------------------------------------
+// Grammar rule related
+// ----------------------------------------------------------------------------------------------------------------------
+
 typedef std::vector<struct SGrammarNode> EGrammarNodes;
 
 struct SGrammarNode
@@ -155,48 +143,76 @@ struct SGrammarNode
 	EGrammarNodes subnodes;
 };
 
-typedef std::function<int(uint32_t, SGrammarNode &, EGrammarNodes *, EGrammarNodes *)> FPostReduceCallback;
+typedef std::function<int(uint32_t, SGrammarNode &, EGrammarNodes *, EGrammarNodes *)> FSRCallback;
 
 struct SGrammarRule
 {
 	EGrammarNodeType reduce;				// Grammar node type to replace the provided list with
 	std::vector<EGrammarNodeType> match;	// List of grammar node types to match
-	FPostReduceCallback callback;			// Function to call after reduction is applied
+	FSRCallback shiftcallback;				// Function to call for shift
+	FSRCallback reducecallback;				// Function to call for reduce
 };
 
-// Post-reduce callbacks
-int PRDefault(uint32_t popcount, SGrammarNode &replacementnode, EGrammarNodes *sourcenodes, EGrammarNodes *targetnodes)
-{
-	// Remove replaced entries from stack
-	for (uint32_t i=0;i<popcount;++i)
-		sourcenodes->pop_back();
+// ----------------------------------------------------------------------------------------------------------------------
+// Shift
+// ----------------------------------------------------------------------------------------------------------------------
 
+int SRDefaultShift(uint32_t popcount, SGrammarNode &replacementnode, EGrammarNodes *sourcenodes, EGrammarNodes *targetnodes)
+{
 	// Push the new node onto stack for next tour
 	sourcenodes->push_back(replacementnode);
 
-	return 1;
+	return popcount;
 }
 
-int PRFunction(uint32_t popcount, SGrammarNode &replacementnode, EGrammarNodes *sourcenodes, EGrammarNodes *targetnodes)
+int SRNoShift(uint32_t popcount, SGrammarNode &replacementnode, EGrammarNodes *sourcenodes, EGrammarNodes *targetnodes)
 {
-	// Copy onto target
+	return 0;
+}
+
+// ----------------------------------------------------------------------------------------------------------------------
+// Reduce
+// ----------------------------------------------------------------------------------------------------------------------
+
+int SRDefaultReduce(uint32_t popcount, SGrammarNode &replacementnode, EGrammarNodes *sourcenodes, EGrammarNodes *targetnodes)
+{
+	// Remove reduced items from stack
+	for (uint32_t i=0; i<popcount; ++i)
+		sourcenodes->pop_back();
+
+	// Copy new collapsed node onto target
+	sourcenodes->push_back(replacementnode);
+
+	return popcount;
+}
+
+int SRNoReduce(uint32_t popcount, SGrammarNode &replacementnode, EGrammarNodes *sourcenodes, EGrammarNodes *targetnodes)
+{
+	return 0;
+}
+
+int SRPushToTarget(uint32_t popcount, SGrammarNode &replacementnode, EGrammarNodes *sourcenodes, EGrammarNodes *targetnodes)
+{
+	// Remove the replaced items from stack
+	for (uint32_t i=0; i<popcount; ++i)
+		sourcenodes->pop_back();
+
+	// Copy new collapsed node onto target
 	targetnodes->push_back(replacementnode);
 
-	// Clear the entire stack
-	sourcenodes->clear();
-
-	return 1;
+	return popcount;
 }
 
 // Grammar rules
 typedef std::vector<struct SGrammarRule> EGrammarRules;
 
 EGrammarRules s_grammar_rules = {
-	{EGrammarNodeType::TypedIdentifier, {EGrammarNodeType::TypeName, EGrammarNodeType::Identifier}, PRDefault},
-	{EGrammarNodeType::FunctionHeader, {EGrammarNodeType::TypedIdentifier, EGrammarNodeType::Colon}, PRDefault},
-	{EGrammarNodeType::FunctionBegin, {EGrammarNodeType::FunctionHeader, EGrammarNodeType::OpenCurlyBracket}, PRDefault},
-	{EGrammarNodeType::FunctionEnd, {EGrammarNodeType::FunctionBegin, EGrammarNodeType::CloseCurlyBracket}, PRFunction},
-	{EGrammarNodeType::Assignment, {EGrammarNodeType::Identifier, EGrammarNodeType::EqualSign}, PRDefault},
+	{EGrammarNodeType::TypedIdentifier, {EGrammarNodeType::TypeName, EGrammarNodeType::Identifier}, SRDefaultShift, SRDefaultReduce},
+	{EGrammarNodeType::VariableDeclaration, {EGrammarNodeType::TypedIdentifier, EGrammarNodeType::EndStatement}, SRDefaultShift, SRDefaultReduce},
+	/*{EGrammarNodeType::FunctionHeader, {EGrammarNodeType::TypedIdentifier, EGrammarNodeType::Colon}, SRDefaultShift, SRDefaultReduce},
+	{EGrammarNodeType::FunctionBegin, {EGrammarNodeType::FunctionHeader, EGrammarNodeType::OpenCurlyBracket}, SRDefaultShift, SRDefaultReduce},
+	{EGrammarNodeType::FunctionEnd, {EGrammarNodeType::FunctionBegin, EGrammarNodeType::CloseCurlyBracket}, SRNoShift, SRPushToTarget},
+	{EGrammarNodeType::Assignment, {EGrammarNodeType::Identifier, EGrammarNodeType::EqualSign}, SRDefaultShift, SRDefaultReduce},*/
 };
 
 void Tokenize(std::string &input, EGrammarNodes &nodes)
@@ -417,21 +433,42 @@ void ShiftReduce(EGrammarNodes &nodes)
 		int matching_rule=-1;
 		int ruleindex = 0;
 		int popcount = 0;
-		for(auto &r : s_grammar_rules)
+
+		// If there is at least one item on the stack
+		if (stack.size() != 0)
 		{
-			uint32_t matches=0;
-			int i=0;
-			// Always rewind to top of stack
-			for (auto &s : stack)
-				matches += (r.match[i++] == s.type) ? 1 : 0;
-			if (matches == r.match.size())
+			for(auto &r : s_grammar_rules)
 			{
-				matching_rule = ruleindex;
-				popcount = r.match.size();
-				//std::cout << "SUCCESS: Reduce successful for rule " << ruleindex << std::endl;
-				break;
+				uint32_t matches=0;
+				// Always rewind back in stack as long as the current rule
+				int i = stack.size()-r.match.size();
+				// If the stack has enough items to test against the rule
+				if (i>=0)
+				{
+					int idxrule = 0;
+					while (i<stack.size())
+					{
+						if (idxrule > r.match.size())
+						{
+							done = true;
+							std::cout << "ERROR: ran out of rules vs stack" << std::endl;
+							break;
+						}
+
+						SGrammarNode &s = stack[i];
+						matches += (r.match[idxrule++] == s.type) ? 1 : 0;
+						++i;
+					}
+					if (matches == r.match.size())
+					{
+						matching_rule = ruleindex;
+						popcount = r.match.size();
+						//std::cout << "SUCCESS: Reduce successful for rule " << ruleindex << std::endl;
+						break;
+					}
+				}
+				++ruleindex;
 			}
-			++ruleindex;
 		}
 
 		// Did we match any rule so far?
@@ -441,14 +478,17 @@ void ShiftReduce(EGrammarNodes &nodes)
 			SGrammarNode replacementnode;
 			replacementnode.type = s_grammar_rules[matching_rule].reduce;
 			// TODO: This is too naiive, callback required to truly 'collapse' stack onto the replaced version
-			for (auto &n : stack)
-				replacementnode.subnodes.push_back(n); // This also carries over the subnodes of stack entries
+			int sidx = stack.size()-popcount;
+			for (int i=sidx;i<stack.size();++i)
+				replacementnode.subnodes.push_back(stack[i]); // This also carries over the subnodes of stack entries
 			replacementnode.word = grammarnodetypenames[static_cast<uint32_t>(replacementnode.type)];
 
-			// Apply the post-rule
-			int count = s_grammar_rules[matching_rule].callback(popcount, replacementnode, &stack, &product);
+			// Apply the shift-reduce
+			int is_reduce = s_grammar_rules[matching_rule].reducecallback(popcount, replacementnode, &stack, &product);
+			//int is_shift = s_grammar_rules[matching_rule].shiftcallback(popcount, replacementnode, &stack, &product);
 		}
-		else
+
+		
 		{
 			if (nextnode >= nodes.size())
 			{
@@ -457,15 +497,16 @@ void ShiftReduce(EGrammarNodes &nodes)
 				break;
 			}
 
-			// stack doesn't have enough items for a rule match, push lookahead
-			stack.push_back(lookahead);
+			// Shift onto stack
+			SRDefaultShift(popcount, lookahead, &stack, &product);
+
 			lookahead = nodes[nextnode++];
 		}
 	}
 
 	// Dump the output we've produced so far
 	std::cout << "Final result:" << std::endl;
-	for (auto &n : product)
+	for (auto &n : stack)
 		DumpNode(n, 0);
 }
 
