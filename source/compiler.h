@@ -5,6 +5,7 @@
 #include <regex>
 #include <iostream>
 #include <inttypes.h>
+#include <functional>
 
 // ---------------------------------------------------------------------------
 // Usefult macros

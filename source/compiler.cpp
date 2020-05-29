@@ -32,7 +32,7 @@ std::string builtin_whitespace = " \t\r\n";
 
 enum class EGrammarNodeType : uint32_t
 {
-	// Terminals
+	// Atoms
 	Unknown,
 	NumericConstant,
 	StringLiteral,
@@ -41,8 +41,6 @@ enum class EGrammarNodeType : uint32_t
 	TypeName,
 	Keyword,
 	Identifier,
-	Dereference,
-	AddressOf,
 	QuestionMark,
 	OpenParenthesis,
 	CloseParenthesis,
@@ -51,7 +49,7 @@ enum class EGrammarNodeType : uint32_t
 	OpenCurlyBracket,
 	CloseCurlyBracket,
 	Colon,
-	Assignment,
+	EqualSign,
 	GreaterEqual,
 	LessEqual,
 	Equal,
@@ -74,22 +72,25 @@ enum class EGrammarNodeType : uint32_t
 	BitAnd,
 	LogicAnd,
 	Separator,
-	// Non-terminals
-	DeclSpec,
-	Declaration,
-	InitDecl,
-	InitDeclList,
-	Initializer,
-	Declarator,
+
+	// 
+	Assignment,
+	FunctionHeader,
+	FunctionBegin,
+	FunctionEnd,
+	TypedIdentifier,
+	Root,
+	Expression,
 	Pointer,
-	DirectDecl,
-	AssignOp,
-	AssignmentExpression
+	Copy,
+	Dereference,
+	AddressOf,
+	Return,
 };
 
 std::string grammarnodetypenames[]=
 {
-	// Terminals
+	// Atoms
 	"Unknown",
 	"NumericConstant",
 	"StringLiteral",
@@ -98,8 +99,6 @@ std::string grammarnodetypenames[]=
 	"TypeName",
 	"Keyword",
 	"Identifier",
-	"Dereference",
-	"AddressOf",
 	"QuestionMark",
 	"OpenParenthesis",
 	"CloseParenthesis",
@@ -108,7 +107,7 @@ std::string grammarnodetypenames[]=
 	"OpenCurlyBracket",
 	"CloseCurlyBracket",
 	"Colon",
-	"Assignment",
+	"EqualSign",
 	"GreaterEqual",
 	"LessEqual",
 	"Equal",
@@ -131,17 +130,20 @@ std::string grammarnodetypenames[]=
 	"BitAnd",
 	"LogicAnd",
 	"Separator",
-	// Non-terminals
-	"DeclSpec",
-	"Declaration",
-	"InitDecl",
-	"InitDeclList",
-	"Initializer",
-	"Declarator",
+
+	// 
+	"Assignment",
+	"FunctionHeader",
+	"FunctionBegin",
+	"FunctionEnd",
+	"TypedIdentifier",
+	"Root",
+	"Expression",
 	"Pointer",
-	"DirectDecl",
-	"AssignOp",
-	"AssignmentExpression"
+	"Copy",
+	"Dereference",
+	"AddressOf",
+	"Return",
 };
 
 typedef std::vector<struct SGrammarNode> EGrammarNodes;
@@ -151,6 +153,50 @@ struct SGrammarNode
 	std::string word;
 	EGrammarNodeType type{EGrammarNodeType::Unknown};
 	EGrammarNodes subnodes;
+};
+
+typedef std::function<int(uint32_t, SGrammarNode &, EGrammarNodes *, EGrammarNodes *)> FPostReduceCallback;
+
+struct SGrammarRule
+{
+	EGrammarNodeType reduce;				// Grammar node type to replace the provided list with
+	std::vector<EGrammarNodeType> match;	// List of grammar node types to match
+	FPostReduceCallback callback;			// Function to call after reduction is applied
+};
+
+// Post-reduce callbacks
+int PRDefault(uint32_t popcount, SGrammarNode &replacementnode, EGrammarNodes *sourcenodes, EGrammarNodes *targetnodes)
+{
+	// Remove replaced entries from stack
+	for (uint32_t i=0;i<popcount;++i)
+		sourcenodes->pop_back();
+
+	// Push the new node onto stack for next tour
+	sourcenodes->push_back(replacementnode);
+
+	return 1;
+}
+
+int PRFunction(uint32_t popcount, SGrammarNode &replacementnode, EGrammarNodes *sourcenodes, EGrammarNodes *targetnodes)
+{
+	// Copy onto target
+	targetnodes->push_back(replacementnode);
+
+	// Clear the entire stack
+	sourcenodes->clear();
+
+	return 1;
+}
+
+// Grammar rules
+typedef std::vector<struct SGrammarRule> EGrammarRules;
+
+EGrammarRules s_grammar_rules = {
+	{EGrammarNodeType::TypedIdentifier, {EGrammarNodeType::TypeName, EGrammarNodeType::Identifier}, PRDefault},
+	{EGrammarNodeType::FunctionHeader, {EGrammarNodeType::TypedIdentifier, EGrammarNodeType::Colon}, PRDefault},
+	{EGrammarNodeType::FunctionBegin, {EGrammarNodeType::FunctionHeader, EGrammarNodeType::OpenCurlyBracket}, PRDefault},
+	{EGrammarNodeType::FunctionEnd, {EGrammarNodeType::FunctionBegin, EGrammarNodeType::CloseCurlyBracket}, PRFunction},
+	{EGrammarNodeType::Assignment, {EGrammarNodeType::Identifier, EGrammarNodeType::EqualSign}, PRDefault},
 };
 
 void Tokenize(std::string &input, EGrammarNodes &nodes)
@@ -279,7 +325,7 @@ void Tokenize(std::string &input, EGrammarNodes &nodes)
 				if (currentword == ":")
 					node.type = EGrammarNodeType::Colon;
 				if (currentword == "=")
-					node.type = EGrammarNodeType::Assignment;
+					node.type = EGrammarNodeType::EqualSign;
 				if (currentword == ">=")
 					node.type = EGrammarNodeType::GreaterEqual;
 				if (currentword == "<=")
@@ -357,6 +403,72 @@ void DumpNode(SGrammarNode &node, int depth)
 		DumpNode(n, depth+1);
 }
 
+void ShiftReduce(EGrammarNodes &nodes)
+{
+	EGrammarNodes product;		// A meaningful portion of work is always moved here
+	EGrammarNodes stack;		// Stack to use during shift-reduce
+
+	bool done = false;
+	int nextnode = 0;
+	SGrammarNode lookahead = nodes[nextnode++];
+	while (!done)
+	{
+		// Try to reduce
+		int matching_rule=-1;
+		int ruleindex = 0;
+		int popcount = 0;
+		for(auto &r : s_grammar_rules)
+		{
+			uint32_t matches=0;
+			int i=0;
+			// Always rewind to top of stack
+			for (auto &s : stack)
+				matches += (r.match[i++] == s.type) ? 1 : 0;
+			if (matches == r.match.size())
+			{
+				matching_rule = ruleindex;
+				popcount = r.match.size();
+				//std::cout << "SUCCESS: Reduce successful for rule " << ruleindex << std::endl;
+				break;
+			}
+			++ruleindex;
+		}
+
+		// Did we match any rule so far?
+		if (matching_rule!=-1)
+		{
+			// Generate a new node with reduced type, and assign all stack entries as subnodes
+			SGrammarNode replacementnode;
+			replacementnode.type = s_grammar_rules[matching_rule].reduce;
+			// TODO: This is too naiive, callback required to truly 'collapse' stack onto the replaced version
+			for (auto &n : stack)
+				replacementnode.subnodes.push_back(n); // This also carries over the subnodes of stack entries
+			replacementnode.word = grammarnodetypenames[static_cast<uint32_t>(replacementnode.type)];
+
+			// Apply the post-rule
+			int count = s_grammar_rules[matching_rule].callback(popcount, replacementnode, &stack, &product);
+		}
+		else
+		{
+			if (nextnode >= nodes.size())
+			{
+				done = true;
+				std::cout << "ERROR: input underflow, aborting. " << std::endl;
+				break;
+			}
+
+			// stack doesn't have enough items for a rule match, push lookahead
+			stack.push_back(lookahead);
+			lookahead = nodes[nextnode++];
+		}
+	}
+
+	// Dump the output we've produced so far
+	std::cout << "Final result:" << std::endl;
+	for (auto &n : product)
+		DumpNode(n, 0);
+}
+
 int CompileCode2(char *_inputname, char *_outputname)
 {
 	EGrammarNodes nodes;
@@ -392,61 +504,10 @@ int CompileCode2(char *_inputname, char *_outputname)
 
 	Tokenize(str, nodes);
 
-	// TEST: Grammar rule application attempt
-	// When applying a rule, the idea is to start from the simplest pattern
-	// and group those together. This group now has a new name and can be
-	// re-inserted into the same position in the graph (first, delete grouped items)
-	// Iteratively applying this method will eventually collapse the list into
-	// a reasonable syntax tree we can work with.
-	uint32_t tok;
+	ShiftReduce(nodes);
 
-	// Loop until the list can't be reduced further
-	bool done = false;
-	while (!done)
-	{
-		size_t oldsize = nodes.size();
-
-		tok = 0;
-		if (nodes.size() != 0) do
-		{
-			// Pointer type
-			if (nodes[tok].type == EGrammarNodeType::TypeName && 
-				nodes[tok+1].type == EGrammarNodeType::Mul)
-			{
-				SGrammarNode vardecl;
-				vardecl.type = EGrammarNodeType::Pointer;
-				vardecl.word = "pointer";
-				//vardecl.subnodes.emplace_back(nodes[tok]);
-				//vardecl.subnodes.emplace_back(nodes[tok+1]);
-				//nodes.erase(nodes.begin()+tok+1);
-				nodes[tok+1] = vardecl;
-			}
-
-			// Pointer dereference
-			if (nodes[tok].type == EGrammarNodeType::Mul &&
-				nodes[tok+1].type == EGrammarNodeType::Identifier)
-			{
-				if (tok==0 || nodes[tok-1].type != EGrammarNodeType::Identifier)
-				{
-					SGrammarNode vardecl;
-					vardecl.type = EGrammarNodeType::Dereference;
-					vardecl.word = "deref";
-					//vardecl.subnodes.emplace_back(nodes[tok]);
-					//vardecl.subnodes.emplace_back(nodes[tok+1]);
-					//nodes.erase(nodes.begin()+tok+1);
-					nodes[tok] = vardecl;
-				}
-			}
-
-			tok++;
-		} while (tok<nodes.size());
-
-		if (nodes.size() == oldsize)
-			break;
-	}
-
-	for (auto n : nodes)
-		DumpNode(n, 0);
+	/*for (auto n : nodes)
+		DumpNode(n, 0);*/
 
 	return 0;
 }

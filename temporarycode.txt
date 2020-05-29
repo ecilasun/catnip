@@ -1,0 +1,121 @@
+	// TEST: Grammar rule application attempt
+	// When applying a rule, the idea is to start from the simplest pattern
+	// and group those together. This group now has a new name and can be
+	// re-inserted into the same position in the graph (first, delete grouped items)
+	// Iteratively applying this method will eventually collapse the list into
+	// a reasonable syntax tree we can work with.
+	uint32_t tok;
+
+	// Loop until the list can't be reduced further
+	bool done = false;
+	while (!done)
+	{
+		size_t oldsize = nodes.size();
+
+		tok = 0;
+		// Replace
+		if (nodes.size() != 0) do
+		{
+			// Pointer: declaration
+			if (nodes[tok].type == EGrammarNodeType::TypeName && 
+				nodes[tok+1].type == EGrammarNodeType::Mul)
+			{
+				SGrammarNode repl;
+				repl.type = EGrammarNodeType::Pointer;
+				repl.word = "pointer";
+				//repl.subnodes.emplace_back(nodes[tok]);
+				//repl.subnodes.emplace_back(nodes[tok+1]);
+				//nodes.erase(nodes.begin()+tok+1);
+				nodes[tok+1] = repl;
+			}
+
+			// Pointer: dereference
+			if (nodes[tok].type == EGrammarNodeType::Mul &&
+				nodes[tok+1].type == EGrammarNodeType::Identifier)
+			{
+				if (tok==0 || nodes[tok-1].type != EGrammarNodeType::Identifier)
+				{
+					SGrammarNode repl;
+					repl.type = EGrammarNodeType::Dereference;
+					repl.word = "deref";
+					//repl.subnodes.emplace_back(nodes[tok+1]);
+					//repl.subnodes.emplace_back(nodes[tok+1]);
+					nodes[tok] = repl;
+					//nodes.erase(nodes.begin()+tok+1);
+				}
+			}
+
+			// Pointer: addressof
+			if (nodes[tok].type == EGrammarNodeType::BitAnd &&
+				nodes[tok+1].type == EGrammarNodeType::Identifier)
+			{
+				if (tok==0 || nodes[tok-1].type != EGrammarNodeType::Identifier)
+				{
+					SGrammarNode repl;
+					repl.type = EGrammarNodeType::AddressOf;
+					repl.word = "addressof";
+					//repl.subnodes.emplace_back(nodes[tok]);
+					//repl.subnodes.emplace_back(nodes[tok+1]);
+					//nodes.erase(nodes.begin()+tok+1);
+					nodes[tok] = repl;
+				}
+			}
+
+			// Copy
+			/*if (nodes[tok].type == EGrammarNodeType::Assignment) // =
+			{
+				if (tok!=0 && nodes[tok-1].type == EGrammarNodeType::Identifier)
+				{
+					//SGrammarNode repl;
+					//repl.type = EGrammarNodeType::Expression;
+					//repl.word = "righthandside";
+					//nodes[tok+1] = repl;
+					nodes[tok].type = EGrammarNodeType::Copy;
+					nodes[tok].word = "assign : righthandside expression should 'return' a value to copy";
+				}
+				else
+				{
+					std::cout << "Error: Assignment without preceding identifier" << std::endl;
+					done = true;
+					break;
+				}
+			}*/
+
+			tok++;
+		} while (tok<nodes.size());
+
+		if (nodes.size() == oldsize)
+			break;
+	}
+
+
+
+
+
+	void Find(char c, char* s)
+{
+	return *s ? *s==c ? 1 : find(c, s+1) : 0;
+}
+
+int Length(char *s)
+{
+	int result=0;
+	while(*s++)
+	{
+		++result;
+	}
+	return result;
+}
+
+char LastCharN(char *s, int n)
+{
+	return s[Length(s)-n];
+}
+
+int PointerTest()
+{
+	int i=0;
+	int *k = &i;
+	*k = 2;
+	return i;
+}
