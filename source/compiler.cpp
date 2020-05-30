@@ -1,6 +1,6 @@
 #include "compiler.h"
 
-#include "lug/lug.hpp"
+//#include "lug/lug.hpp"
 
 int CompileCode2(char * /*_inputname*/, char * /*_outputname*/)
 {
@@ -523,38 +523,34 @@ void ShiftReduce(EGrammarNodes &nodes)
 		{
 			for(auto &r : s_grammar_rules)
 			{
-				// Always rewind back in stack as long as the current rule
+				// Point lower on stack by rule size
 				int i = int(stack.size())-int(r.match.size());
-				bool tooshort = i<0 ? true:false;
-				i = i<0 ? 0 : i;
-				// If the stack has enough items to test against the rule
-				//if (i>=0)
+
+				// If the stack has enough items to test against this rule, continue
+				if (i>=0)
 				{
 					int idxrule = 0;
 					uint32_t matches = 0;
-					while (i<stack.size())
+					// Walk over match list in rule
+					while (i<stack.size() && idxrule<r.match.size())
 					{
-						if (idxrule > r.match.size())
-						{
-							done = true;
-							std::cout << "ERROR: ran out of rules vs stack" << std::endl;
-							break;
-						}
-
 						SGrammarNode &s = stack[i];
-						matches += (r.match[idxrule++] == s.type) ? 1 : 0;
+						int match = (r.match[idxrule++] == s.type) ? 1 : 0;
+						// Rule broken, bail out
+						if (!match)
+							break;
+						// Increment match count
+						matches += match;
+						// Next match
 						++i;
 					}
+					// All items in rule matched
 					if (matches == r.match.size())
 					{
+						// Send to reduce
 						matching_rule = ruleindex;
 						popcount = int(r.match.size());
 						//std::cout << "SUCCESS: Reduce successful for rule " << ruleindex << std::endl;
-						break;
-					}
-					else if (tooshort)
-					{
-						// There's a partial match, we need to break before we run into shorter rules
 						break;
 					}
 				}
