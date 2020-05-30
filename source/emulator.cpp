@@ -150,16 +150,16 @@ void ClockMain()
 	s_VGAClockFallingEdge = ((oldvgaclock&0x80000000)) && (!(s_VGAClock&0x80000000));
 }
 
-void execute(uint16_t instruction)
+void execute(uint16_t instr)
 {
-	uint16_t inst = instruction&0x000F;
+	uint16_t inst = instr&0x000F;
 	switch(inst)
 	{
 		case INST_LOGIC:
 		{
-			uint16_t op = (instruction&0b0000000001110000)>>4; // [6:4]
-			uint16_t r1 = (instruction&0b0000011110000000)>>7; // [10:7]
-			uint16_t r2 = (instruction&0b0111100000000000)>>11; // [14:11]
+			uint16_t op = (instr&0b0000000001110000)>>4; // [6:4]
+			uint16_t r1 = (instr&0b0000011110000000)>>7; // [10:7]
+			uint16_t r2 = (instr&0b0111100000000000)>>11; // [14:11]
 			switch (op)
 			{
 				case 0: // Or
@@ -200,10 +200,10 @@ void execute(uint16_t instruction)
 
 		case INST_BRANCH:
 		{
-			uint16_t typ = (instruction&0b0100000000000000)>>14; // [14]
-			uint16_t immed = (instruction&0b1000000000000000)>>15; // [15]
-			uint16_t si = (instruction&0b0000000000110000)>>4; // [5:4]
-			uint16_t r1 = (instruction&0b0000001111000000)>>6; // [9:6]
+			uint16_t typ = (instr&0b0100000000000000)>>14; // [14]
+			uint16_t immed = (instr&0b1000000000000000)>>15; // [15]
+			uint16_t si = (instr&0b0000000000110000)>>4; // [5:4]
+			uint16_t r1 = (instr&0b0000001111000000)>>6; // [9:6]
 
 			// NOTE: BRANCH and JMP share the same logic except the stack bit
 			// Push return address to branch stack for 'BRANCH/BRANCHIF'
@@ -289,10 +289,10 @@ void execute(uint16_t instruction)
 
 			case INST_MATH:
 			{
-				uint16_t op = (instruction&0b0000000001110000)>>4; // [6:4]
-				uint16_t subop = (instruction&0b0000001110000000)>>7; // [9:7]
-				uint16_t r1 = (instruction&0b0000111100000000)>>8; // [11:8]
-				uint16_t r2 = (instruction&0b1111000000000000)>>12; // [15:12]
+				uint16_t op = (instr&0b0000000001110000)>>4; // [6:4]
+				//uint16_t subop = (instr&0b0000001110000000)>>7; // [9:7]
+				uint16_t r1 = (instr&0b0000111100000000)>>8; // [11:8]
+				uint16_t r2 = (instr&0b1111000000000000)>>12; // [15:12]
 				switch (op)
 				{
 					case 0: // Iadd
@@ -311,7 +311,7 @@ void execute(uint16_t instruction)
 						register_file[r1] = register_file[r1] % register_file[r2];
 					break;
 					case 5: // Ineg
-						register_file[r1] = -register_file[r1];
+						register_file[r1] = register_file[r1]^0x80000000; // Flip integer sign bit
 					break;
 					case 6: // Inc
 						register_file[r1] = register_file[r1] + 1;
@@ -330,9 +330,9 @@ void execute(uint16_t instruction)
 
 			case INST_MOV:
 			{
-				uint16_t op = (instruction&0b0000000001110000)>>4; // [6:4]
-				uint16_t r1 = (instruction&0b0000011110000000)>>7; // [10:7]
-				uint16_t r2 = (instruction&0b0111100000000000)>>11; // [14:11]
+				uint16_t op = (instr&0b0000000001110000)>>4; // [6:4]
+				uint16_t r1 = (instr&0b0000011110000000)>>7; // [10:7]
+				uint16_t r2 = (instr&0b0111100000000000)>>11; // [14:11]
 				switch (op)
 				{
 					case 0: // reg2mem
@@ -471,7 +471,7 @@ void execute(uint16_t instruction)
 
 			case INST_RET:
 			{
-				uint16_t op = (instruction&0b0000000000010000)>>4; // [4]
+				uint16_t op = (instr&0b0000000000010000)>>4; // [4]
 				if (op == 1) // HALT
 				{
 					IP = 0x7FFFF;
@@ -495,8 +495,8 @@ void execute(uint16_t instruction)
 
 			case INST_STACK:
 			{
-				uint16_t op = (instruction&0b0000000000010000)>>4; // [4]
-				uint16_t r1 = (instruction&0b0000000111100000)>>5; // [8:5]
+				uint16_t op = (instr&0b0000000000010000)>>4; // [4]
+				uint16_t r1 = (instr&0b0000000111100000)>>5; // [8:5]
 				switch (op)
 				{
 					case 0:
@@ -532,7 +532,7 @@ void execute(uint16_t instruction)
 			{
 				// [ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL] & FLAG_MASK
 				uint16_t flg = (flags_register&0b0000000000111111); // [5:0]
-				uint16_t msk = (instruction&0b0000001111110000)>>4; // [9:4]
+				uint16_t msk = (instr&0b0000001111110000)>>4; // [9:4]
 				TR = flg&msk ? 1:0; // At least one bit out of the masked bits passed test against mask or no bits passed
 				sram_addr = IP+2;
 				IP = IP + 2;
@@ -544,8 +544,8 @@ void execute(uint16_t instruction)
 
 			case INST_CMP:
 			{
-				uint16_t r1 = (instruction&0b0000000011110000)>>4; // [7:4]
-				uint16_t r2 = (instruction&0b0000111100000000)>>8; // [11:8]
+				uint16_t r1 = (instr&0b0000000011110000)>>4; // [7:4]
+				uint16_t r2 = (instr&0b0000111100000000)>>8; // [11:8]
 				flags_register = 0;
 				flags_register |= (register_file[r1] == register_file[r2]) ? 1 : 0; // EQUAL
 				flags_register |= (register_file[r1] > register_file[r2]) ? 2 : 0; // GREATER
@@ -563,8 +563,8 @@ void execute(uint16_t instruction)
 
 			case INST_IO:
 			{
-				uint16_t sub = (instruction&0b0000000001110000)>>4; // [6:4]
-				uint16_t r1  = (instruction&0b0000011110000000)>>7; // [10:7]
+				uint16_t sub = (instr&0b0000000001110000)>>4; // [6:4]
+				uint16_t r1  = (instr&0b0000011110000000)>>7; // [10:7]
 				switch(sub)
 				{
 					case 0b000: // VSYNC
@@ -588,7 +588,7 @@ void execute(uint16_t instruction)
 					case 0b010: // OUT
 					{
 						// TODO: Read next word (PORT)
-						// TODO: Output register_file[instruction[9:7]] to given port
+						// TODO: Output register_file[instr[9:7]] to given port
 						// TODO: Isn't this a memory mapped device MOV?
 						sram_addr = IP+2;
 						IP = IP + 2;
@@ -625,9 +625,9 @@ void execute(uint16_t instruction)
 
 			case INST_RELMOV:
 			{
-				uint16_t op = (instruction&0b0000000001110000)>>4; // [6:4]
-				uint16_t r1 = (instruction&0b0000011110000000)>>7; // [10:7]
-				uint16_t r2 = (instruction&0b0111100000000000)>>11; // [14:11]
+				uint16_t op = (instr&0b0000000001110000)>>4; // [6:4]
+				//uint16_t r1 = (instr&0b0000011110000000)>>7; // [10:7]
+				//uint16_t r2 = (instr&0b0111100000000000)>>11; // [14:11]
 				switch (op)
 				{
 					case 0: // reserved
@@ -1020,9 +1020,9 @@ void VideoMain()
 			uint32_t R = VRAM[framebuffer_select*0xFFFF+0xC000]&0x07;
 			uint32_t G = (VRAM[framebuffer_select*0xFFFF+0xC000]>>3)&0x07;
 			uint32_t B = (VRAM[framebuffer_select*0xFFFF+0xC000]>>6)&0x03;
-			pixels[4*(y*s_Surface->w+x)+0] = (B*255)/3;
-			pixels[4*(y*s_Surface->w+x)+1] = (G*255)/7;
-			pixels[4*(y*s_Surface->w+x)+2] = (R*255)/7;
+			pixels[4*(y*s_Surface->w+x)+0] = uint8_t((B*255)/3);
+			pixels[4*(y*s_Surface->w+x)+1] = uint8_t((G*255)/7);
+			pixels[4*(y*s_Surface->w+x)+2] = uint8_t((R*255)/7);
 			pixels[4*(y*s_Surface->w+x)+3] = 255;
 		}
 	}

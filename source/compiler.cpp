@@ -1,5 +1,30 @@
 #include "compiler.h"
 
+#include "lug/lug.hpp"
+
+int CompileCode2(char * /*_inputname*/, char * /*_outputname*/)
+{
+	//using namespace lug::language;
+	//lug::grammar grammar_;
+	//lug::environment environment_;
+	//lug::variable<std::string> id_{ environment_ };
+
+	//rule Expr;
+	//implicit_space_rule SP = *"[ \t\n\r]"_rx;
+
+	// simple language
+	//rule CIdentifier, CStringLiteral, CIntegerConst, CHexConst;
+
+	//CIdentifier = lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]] < [this] { printf("id(%s) ", id_->c_str()); return lug::utf8::toupper(*id_); };
+	//CStringLiteral = lexeme["\"" > capture(id_)[*"[^\"]"_rx] > "\""]													< [this] { printf("str(%s) ", id_->c_str()); return lug::utf8::toupper(*id_); };
+	//CIntegerConst	= lexeme[capture(id_)[+"[0-9]"_rx]]																	< [this] { printf("deci(%s) ", id_->c_str()); return lug::utf8::toupper(*id_); };
+	//CHexConst	= lexeme[capture(id_)["0[xX][a-fA-F0-9] + *(u|U|l|L)?"_rx]]												< [this] { printf("hex(%s) ", id_->c_str()); return lug::utf8::toupper(*id_); };
+
+	//grammar_ = start(CTranslationUnit);
+
+	return 0;
+}
+
 // ----------------------------------------------------------------------------------------------------------------------
 // Tokens, nodes etc
 // ----------------------------------------------------------------------------------------------------------------------
@@ -42,7 +67,7 @@ enum class EGrammarNodeType : uint32_t
 	Increment,
 	Decrement,
 	Asterisk,
-	Div,
+	ForwardSlash,
 	Plus,
 	Minus,
 	EndStatement,
@@ -56,12 +81,17 @@ enum class EGrammarNodeType : uint32_t
 	Separator,
 
 	// 
+	Products,
+	Sums,
+	Value,
+	Assignment,
+
+	Div,
 	Mul,
 	Sub,
 	Add,
 	Statement,
 	VariableDeclaration,
-	Assignment,
 	FunctionHeader,
 	FunctionBegin,
 	FunctionEnd,
@@ -105,7 +135,7 @@ std::string grammarnodetypenames[]=
 	"Increment",
 	"Decrement",
 	"Asterisk",
-	"Div",
+	"ForwardSlash",
 	"Plus",
 	"Minus",
 	"EndStatement",
@@ -119,12 +149,17 @@ std::string grammarnodetypenames[]=
 	"Separator",
 
 	// 
+	"Products",
+	"Sums",
+	"Value",
+	"Assignment",
+
+	"Div",
 	"Mul",
 	"Sub",
 	"Add",
 	"Statement",
 	"VariableDeclaration",
-	"Assignment",
 	"FunctionHeader",
 	"FunctionBegin",
 	"FunctionEnd",
@@ -160,18 +195,20 @@ struct SGrammarNode
 
 struct SGrammarRule
 {
-	EGrammarNodeType reduce;				// Grammar node type to replace the provided list with
-	std::vector<EGrammarNodeType> match;	// List of grammar node types to match
+	EGrammarNodeType reduce{EGrammarNodeType::Unknown};		// Grammar node type to replace the provided list with
+	std::vector<EGrammarNodeType> match;					// List of grammar node types to match
 };
 
 // ----------------------------------------------------------------------------------------------------------------------
 // Shift
 // ----------------------------------------------------------------------------------------------------------------------
 
-int SRDefaultShift(SGrammarContext &context, uint32_t popcount, SGrammarNode &replacementnode, EGrammarNodes *sourcenodes, EGrammarNodes *targetnodes)
+int SRDefaultShift(SGrammarContext & /*context*/, uint32_t popcount, SGrammarNode &replacementnode, EGrammarNodes *sourcenodes, EGrammarNodes * /*targetnodes*/)
 {
 	// Push the new node onto stack for next tour
 	sourcenodes->push_back(replacementnode);
+
+	std::cout << "Shift: " << grammarnodetypenames[(uint32_t)replacementnode.type] << std::endl;
 
 	return popcount;
 }
@@ -180,23 +217,25 @@ int SRDefaultShift(SGrammarContext &context, uint32_t popcount, SGrammarNode &re
 // Reduce
 // ----------------------------------------------------------------------------------------------------------------------
 
-int SRDefaultReduce(SGrammarContext &context, uint32_t popcount, SGrammarNode &replacementnode, EGrammarNodes *sourcenodes, EGrammarNodes *targetnodes)
+int SRDefaultReduce(SGrammarContext & /*context*/, uint32_t popcount, SGrammarNode &replacementnode, EGrammarNodes *sourcenodes, EGrammarNodes * /*targetnodes*/)
 {
 	// Remove reduced items from stack
 	for (uint32_t i=0; i<popcount; ++i)
 		sourcenodes->pop_back();
 
+	std::cout << "Reduce: " << grammarnodetypenames[(uint32_t)replacementnode.type] << std::endl;
+
 	// If we're generating a function header, get rid of the { and : symbols, and also 'enter' code block
-	if (replacementnode.type == EGrammarNodeType::FunctionHeader)
+	/*if (replacementnode.type == EGrammarNodeType::FunctionHeader)
 	{
 		replacementnode.subnodes.pop_back();
 		replacementnode.subnodes.pop_back();
 		context.codeblockdepth++;
-	}
+	}*/
 
 	// If we're closing a code block, check to see if we can
 	// do it, and also remove the } symbol
-	if (replacementnode.type == EGrammarNodeType::FunctionEnd)
+	/*if (replacementnode.type == EGrammarNodeType::FunctionEnd)
 	{
 		if (context.codeblockdepth<=0)
 		{
@@ -205,10 +244,10 @@ int SRDefaultReduce(SGrammarContext &context, uint32_t popcount, SGrammarNode &r
 		}
 		context.codeblockdepth--;
 		replacementnode.subnodes.pop_back();
-	}
+	}*/
 
 	// For Add, remove the middle operator sign
-	if (replacementnode.type == EGrammarNodeType::Add || replacementnode.type == EGrammarNodeType::Sub || replacementnode.type == EGrammarNodeType::Mul)
+	/*if (replacementnode.type == EGrammarNodeType::Add || replacementnode.type == EGrammarNodeType::Sub || replacementnode.type == EGrammarNodeType::Mul)
 	{
 		SGrammarNode lastitem = replacementnode.subnodes.back();
 		replacementnode.subnodes.pop_back();
@@ -219,13 +258,13 @@ int SRDefaultReduce(SGrammarContext &context, uint32_t popcount, SGrammarNode &r
 		expression.word = "";
 		expression.subnodes.push_back(replacementnode);
 		replacementnode = expression;
-	}
+	}*/
 
 	// If we have a variable, remove the semicolumn at the end
-	if (replacementnode.type == EGrammarNodeType::VariableDeclaration)
+	/*if (replacementnode.type == EGrammarNodeType::VariableDeclaration)
 	{
 		replacementnode.subnodes.pop_back();
-	}
+	}*/
 
 	// Copy new collapsed node onto target
 	sourcenodes->push_back(replacementnode);
@@ -237,17 +276,27 @@ int SRDefaultReduce(SGrammarContext &context, uint32_t popcount, SGrammarNode &r
 typedef std::vector<struct SGrammarRule> EGrammarRules;
 
 EGrammarRules s_grammar_rules = {
-	{EGrammarNodeType::TypedIdentifier, {EGrammarNodeType::TypeName, EGrammarNodeType::Identifier}},
+	/*{EGrammarNodeType::TypedIdentifier, {EGrammarNodeType::TypeName, EGrammarNodeType::Identifier}},
 	{EGrammarNodeType::VariableDeclaration, {EGrammarNodeType::TypedIdentifier, EGrammarNodeType::EndStatement}},
 	{EGrammarNodeType::FunctionHeader, {EGrammarNodeType::TypedIdentifier, EGrammarNodeType::Colon, EGrammarNodeType::OpenCurlyBracket}},
-	{EGrammarNodeType::FunctionEnd, {EGrammarNodeType::CloseCurlyBracket}},
+	{EGrammarNodeType::FunctionEnd, {EGrammarNodeType::CloseCurlyBracket}},*/
+
+	{EGrammarNodeType::Assignment, {EGrammarNodeType::Identifier, EGrammarNodeType::EqualSign, EGrammarNodeType::Sums}},
+	{EGrammarNodeType::Sums, {EGrammarNodeType::Sums, EGrammarNodeType::Plus, EGrammarNodeType::Products}},
+	{EGrammarNodeType::Sums, {EGrammarNodeType::Sums, EGrammarNodeType::Minus, EGrammarNodeType::Products}},
+	{EGrammarNodeType::Sums, {EGrammarNodeType::Products}},
+	{EGrammarNodeType::Products, {EGrammarNodeType::Products, EGrammarNodeType::Asterisk, EGrammarNodeType::Value}},
+	{EGrammarNodeType::Products, {EGrammarNodeType::Products, EGrammarNodeType::ForwardSlash, EGrammarNodeType::Value}},
+	{EGrammarNodeType::Products, {EGrammarNodeType::Value}},
+	{EGrammarNodeType::Value, {EGrammarNodeType::NumericConstant}},
+	{EGrammarNodeType::Value, {EGrammarNodeType::Identifier}},
+
 	//{EGrammarNodeType::Expression, {EGrammarNodeType::Identifier}},
-	{EGrammarNodeType::Expression, {EGrammarNodeType::NumericConstant}},
-	{EGrammarNodeType::Expression, {EGrammarNodeType::OpenParenthesis, EGrammarNodeType::Expression, EGrammarNodeType::CloseParenthesis}},
-	{EGrammarNodeType::Mul, {EGrammarNodeType::Expression, EGrammarNodeType::Asterisk, EGrammarNodeType::Expression}},
-	{EGrammarNodeType::Sub, {EGrammarNodeType::Expression, EGrammarNodeType::Minus, EGrammarNodeType::Expression}},
-	{EGrammarNodeType::Add, {EGrammarNodeType::Expression, EGrammarNodeType::Plus, EGrammarNodeType::Expression}},
-	/*{EGrammarNodeType::Assignment, {EGrammarNodeType::Identifier, EGrammarNodeType::EqualSign}},*/
+	//{EGrammarNodeType::Expression, {EGrammarNodeType::NumericConstant}},
+	//{EGrammarNodeType::Expression, {EGrammarNodeType::OpenParenthesis, EGrammarNodeType::Expression, EGrammarNodeType::CloseParenthesis}},
+	//{EGrammarNodeType::Mul, {EGrammarNodeType::Expression, EGrammarNodeType::Asterisk, EGrammarNodeType::Expression}},
+	//{EGrammarNodeType::Sub, {EGrammarNodeType::Expression, EGrammarNodeType::Minus, EGrammarNodeType::Expression}},
+	//{EGrammarNodeType::Add, {EGrammarNodeType::Expression, EGrammarNodeType::Plus, EGrammarNodeType::Expression}},
 };
 
 void Tokenize(std::string &input, EGrammarNodes &nodes)
@@ -398,7 +447,7 @@ void Tokenize(std::string &input, EGrammarNodes &nodes)
 				if (currentword == "*")
 					node.type = EGrammarNodeType::Asterisk;
 				if (currentword == "/")
-					node.type = EGrammarNodeType::Div;
+					node.type = EGrammarNodeType::ForwardSlash;
 				if (currentword == "+")
 					node.type = EGrammarNodeType::Plus;
 				if (currentword == "-")
@@ -447,7 +496,6 @@ void Tokenize(std::string &input, EGrammarNodes &nodes)
 void DumpNode(SGrammarNode &node, int depth)
 {
 	static const std::string tabulator = "                                                                                                              ";
-	bool done = false;
 	std::cout << tabulator.substr(0, depth);
 	std::cout << grammarnodetypenames[static_cast<uint32_t>(node.type)] << "[" << node.word << "] " << std::endl;
 	for (auto n : node.subnodes)
@@ -475,13 +523,15 @@ void ShiftReduce(EGrammarNodes &nodes)
 		{
 			for(auto &r : s_grammar_rules)
 			{
-				uint32_t matches=0;
 				// Always rewind back in stack as long as the current rule
-				int i = stack.size()-r.match.size();
+				int i = int(stack.size())-int(r.match.size());
+				bool tooshort = i<0 ? true:false;
+				i = i<0 ? 0 : i;
 				// If the stack has enough items to test against the rule
-				if (i>=0)
+				//if (i>=0)
 				{
 					int idxrule = 0;
+					uint32_t matches = 0;
 					while (i<stack.size())
 					{
 						if (idxrule > r.match.size())
@@ -498,11 +548,17 @@ void ShiftReduce(EGrammarNodes &nodes)
 					if (matches == r.match.size())
 					{
 						matching_rule = ruleindex;
-						popcount = r.match.size();
+						popcount = int(r.match.size());
 						//std::cout << "SUCCESS: Reduce successful for rule " << ruleindex << std::endl;
 						break;
 					}
+					else if (tooshort)
+					{
+						// There's a partial match, we need to break before we run into shorter rules
+						break;
+					}
 				}
+				
 				++ruleindex;
 			}
 		}
@@ -514,13 +570,13 @@ void ShiftReduce(EGrammarNodes &nodes)
 			SGrammarNode replacementnode;
 			replacementnode.type = s_grammar_rules[matching_rule].reduce;
 			// TODO: This is too naiive, callback required to truly 'collapse' stack onto the replaced version
-			int sidx = stack.size()-popcount;
-			for (int i=sidx;i<stack.size();++i)
+			int sidx = int(stack.size()) - popcount;
+			for (int i=sidx;i<int(stack.size());++i)
 				replacementnode.subnodes.push_back(stack[i]); // This also carries over the subnodes of stack entries
 			replacementnode.word = "";//grammarnodetypenames[static_cast<uint32_t>(replacementnode.type)];
 
 			// Apply the shift-reduce
-			int is_reduce = SRDefaultReduce(context, popcount, replacementnode, &stack, &product);
+			/*int is_reduce =*/ SRDefaultReduce(context, popcount, replacementnode, &stack, &product);
 		}
 		else
 		{
@@ -544,7 +600,7 @@ void ShiftReduce(EGrammarNodes &nodes)
 		DumpNode(n, 0);
 }
 
-int CompileCode2(char *_inputname, char *_outputname)
+int CompileCode(char *_inputname, char * /*_outputname*/)
 {
 	EGrammarNodes nodes;
 

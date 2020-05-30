@@ -1,11 +1,3 @@
-int Test:
-{
-	int somevar;
-	somevar = 1+(2-(3*4);
-}
+A = B + C * 2;
 
-int Test2:
-{
-}
-
-~
+;
