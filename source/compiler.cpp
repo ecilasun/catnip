@@ -222,16 +222,18 @@ EGrammarRules s_grammar_rules = {
 	{EGrammarNodeType::Value, {EGrammarNodeType::Identifier}},*/
 
 	// TEST
-	{EGrammarNodeType::Value, {EGrammarNodeType::Value, EGrammarNodeType::Plus, EGrammarNodeType::Value}},
-	{EGrammarNodeType::Value, {EGrammarNodeType::Value, EGrammarNodeType::Asterisk, EGrammarNodeType::Value}},
-	{EGrammarNodeType::Value, {EGrammarNodeType::Identifier}},
+	// {EGrammarNodeType::Value, {EGrammarNodeType::Value, EGrammarNodeType::Plus, EGrammarNodeType::Value}},
+	// {EGrammarNodeType::Value, {EGrammarNodeType::Value, EGrammarNodeType::Asterisk, EGrammarNodeType::Value}},
+	// {EGrammarNodeType::Value, {EGrammarNodeType::Identifier}},
 
-	//{EGrammarNodeType::Expression, {EGrammarNodeType::Identifier}},
-	//{EGrammarNodeType::Expression, {EGrammarNodeType::NumericConstant}},
-	//{EGrammarNodeType::Expression, {EGrammarNodeType::OpenParenthesis, EGrammarNodeType::Expression, EGrammarNodeType::CloseParenthesis}},
-	//{EGrammarNodeType::Mul, {EGrammarNodeType::Expression, EGrammarNodeType::Asterisk, EGrammarNodeType::Expression}},
-	//{EGrammarNodeType::Sub, {EGrammarNodeType::Expression, EGrammarNodeType::Minus, EGrammarNodeType::Expression}},
-	//{EGrammarNodeType::Add, {EGrammarNodeType::Expression, EGrammarNodeType::Plus, EGrammarNodeType::Expression}},
+	{EGrammarNodeType::Assignment, {EGrammarNodeType::Identifier, EGrammarNodeType::EqualSign, EGrammarNodeType::Expression, EGrammarNodeType::EndStatement}},
+	{EGrammarNodeType::Expression, {EGrammarNodeType::Expression, EGrammarNodeType::Asterisk, EGrammarNodeType::Expression}},
+	{EGrammarNodeType::Expression, {EGrammarNodeType::Expression, EGrammarNodeType::Minus, EGrammarNodeType::Expression}},
+	{EGrammarNodeType::Expression, {EGrammarNodeType::Expression, EGrammarNodeType::Plus, EGrammarNodeType::Expression}},
+	{EGrammarNodeType::Expression, {EGrammarNodeType::Value}},
+	{EGrammarNodeType::Value, {EGrammarNodeType::Identifier}},
+	{EGrammarNodeType::Value, {EGrammarNodeType::NumericConstant}},
+	{EGrammarNodeType::Expression, {EGrammarNodeType::OpenParenthesis, EGrammarNodeType::Expression, EGrammarNodeType::CloseParenthesis}},
 };
 
 // ----------------------------------------------------------------------------------------------------------------------
@@ -517,7 +519,8 @@ void DumpNode(SGrammarNode &node, int depth)
 {
 	int depth2 = depth-1; depth2 = depth2<0 ? 0 : depth2;
 	static const std::string tabulator = "|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||";
-	std::cout << "\t" << tabulator.substr(0, depth2) << (depth==0 ? "" : "|-");
+	//std::cout << "\t" << tabulator.substr(0, depth2) << (depth==0 ? "" : "|-");
+	std::cout << tabulator.substr(0, depth);
 	std::cout << grammarnodetypenames[static_cast<uint32_t>(node.type)] << "[" << node.word << "] " << std::endl;
 	for (auto n : node.subnodes)
 		DumpNode(n, depth+1);
