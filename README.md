@@ -19,6 +19,9 @@ If you happen to be building on Linux, before everything else you'll need to ins
 ```
 sudo apt install clang
 sudo apt install libsdl2-dev
+sudo apt install bison
+sudo apt install flex
+sudo apt install re2c
 ```
 
 For first time around, or if you change the wscript's configure or options functions, a configuration step is required:

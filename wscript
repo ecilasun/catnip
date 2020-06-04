@@ -60,7 +60,7 @@ def build(ctx):
             ldflags=linker_flags,
             target='catnip',
             defines=platform_defines,
-            includes=['source', 'includes'],
+            includes=['source', 'includes', 'SDL'],
             libpath=[],
             lib=['SDL2'],
             use=['parsercode'])
