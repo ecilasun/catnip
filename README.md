@@ -15,10 +15,13 @@ If you're using Visual Studio Code, this folder contains a .vscode directory wit
 ### Command line
 WAF (the build system) is included with this release. To build CatNip from command line, run these from the root directory where you've placed the catnip project.
 
-If you happen to be building on Linux, before everything else you'll need to install clang and SDL2 libraries as follows:
+If you happen to be building on Linux, before everything else you'll need to install clang and SDL2 libraries, as well as bison/flex and re2c (for now until the custom parser-compiler is done) as follows:
 ```
 sudo apt install clang
 sudo apt install libsdl2-dev
+sudo apt install bison
+sudo apt install flex
+sudo apt install re2c
 ```
 
 For first time around, or if you change the wscript's configure or options functions, a configuration step is required:
