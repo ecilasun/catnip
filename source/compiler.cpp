@@ -29,7 +29,7 @@ class CSimpleCompiler
 		CIntegerConst			= lexeme[capture(id_)[+"[0-9]"_rx]]												< [this] { uint32_t V = std::stoi(*id_); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
 		CHexConst				= lexeme[capture(id_)["0[xX]"_rx > *"[a-fA-F0-9]"_rx]]							< [this] { uint32_t V = std::stoul(*id_, nullptr, 16); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
 		CBeginScope				= lexeme["{"_sx]																< [this] { scope_++; printf("{\t\t\t#scope:%d\n",scope_); return lug::utf8::toupper(*id_); };
-		CEndScope				= lexeme["}"_sx]																< [this] { printf("}\t\t\t#scope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); CleanupScope(scope_); scope_--; return lug::utf8::toupper(*id_); };
+		CEndScope				= lexeme["}"_sx]																< [this] { CleanupScope(scope_); printf("}\t\t\t#scope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); scope_--; return lug::utf8::toupper(*id_); };
 
 		CConstant				= CHexConst
 								| CIntegerConst;
@@ -44,11 +44,11 @@ class CSimpleCompiler
 								| CStatement;
 
 		// Variable declaration
-		CVar					= capture(id_)[CIdentifierLHS]													< [this] { NewVariable(*id_); printf("ALLOC %s\n", id_->c_str()); };
-		CVarArray				= CVar > "["_sx > CExpression > "]"_sx;
+		CVar					= capture(id_)[CIdentifierLHS]													< [this] { NewVariable(*id_); printf("ALLOC %s, 4\n", id_->c_str()); };
+		CVarArray				= capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx					< [this] { uint32_t V = stack_.top(); stack_.pop(); NewVariable(*id_); printf("ALLOC %s, %d\n", id_->c_str(), V*4); };
 		CVarList				= CVar > ","_sx > CVarList
-								| CVarArray > ","_sx > CVarList													< [this] { uint32_t V = stack_.top(); stack_.pop(); printf("SETDIM\t\t\t#=%d bytes (implicit*4 for int)\n", V*4); }
-								| CVarArray																		< [this] { uint32_t V = stack_.top(); stack_.pop(); printf("SETDIM\t\t\t#=%d bytes (implicit*4 for int)\n", V*4); }
+								| CVarArray > ","_sx > CVarList
+								| CVarArray
 								| CVar;
 		CVarStatement			= "var"_sx > CVarList > ";"_sx;
 
@@ -76,12 +76,13 @@ class CSimpleCompiler
 
 		// The grammar
 		grammar_ = start(CTranslationUnit);
-
 	}
 
 	// Remove all variables that went out of scope
 	void CleanupScope(uint32_t cleanScope)
 	{
+		for (auto &var : variables_[cleanScope])
+			printf("DEALLOC %s\n", var.first.c_str());
 		variables_[cleanScope].clear();
 	}
 
@@ -182,6 +183,8 @@ private:
 int CompileCode(char *_inputname, char * /*_outputname*/)
 {
 	CSimpleCompiler compiler;
+
+	std::cout << "Compiling...\n" << std::endl;
 
 	std::string sourcecode;
 	FILE *inputfile;
