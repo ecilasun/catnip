@@ -12,66 +12,69 @@ class CSimpleCompiler
 		rule Expr;
 		implicit_space_rule SP = *"[ \t\n\r]"_rx;
 
-		rule CTranslationUnit, CStatement, CStatementList, CStatementBlock;
+		rule CTranslationUnit, CStatement, CStatementList;
 		rule CVarStatement, CVar, CVarArray, CVarList;
 		rule CIdentifierLHS, CIdentifierRHS, CStringLiteral, CIntegerConst, CHexConst, CConstant;
 		rule CExpressionStatement, CExpression;
 		rule CTerm, CFactor;
+		rule CBeginScope, CEndScope;
 		rule CAssignmentStatement;
 
 		// TODO: add function calls
 		// TODO: add function definitions
 
-		CIdentifierLHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]							< [this] { return lug::utf8::toupper(*id_); };
-		CIdentifierRHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]							< [this] { uint32_t H; if (Eval(*id_,H)) { stack_.push(H); printf("PUSH [%s]\n", id_->c_str()); } else { parserdone = true; } return lug::utf8::toupper(*id_); };
-		//CStringLiteral		= lexeme["\"" > capture(id_)[*"[^\"]"_rx] > "\""]									< [this] { stack_.push(*id_); return lug::utf8::toupper(*id_); };
-		CIntegerConst			= lexeme[capture(id_)[+"[0-9]"_rx]]													< [this] { uint32_t V = std::stoi(*id_); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
-		CHexConst				= lexeme[capture(id_)["0[xX]"_rx > *"[a-fA-F0-9]"_rx]]								< [this] { uint32_t V = std::stoul(*id_, nullptr, 16); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
+		CIdentifierLHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]						< [this] { return lug::utf8::toupper(*id_); };
+		CIdentifierRHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]						< [this] { uint32_t H; if (Eval(*id_,H)) { stack_.push(H); printf("PUSH [%s]\n", id_->c_str()); } else { parserdone = true; } return lug::utf8::toupper(*id_); };
+		//CStringLiteral		= lexeme["\"" > capture(id_)[*"[^\"]"_rx] > "\""]								< [this] { stack_.push(*id_); return lug::utf8::toupper(*id_); };
+		CIntegerConst			= lexeme[capture(id_)[+"[0-9]"_rx]]												< [this] { uint32_t V = std::stoi(*id_); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
+		CHexConst				= lexeme[capture(id_)["0[xX]"_rx > *"[a-fA-F0-9]"_rx]]							< [this] { uint32_t V = std::stoul(*id_, nullptr, 16); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
+		CBeginScope				= lexeme["{"_sx]																< [this] { scope_++; printf("{\t\t\t#scope:%d\n",scope_); return lug::utf8::toupper(*id_); };
+		CEndScope				= lexeme["}"_sx]																< [this] { printf("}\t\t\t#scope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); CleanupScope(scope_); scope_--; return lug::utf8::toupper(*id_); };
 
 		CConstant				= CHexConst
-								| CIntegerConst
-								;
+								| CIntegerConst;
 
 		CStatement				= CAssignmentStatement
 								| CExpressionStatement
-								| CVarStatement;
+								| CVarStatement
+								| CBeginScope
+								| CEndScope;
 
 		CStatementList			= CStatement > CStatementList
 								| CStatement;
-
-		CStatementBlock			= "{"_sx < [this] { scope_++; printf("  BEGIN\t\t\t#scope:%d\n",scope_); } > CStatementList > "}"_sx	< [this] { printf("  END\t\t\t#scope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); CleanupScope(scope_); scope_--; }
-								| "{"_sx > "}"_sx;
 
 		// Variable declaration
 		CVar					= capture(id_)[CIdentifierLHS]													< [this] { NewVariable(*id_); printf("ALLOC %s\n", id_->c_str()); };
 		CVarArray				= CVar > "["_sx > CExpression > "]"_sx;
 		CVarList				= CVar > ","_sx > CVarList
-								| CVarArray > ","_sx > CVarList													< [this] { uint32_t V = stack_.top(); stack_.pop();printf("SETDIM\t\t\t#=%d bytes (implicit*4 for int)\n", V*4); }
-								| CVarArray																		< [this] { uint32_t V = stack_.top(); stack_.pop();printf("SETDIM\t\t\t#=%d bytes (implicit*4 for int)\n", V*4); }
+								| CVarArray > ","_sx > CVarList													< [this] { uint32_t V = stack_.top(); stack_.pop(); printf("SETDIM\t\t\t#=%d bytes (implicit*4 for int)\n", V*4); }
+								| CVarArray																		< [this] { uint32_t V = stack_.top(); stack_.pop(); printf("SETDIM\t\t\t#=%d bytes (implicit*4 for int)\n", V*4); }
 								| CVar;
-		CVarStatement			= "var"_sx > CVarList > ";"_sx 													< [this] { /* var A,B,C; */ };
+		CVarStatement			= "var"_sx > CVarList > ";"_sx;
 
 		// Assignment
 		CAssignmentStatement	= capture(id_)[CIdentifierLHS] > "="_sx > CExpressionStatement					< [this] { uint32_t V = stack_.top(); stack_.pop(); if (AssignVariable(*id_, V)) printf("SET [%s]\t\t\t#=%d\n", id_->c_str(), V); else { parserdone = true; } };
 								/*| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx > "="_sx > CExpressionStatement	< [this] { uint32_t V = stack_.top(); stack_.pop(); uint32_t I = stack_.top(); stack_.pop(); AssignVariable(*id_, V); printf("SET [%s+%d] #=%d\n", id_->c_str(), I, V); };*/
 
-		CExpressionStatement	= CExpression > ";"_sx															< [this] { }
-								| ";"_sx																		< [this] { };
+		// Expressions
+		CExpressionStatement	= CExpression > ";"_sx
+								| ";"_sx;
 		CExpression				= CTerm > "+"_sx > CExpression													< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("ADD\t\t\t#%d+%d\n", A, B); stack_.push(A+B); }
 								| CTerm > "-"_sx > CExpression													< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("SUB\t\t\t#%d-%d\n", A, B); stack_.push(A-B); }
-								| CTerm																			< [this] { };
+								| CTerm;
 		CTerm					= CFactor > "*"_sx > CTerm														< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("MUL\t\t\t#%d*%d\n", A, B); stack_.push(A*B); }
 								| CFactor > "/"_sx > CTerm														< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("DIV\t\t\t#%d/%d\n", A, B); stack_.push(A/B); }
-								| CFactor																		< [this] { };
-		CFactor					= "("_sx > CExpression > ")"_sx													< [this] { }
+								| CFactor;
+		CFactor					= "("_sx > CExpression > ")"_sx
 								| CConstant
 								| CIdentifierRHS;
 
+		// Main body
 		CTranslationUnit		= CStatementList
-								| CStatementBlock
 								| "<::EOF::>"_sx																< [this] { parserdone = true; }
 								| !any																			< [this] { parserdone = true; };
 
+		// The grammar
 		grammar_ = start(CTranslationUnit);
 
 	}

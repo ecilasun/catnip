@@ -73,12 +73,12 @@ def build(ctx):
         libs = ['user32', 'Comdlg32', 'gdi32', 'ole32', 'kernel32', 'winmm', 'ws2_32', 'SDL2']
 
         # RELEASE - vcc
-        # compile_flags = ['/permissive-', '/std:c++17', '/arch:AVX', '/GL', '/WX', '/Ox', '/Ot', '/Oy', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/EHsc', '/FS', '/D_SECURE_SCL 0']
-        # linker_flags = ['/LTCG', '/RELEASE']
+        compile_flags = ['/permissive-', '/std:c++17', '/arch:AVX', '/GL', '/WX', '/Ox', '/Ot', '/Oy', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/EHsc', '/FS', '/D_SECURE_SCL 0']
+        linker_flags = ['/LTCG', '/RELEASE']
 
         # DEBUG - vcc
-        compile_flags = ['/permissive-', '/std:c++17', '/arch:AVX', '/GL', '/WX', '/Od', '/DDEBUG', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/Gs', '/EHsc', '/FS']
-        linker_flags = ['/DEBUG']
+        # compile_flags = ['/permissive-', '/std:c++17', '/arch:AVX', '/GL', '/WX', '/Od', '/DDEBUG', '/fp:fast', '/Qfast_transcendentals', '/Zi', '/Gs', '/EHsc', '/FS']
+        # linker_flags = ['/DEBUG']
 
         # RELEASE - clang
         # compile_flags = ['-std=c++17', '-g', '-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS', '-DDEBUG', '-D_SECURE_SCL=0']
