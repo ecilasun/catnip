@@ -13,7 +13,7 @@ class CSimpleCompiler
 		implicit_space_rule SP = *"[ \t\n\r]"_rx;
 
 		rule CTranslationUnit, CStatement, CStatementList, CStatementBlock;
-		rule CVarStatement, CVar, CVarList;
+		rule CVarStatement, CVar, CVarArray, CVarList;
 		rule CIdentifierLHS, CIdentifierRHS, CStringLiteral, CIntegerConst, CHexConst, CConstant;
 		rule CExpressionStatement, CExpression;
 		rule CTerm, CFactor;
@@ -44,9 +44,10 @@ class CSimpleCompiler
 
 		// Variable declaration
 		CVar					= capture(id_)[CIdentifierLHS]													< [this] { NewVariable(*id_); printf("ALLOC %s\n", id_->c_str()); };
+		CVarArray				= CVar > "["_sx > CExpression > "]"_sx;
 		CVarList				= CVar > ","_sx > CVarList
-								| CVar > "["_sx > CExpression > "]"_sx > ","_sx > CVarList						< [this] { uint32_t V = stack_.top(); stack_.pop();printf("SETDIM\t\t\t#=%d bytes\n", V*4); }
-								| CVar > "["_sx > CExpression > "]"_sx											< [this] { uint32_t V = stack_.top(); stack_.pop();printf("SETDIM\t\t\t#=%d bytes\n", V*4); }
+								| CVarArray > ","_sx > CVarList													< [this] { uint32_t V = stack_.top(); stack_.pop();printf("SETDIM\t\t\t#=%d bytes (implicit*4 for int)\n", V*4); }
+								| CVarArray																		< [this] { uint32_t V = stack_.top(); stack_.pop();printf("SETDIM\t\t\t#=%d bytes (implicit*4 for int)\n", V*4); }
 								| CVar;
 		CVarStatement			= "var"_sx > CVarList > ";"_sx 													< [this] { /* var A,B,C; */ };
 
@@ -66,7 +67,7 @@ class CSimpleCompiler
 								| CConstant
 								| CIdentifierRHS;
 
-		CTranslationUnit		= CStatement
+		CTranslationUnit		= CStatementList
 								| CStatementBlock
 								| "<::EOF::>"_sx																< [this] { parserdone = true; }
 								| !any																			< [this] { parserdone = true; };
@@ -245,6 +246,9 @@ int CompileCode(char *_inputname, char * /*_outputname*/)
 		else
 			break;
 	} while(sourcecode.length() != 0);
+
+	// Add default outer scope (TODO: and header code in the future)
+	//sourcecode = "{ " + sourcecode + " }";
 
 	if (!commentError)
 	{

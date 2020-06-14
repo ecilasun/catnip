@@ -1,3 +1,4 @@
+
 var A, B;
 A = 2;
 var R[2*A];
@@ -13,6 +14,6 @@ var R[2*A];
 	// Test: D should be out of scope here since it's in another code block's scope
 	//A = D+1;
 
-	// Test: Both A and B should be accessible from outer scope
+	// Test: Both A and B should still be accessible from outer scope
 	A = B+3;
 }
