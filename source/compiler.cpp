@@ -22,15 +22,15 @@ class CSimpleCompiler
 		// TODO: add function calls
 		// TODO: add function definitions
 
-		CIdentifierLHS		= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]							< [this] { return lug::utf8::toupper(*id_); };
-		CIdentifierRHS		= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]							< [this] { uint32_t H = Eval(*id_); stack_.push(H); printf("PUSH [%s]\n", id_->c_str()); return lug::utf8::toupper(*id_); };
-		//CStringLiteral	= lexeme["\"" > capture(id_)[*"[^\"]"_rx] > "\""]									< [this] { stack_.push(*id_); return lug::utf8::toupper(*id_); };
-		CIntegerConst		= lexeme[capture(id_)[+"[0-9]"_rx]]													< [this] { uint32_t V = std::stoi(*id_); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
-		CHexConst			= lexeme[capture(id_)["0[xX]"_rx > *"[a-fA-F0-9]"_rx]]								< [this] { uint32_t V = std::stoul(*id_, nullptr, 16); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
+		CIdentifierLHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]							< [this] { return lug::utf8::toupper(*id_); };
+		CIdentifierRHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]							< [this] { uint32_t H; if (Eval(*id_,H)) { stack_.push(H); printf("PUSH [%s]\n", id_->c_str()); } else { parserdone = true; } return lug::utf8::toupper(*id_); };
+		//CStringLiteral		= lexeme["\"" > capture(id_)[*"[^\"]"_rx] > "\""]									< [this] { stack_.push(*id_); return lug::utf8::toupper(*id_); };
+		CIntegerConst			= lexeme[capture(id_)[+"[0-9]"_rx]]													< [this] { uint32_t V = std::stoi(*id_); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
+		CHexConst				= lexeme[capture(id_)["0[xX]"_rx > *"[a-fA-F0-9]"_rx]]								< [this] { uint32_t V = std::stoul(*id_, nullptr, 16); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
 
-		CConstant	= CHexConst
-					| CIntegerConst
-					;
+		CConstant				= CHexConst
+								| CIntegerConst
+								;
 
 		CStatement				= CAssignmentStatement
 								| CExpressionStatement
@@ -39,25 +39,28 @@ class CSimpleCompiler
 		CStatementList			= CStatement > CStatementList
 								| CStatement;
 
-		CStatementBlock			= "{"_sx < [this] { printf("BEGIN\n"); } > CStatementList > "}"_sx				< [this] { printf("END  #stacksize=%d\n", uint32_t(stack_.size())); };
+		CStatementBlock			= "{"_sx < [this] { scope_++; printf("  BEGIN\t\t\t#scope:%d\n",scope_); } > CStatementList > "}"_sx	< [this] { printf("  END\t\t\t#scope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); CleanupScope(scope_); scope_--; }
+								| "{"_sx > "}"_sx;
 
 		// Variable declaration
-		CVar					= capture(id_)[CIdentifierLHS]				 									< [this] { NewVariable(*id_); printf("ALLOC %s, 4\n", id_->c_str()); };
+		CVar					= capture(id_)[CIdentifierLHS]													< [this] { NewVariable(*id_); printf("ALLOC %s\n", id_->c_str()); };
 		CVarList				= CVar > ","_sx > CVarList
+								| CVar > "["_sx > CExpression > "]"_sx > ","_sx > CVarList						< [this] { uint32_t V = stack_.top(); stack_.pop();printf("SETDIM\t\t\t#=%d bytes\n", V*4); }
+								| CVar > "["_sx > CExpression > "]"_sx											< [this] { uint32_t V = stack_.top(); stack_.pop();printf("SETDIM\t\t\t#=%d bytes\n", V*4); }
 								| CVar;
 		CVarStatement			= "var"_sx > CVarList > ";"_sx 													< [this] { /* var A,B,C; */ };
 
 		// Assignment
-		CAssignmentStatement	= capture(id_)[CIdentifierLHS] > "="_sx > CExpressionStatement					< [this] { uint32_t V = stack_.top(); stack_.pop(); AssignVariable(*id_, V); printf("SET [%s] #=%d\n", id_->c_str(), V); };
+		CAssignmentStatement	= capture(id_)[CIdentifierLHS] > "="_sx > CExpressionStatement					< [this] { uint32_t V = stack_.top(); stack_.pop(); if (AssignVariable(*id_, V)) printf("SET [%s]\t\t\t#=%d\n", id_->c_str(), V); else { parserdone = true; } };
 								/*| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx > "="_sx > CExpressionStatement	< [this] { uint32_t V = stack_.top(); stack_.pop(); uint32_t I = stack_.top(); stack_.pop(); AssignVariable(*id_, V); printf("SET [%s+%d] #=%d\n", id_->c_str(), I, V); };*/
 
 		CExpressionStatement	= CExpression > ";"_sx															< [this] { }
 								| ";"_sx																		< [this] { };
-		CExpression				= CTerm > "+"_sx > CExpression													< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("ADD #%d+%d\n", A, B); stack_.push(A+B); }
-								| CTerm > "-"_sx > CExpression													< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("SUB #%d-%d\n", A, B); stack_.push(A-B); }
+		CExpression				= CTerm > "+"_sx > CExpression													< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("ADD\t\t\t#%d+%d\n", A, B); stack_.push(A+B); }
+								| CTerm > "-"_sx > CExpression													< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("SUB\t\t\t#%d-%d\n", A, B); stack_.push(A-B); }
 								| CTerm																			< [this] { };
-		CTerm					= CFactor > "*"_sx > CTerm														< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("MUL #%d*%d\n", A, B); stack_.push(A*B); }
-								| CFactor > "/"_sx > CTerm														< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("DIV #%d/%d\n", A, B); stack_.push(A/B); }
+		CTerm					= CFactor > "*"_sx > CTerm														< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("MUL\t\t\t#%d*%d\n", A, B); stack_.push(A*B); }
+								| CFactor > "/"_sx > CTerm														< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("DIV\t\t\t#%d/%d\n", A, B); stack_.push(A/B); }
 								| CFactor																		< [this] { };
 		CFactor					= "("_sx > CExpression > ")"_sx													< [this] { }
 								| CConstant
@@ -65,25 +68,76 @@ class CSimpleCompiler
 
 		CTranslationUnit		= CStatement
 								| CStatementBlock
-								| "<::EOF::>"_sx																< [this] { parserdone = true; };
+								| "<::EOF::>"_sx																< [this] { parserdone = true; }
+								| !any																			< [this] { parserdone = true; };
 
 		grammar_ = start(CTranslationUnit);
 
 	}
 
-	void AssignVariable(std::string& identifier, uint32_t value)
+	// Remove all variables that went out of scope
+	void CleanupScope(uint32_t cleanScope)
 	{
-		variables_[identifier] = value;
+		variables_[cleanScope].clear();
 	}
 
+	// If the identifier is available in current or lower scope, set its value
+	bool AssignVariable(std::string& identifier, uint32_t value)
+	{
+		uint32_t foundScope = scope_;
+		uint32_t spinScope = scope_;
+		bool found = false;
+		do
+		{
+			if (variables_[spinScope].find(identifier) != variables_[spinScope].end())
+			{
+				foundScope = spinScope;
+				found = true;
+				break;
+			}
+		}
+		while(spinScope-- != 0);
+
+		if (found)
+			variables_[foundScope][identifier] = value;
+		else
+			std::cout << "E0001: Variable '" << identifier << "' not declared within scope." << std::endl;
+		return found;
+	}
+
+	// Declare a new variable in current scope
+	// When the scope terminates, variable will be removed
 	void NewVariable(std::string& identifier)
 	{
-		variables_[identifier] = 0; // Variables default to zero
+		variables_[scope_][identifier] = 0; // Variables default to zero
 	}
 
-	uint32_t Eval(std::string &identifier)
+	// If the identifier is available in current or lower scope, retrieve its value
+	bool Eval(std::string &identifier, uint32_t &result)
 	{
-		return variables_[identifier];
+		uint32_t foundScope = scope_;
+		uint32_t spinScope = scope_;
+		bool found = false;
+		do
+		{
+			if (variables_[spinScope].find(identifier) != variables_[spinScope].end())
+			{
+				foundScope = spinScope;
+				found = true;
+				break;
+			}
+		}
+		while(spinScope-- != 0);
+
+		if (found)
+			result = variables_[foundScope][identifier];
+		else
+		{
+			std::cout << "E0000: Variable '" << identifier << "' not found within scope." << std::endl;
+			result=0;
+		}
+
+		return found;
 	}
 
 	void Process(std::string& sourcecode)
@@ -113,9 +167,12 @@ private:
 	lug::environment environment_;
 	lug::variable<std::string> idx_{environment_};
 	lug::variable<std::string> id_{environment_};
-	std::map<std::string, uint32_t> variables_;
+
+	typedef std::map<std::string, uint32_t> TVariableMap; // Map of variable name -> value
+	std::map<uint32_t, TVariableMap> variables_; // Map of scope -> variable map
+	uint32_t scope_{0}; // Current scope depth
+
 	std::stack<uint32_t> stack_;
-	uint32_t handle_{1024};
 };
 
 int CompileCode(char *_inputname, char * /*_outputname*/)
@@ -151,10 +208,52 @@ int CompileCode(char *_inputname, char * /*_outputname*/)
 		return -1;
 	}
 
-	// This is the source termination marker
-	sourcecode += "\n\n\n\n<::EOF::>";
+	bool commentError = false;
+	// Strip multiline comments
+	do {
+		size_t foundStart = sourcecode.find("/*");
+		if (foundStart != std::string::npos)
+		{
+			size_t foundEnd = sourcecode.find("*/", foundStart);
+			if (foundEnd == std::string::npos)
+			{
+				std::cout << "E0002: Multiline comment not terminated." << std::endl;
+				commentError = true;
+				break;
+			}
+			sourcecode = sourcecode.substr(0, foundStart) + sourcecode.substr(foundEnd+2);
+		}
+		else
+			break;
+	} while(sourcecode.length() != 0);
 
-	compiler.Process(sourcecode);
+	// Strip single line comments
+	do {
+		size_t foundStart = sourcecode.find("//");
+		if (foundStart != std::string::npos)
+		{
+			//size_t foundEnd = sourcecode.find("\r", foundStart);
+			size_t foundEnd = sourcecode.find("\n", foundStart);
+			if (foundEnd == std::string::npos)
+			{
+				std::cout << "E0003: Single line comment not terminated." << std::endl;
+				commentError = true;
+				break;
+			}
+			sourcecode = sourcecode.substr(0, foundStart) + sourcecode.substr(foundEnd+1);
+		}
+		else
+			break;
+	} while(sourcecode.length() != 0);
 
-	return 0;
+	if (!commentError)
+	{
+		// This is the source termination marker
+		sourcecode += " <::EOF::>";
+		// Parse the code which is now stripped from all comments
+		compiler.Process(sourcecode);
+		return 0;
+	}
+
+	return -1;
 }
