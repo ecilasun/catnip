@@ -2,21 +2,21 @@
 
 #include <string>
 #include <vector>
+#include <stack>
+#include <map>
 #include <regex>
 #include <iostream>
 #include <inttypes.h>
 #include <functional>
 
 // ---------------------------------------------------------------------------
-// Usefult macros
+// Useful macros
 // ---------------------------------------------------------------------------
 
 #define EAlignUp(_x_, _align_) ((_x_ + (_align_ - 1)) & (~(_align_ - 1)))
 
 // ---------------------------------------------------------------------------
-// Compiler drivers
+// Compiler driver
 // ---------------------------------------------------------------------------
 
 int CompileCode(char *_inputname, char *_outputname);
-
-int CompileCode2(char *_inputname, char *_outputname);
