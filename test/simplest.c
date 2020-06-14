@@ -1,5 +1,7 @@
-var A;
-var B;
-A = 3;
-B = 8;
-result = 0x3FFF/(3*(A-4)+B);
+var A, B, result;
+
+{
+	A = 3;
+	B = 8;
+	result = 0x7FFF/(3*(A-4)+B);
+}
