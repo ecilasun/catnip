@@ -17,8 +17,7 @@ class CSimpleCompiler
 		rule CIdentifierLHS, CIdentifierRHS, CStringLiteral, CIntegerConst, CHexConst, CConstant;
 		rule CExpressionStatement, CExpression;
 		rule CTerm, CFactor;
-		rule CBeginScope, CEndScope;
-		rule CAssignmentStatement;
+		rule CAssignmentStatement, CCompoundStatement;
 
 		// TODO: add function calls
 		// TODO: add function definitions
@@ -28,8 +27,6 @@ class CSimpleCompiler
 		//CStringLiteral		= lexeme["\"" > capture(id_)[*"[^\"]"_rx] > "\""]								< [this] { stack_.push(*id_); return lug::utf8::toupper(*id_); };
 		CIntegerConst			= lexeme[capture(id_)[+"[0-9]"_rx]]												< [this] { uint32_t V = std::stoi(*id_); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
 		CHexConst				= lexeme[capture(id_)["0[xX]"_rx > *"[a-fA-F0-9]"_rx]]							< [this] { uint32_t V = std::stoul(*id_, nullptr, 16); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
-		CBeginScope				= lexeme["{"_sx]																< [this] { scope_++; printf("{\t\t\t#scope:%d\n",scope_); return lug::utf8::toupper(*id_); };
-		CEndScope				= lexeme["}"_sx]																< [this] { CleanupScope(scope_); printf("}\t\t\t#scope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); scope_--; return lug::utf8::toupper(*id_); };
 
 		CConstant				= CHexConst
 								| CIntegerConst;
@@ -37,11 +34,13 @@ class CSimpleCompiler
 		CStatement				= CAssignmentStatement
 								| CExpressionStatement
 								| CVarStatement
-								| CBeginScope
-								| CEndScope;
+								| CCompoundStatement;
 
 		CStatementList			= CStatement > CStatementList
 								| CStatement;
+
+		CCompoundStatement		= "{"_sx < [this] { scope_++; printf("{\t\t\t#scope:%d\n",scope_); return lug::utf8::toupper(*id_); } > CStatementList > "}"_sx < [this] { CleanupScope(scope_); printf("}\t\t\t#scope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); scope_--; return lug::utf8::toupper(*id_); }
+								| "{"_sx < [this] { scope_++; printf("{\t\t\t#scope:%d\n",scope_); return lug::utf8::toupper(*id_); } > "}"_sx < [this] { CleanupScope(scope_); printf("}\t\t\t#scope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); scope_--; return lug::utf8::toupper(*id_); };
 
 		// Variable declaration
 		CVar					= capture(id_)[CIdentifierLHS]													< [this] { NewVariable(*id_); printf("ALLOC %s, 4\n", id_->c_str()); };
