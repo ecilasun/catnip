@@ -23,10 +23,10 @@ class CSimpleCompiler
 		// TODO: add function definitions
 
 		CIdentifierLHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]						< [this] { return lug::utf8::toupper(*id_); };
-		CIdentifierRHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]						< [this] { uint32_t H; if (Eval(*id_,0,H)) { printf("LD R%d, [%s]\n", uint32_t(stack_.size()), id_->c_str()); stack_.push(H); } else { parserdone = true; } return lug::utf8::toupper(*id_); };
-		//CStringLiteral		= lexeme["\"" > capture(id_)[*"[^\"]"_rx] > "\""]								< [this] { stack_.push(*id_); return lug::utf8::toupper(*id_); };
-		CIntegerConst			= lexeme[capture(id_)[+"[0-9]"_rx]]												< [this] { uint32_t V = std::stoi(*id_); printf("LD R%d, %d\n", uint32_t(stack_.size()), V); stack_.push(V); return lug::utf8::toupper(*id_); };
-		CHexConst				= lexeme[capture(id_)["0[xX]"_rx > *"[a-fA-F0-9]"_rx]]							< [this] { uint32_t V = std::stoul(*id_, nullptr, 16); printf("LD R%d, %d\n", uint32_t(stack_.size()), V); stack_.push(V); return lug::utf8::toupper(*id_); };
+		CIdentifierRHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]						< [this] { uint32_t H; if (Eval(*id_,0,H)) { printf("LD R%d, [%s]\n", RegisterIndex(), id_->c_str()); Push(H); } else { parserdone = true; } return lug::utf8::toupper(*id_); };
+		//CStringLiteral		= lexeme["\"" > capture(id_)[*"[^\"]"_rx] > "\""]								< [this] { Push(*id_); return lug::utf8::toupper(*id_); };
+		CIntegerConst			= lexeme[capture(id_)[+"[0-9]"_rx]]												< [this] { uint32_t V = std::stoi(*id_); printf("LD R%d, %d\n", RegisterIndex(), V); Push(V); return lug::utf8::toupper(*id_); };
+		CHexConst				= lexeme[capture(id_)["0[xX]"_rx > *"[a-fA-F0-9]"_rx]]							< [this] { uint32_t V = std::stoul(*id_, nullptr, 16); printf("LD R%d, %d\n", RegisterIndex(), V); Push(V); return lug::utf8::toupper(*id_); };
 
 		CConstant				= CHexConst
 								| CIntegerConst;
@@ -39,12 +39,12 @@ class CSimpleCompiler
 		CStatementList			= CStatement > CStatementList
 								| CStatement;
 
-		CCompoundStatement		= "{"_sx < [this] { scope_++; printf("{\t\t\t#beginscope:%d\n",scope_); return lug::utf8::toupper(*id_); } > CStatementList > "}"_sx < [this] { CleanupScope(scope_); printf("}\t\t\t#endscope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); scope_--; return lug::utf8::toupper(*id_); }
-								| "{"_sx < [this] { scope_++; printf("{\t\t\t#beginscope:%d\n",scope_); return lug::utf8::toupper(*id_); } > "}"_sx < [this] { CleanupScope(scope_); printf("}\t\t\t#endscope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); scope_--; return lug::utf8::toupper(*id_); };
+		CCompoundStatement		= "{"_sx < [this] { scope_++; printf("{\t\t\t#beginscope:%d\n",scope_); return lug::utf8::toupper(*id_); } > CStatementList > "}"_sx < [this] { CleanupScope(scope_); printf("}\t\t\t#endscope:%d, stacksize=%d\n", scope_, RegisterIndex()); scope_--; return lug::utf8::toupper(*id_); }
+								| "{"_sx < [this] { scope_++; printf("{\t\t\t#beginscope:%d\n",scope_); return lug::utf8::toupper(*id_); } > "}"_sx < [this] { CleanupScope(scope_); printf("}\t\t\t#endscope:%d, stacksize=%d\n", scope_, RegisterIndex()); scope_--; return lug::utf8::toupper(*id_); };
 
 		// Variable declaration
 		CVar					= capture(id_)[CIdentifierLHS]													< [this] { NewVariable(*id_,1); printf("@DEF %s, 1\n", id_->c_str()); };
-		CVarArray				= capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx					< [this] { uint32_t V = stack_.top(); stack_.pop(); NewVariable(*id_,V); printf("@DEF %s, R%d\t\t\t#count:%d\n", id_->c_str(), uint32_t(stack_.size()), V); };
+		CVarArray				= capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx					< [this] { uint32_t V = Pop(); NewVariable(*id_,V); printf("@DEF %s, R%d\t\t\t#count:%d\n", id_->c_str(), RegisterIndex(), V); };
 		CVarList				= CVar > ","_sx > CVarList
 								| CVarArray > ","_sx > CVarList
 								| CVarArray
@@ -52,21 +52,21 @@ class CSimpleCompiler
 		CVarStatement			= "var"_sx > CVarList > ";"_sx;
 
 		// Assignment
-		CAssignmentStatement	= capture(id_)[CIdentifierLHS] > "="_sx > CExpressionStatement					< [this] { uint32_t V = stack_.top(); stack_.pop(); if (AssignVariable(*id_, 0, V)) printf("ST [%s], R%d\t\t\t#=%d\n", id_->c_str(), uint32_t(stack_.size()), V); else { parserdone = true; } }
-								| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx > "="_sx > CExpressionStatement	< [this] { uint32_t V = stack_.top(); stack_.pop(); uint32_t I = stack_.top(); stack_.pop(); AssignVariable(*id_, I, V); printf("ST [%s+%d], R%d #=%d\n", id_->c_str(), I, uint32_t(stack_.size()), V); };
+		CAssignmentStatement	= capture(id_)[CIdentifierLHS] > "="_sx > CExpressionStatement					< [this] { uint32_t V = Pop(); if (AssignVariable(*id_, 0, V)) printf("ST [%s], R%d\t\t\t#=%d\n", id_->c_str(), RegisterIndex(), V); else { parserdone = true; } }
+								| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx > "="_sx > CExpressionStatement	< [this] { uint32_t V = Pop(); uint32_t I = Pop(); AssignVariable(*id_, I, V); printf("ST [%s+%d], R%d #=%d\n", id_->c_str(), I, RegisterIndex(), V); };
 
 		// Expressions
 		CExpressionStatement	= CExpression > ";"_sx
 								| ";"_sx;
-		CExpression				= CTerm > "+"_sx > CExpression													< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("ADD R%d, R%d\t\t\t#%d+%d\n", uint32_t(stack_.size()), uint32_t(stack_.size()+1), A, B); stack_.push(A+B); }
-								| CTerm > "-"_sx > CExpression													< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("SUB R%d, R%d\t\t\t#%d-%d\n", uint32_t(stack_.size()), uint32_t(stack_.size()+1), A, B); stack_.push(A-B); }
+		CExpression				= CTerm > "+"_sx > CExpression													< [this] { uint32_t B = Pop(); uint32_t A = Pop(); printf("ADD R%d, R%d\t\t\t#%d+%d\n", RegisterIndex(), uint32_t(stack_.size()+1), A, B); Push(A+B); }
+								| CTerm > "-"_sx > CExpression													< [this] { uint32_t B = Pop(); uint32_t A = Pop(); printf("SUB R%d, R%d\t\t\t#%d-%d\n", RegisterIndex(), uint32_t(stack_.size()+1), A, B); Push(A-B); }
 								| CTerm;
-		CTerm					= CFactor > "*"_sx > CTerm														< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("MUL R%d, R%d\t\t\t#%d*%d\n", uint32_t(stack_.size()), uint32_t(stack_.size()+1), A, B); stack_.push(A*B); }
-								| CFactor > "/"_sx > CTerm														< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("DIV R%d, R%d\t\t\t#%d/%d\n", uint32_t(stack_.size()), uint32_t(stack_.size()+1), A, B); stack_.push(A/B); }
+		CTerm					= CFactor > "*"_sx > CTerm														< [this] { uint32_t B = Pop(); uint32_t A = Pop(); printf("MUL R%d, R%d\t\t\t#%d*%d\n", RegisterIndex(), uint32_t(stack_.size()+1), A, B); Push(A*B); }
+								| CFactor > "/"_sx > CTerm														< [this] { uint32_t B = Pop(); uint32_t A = Pop(); printf("DIV R%d, R%d\t\t\t#%d/%d\n", RegisterIndex(), uint32_t(stack_.size()+1), A, B); Push(A/B); }
 								| CFactor;
 		CFactor					= "("_sx > CExpression > ")"_sx
-								| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx					< [this] { uint32_t V,H; V = stack_.top(); stack_.pop(); if (Eval(*id_,V,H)) { /*reuse same register*/ printf("LD R%d, [%s+R%d]\t\t\t#offset:%d\n", uint32_t(stack_.size()), id_->c_str(), uint32_t(stack_.size()), V); stack_.push(H); } else { parserdone = true; } return lug::utf8::toupper(*id_); }
-								| capture(id_)[CIdentifierLHS] > "("_sx > ")"_sx								< [this] { printf("CALL %s\t\t\t#retval:[funcRetArea]->R%d\n", id_->c_str(), uint32_t(stack_.size())); uint32_t V=CallFunc(*id_, uint32_t(stack_.size())); stack_.push(V);/*return register from function call*/ return lug::utf8::toupper(*id_); }
+								| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx					< [this] { uint32_t V,H; V = Pop(); if (Eval(*id_,V,H)) { /*reuse same register*/ printf("LD R%d, [%s+R%d]\t\t\t#offset:%d\n", RegisterIndex(), id_->c_str(), RegisterIndex(), V); Push(H); } else { parserdone = true; } return lug::utf8::toupper(*id_); }
+								| capture(id_)[CIdentifierLHS] > "("_sx > ")"_sx								< [this] { printf("CALL %s\t\t\t#retval:[funcRetArea]->R%d\n", id_->c_str(), RegisterIndex()); uint32_t V=CallFunc(*id_, RegisterIndex()); Push(V);/*return register from function call*/ return lug::utf8::toupper(*id_); }
 								| CIdentifierRHS
 								| CConstant;
 
@@ -77,6 +77,23 @@ class CSimpleCompiler
 
 		// The grammar
 		grammar_ = start(CTranslationUnit);
+	}
+	
+	uint32_t RegisterIndex()
+	{
+		return uint32_t(stack_.size());
+	}
+
+	uint32_t Pop()
+	{
+		uint32_t V = stack_.top();
+		stack_.pop();
+		return V;
+	}
+
+	void Push(uint32_t V)
+	{
+		stack_.push(V);
 	}
 
 	// Remove all variables that went out of scope
@@ -188,7 +205,6 @@ private:
 	bool parserdone{false};
 	lug::grammar grammar_;
 	lug::environment environment_;
-	lug::variable<std::string> idx_{environment_};
 	lug::variable<std::string> id_{environment_};
 
 	typedef std::map<std::string, uint32_t*> TVariableMap; // Map of variable name -> pointer to variable
