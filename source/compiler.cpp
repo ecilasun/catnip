@@ -23,7 +23,7 @@ class CSimpleCompiler
 		// TODO: add function definitions
 
 		CIdentifierLHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]						< [this] { return lug::utf8::toupper(*id_); };
-		CIdentifierRHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]						< [this] { uint32_t H; if (Eval(*id_,H)) { stack_.push(H); printf("PUSH [%s]\n", id_->c_str()); } else { parserdone = true; } return lug::utf8::toupper(*id_); };
+		CIdentifierRHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]						< [this] { uint32_t H; if (Eval(*id_,0,H)) { stack_.push(H); printf("PUSH [%s]\n", id_->c_str()); } else { parserdone = true; } return lug::utf8::toupper(*id_); };
 		//CStringLiteral		= lexeme["\"" > capture(id_)[*"[^\"]"_rx] > "\""]								< [this] { stack_.push(*id_); return lug::utf8::toupper(*id_); };
 		CIntegerConst			= lexeme[capture(id_)[+"[0-9]"_rx]]												< [this] { uint32_t V = std::stoi(*id_); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
 		CHexConst				= lexeme[capture(id_)["0[xX]"_rx > *"[a-fA-F0-9]"_rx]]							< [this] { uint32_t V = std::stoul(*id_, nullptr, 16); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
@@ -43,8 +43,8 @@ class CSimpleCompiler
 								| "{"_sx < [this] { scope_++; printf("{\t\t\t#beginscope:%d\n",scope_); return lug::utf8::toupper(*id_); } > "}"_sx < [this] { CleanupScope(scope_); printf("}\t\t\t#endscope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); scope_--; return lug::utf8::toupper(*id_); };
 
 		// Variable declaration
-		CVar					= capture(id_)[CIdentifierLHS]													< [this] { NewVariable(*id_); printf("ALLOC %s, 4\n", id_->c_str()); };
-		CVarArray				= capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx					< [this] { uint32_t V = stack_.top(); stack_.pop(); NewVariable(*id_); printf("ALLOC %s, %d\n", id_->c_str(), V*4); };
+		CVar					= capture(id_)[CIdentifierLHS]													< [this] { NewVariable(*id_,1); printf("ALLOC %s, 4\n", id_->c_str()); };
+		CVarArray				= capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx					< [this] { uint32_t V = stack_.top(); stack_.pop(); NewVariable(*id_,V); printf("ALLOC %s, %d*uint32_t\n", id_->c_str(), V); };
 		CVarList				= CVar > ","_sx > CVarList
 								| CVarArray > ","_sx > CVarList
 								| CVarArray
@@ -52,8 +52,8 @@ class CSimpleCompiler
 		CVarStatement			= "var"_sx > CVarList > ";"_sx;
 
 		// Assignment
-		CAssignmentStatement	= capture(id_)[CIdentifierLHS] > "="_sx > CExpressionStatement					< [this] { uint32_t V = stack_.top(); stack_.pop(); if (AssignVariable(*id_, V)) printf("SET [%s]\t\t\t#=%d\n", id_->c_str(), V); else { parserdone = true; } }
-								| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx > "="_sx > CExpressionStatement	< [this] { uint32_t V = stack_.top(); stack_.pop(); uint32_t I = stack_.top(); stack_.pop(); AssignVariable(*id_, V); printf("SET [%s+%d] #=%d\n", id_->c_str(), I, V); };
+		CAssignmentStatement	= capture(id_)[CIdentifierLHS] > "="_sx > CExpressionStatement					< [this] { uint32_t V = stack_.top(); stack_.pop(); if (AssignVariable(*id_, 0, V)) printf("SET [%s]\t\t\t#=%d\n", id_->c_str(), V); else { parserdone = true; } }
+								| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx > "="_sx > CExpressionStatement	< [this] { uint32_t V = stack_.top(); stack_.pop(); uint32_t I = stack_.top(); stack_.pop(); AssignVariable(*id_, I, V); printf("SET [%s+%d] #=%d\n", id_->c_str(), I, V); };
 
 		// Expressions
 		CExpressionStatement	= CExpression > ";"_sx
@@ -66,7 +66,7 @@ class CSimpleCompiler
 								| CFactor;
 		CFactor					= "("_sx > CExpression > ")"_sx
 								| CConstant
-								| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx					< [this] { uint32_t V,H; V = stack_.top(); stack_.pop(); if (Eval(*id_,H)) { stack_.push(H); printf("PUSH [%s+%d]\n", id_->c_str(), V); } else { parserdone = true; } return lug::utf8::toupper(*id_); }
+								| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx					< [this] { uint32_t V,H; V = stack_.top(); stack_.pop(); if (Eval(*id_,V,H)) { stack_.push(H); printf("PUSH [%s+%d]\n", id_->c_str(), V); } else { parserdone = true; } return lug::utf8::toupper(*id_); }
 								| CIdentifierRHS;
 
 		// Main body
@@ -82,12 +82,16 @@ class CSimpleCompiler
 	void CleanupScope(uint32_t cleanScope)
 	{
 		for (auto &var : variables_[cleanScope])
+		{
+			uint32_t *varaddr = var.second;
+			delete [] varaddr;
 			printf("DEALLOC %s\n", var.first.c_str());
+		}
 		variables_[cleanScope].clear();
 	}
 
 	// If the identifier is available in current or lower scope, set its value
-	bool AssignVariable(std::string& identifier, uint32_t value)
+	bool AssignVariable(std::string& identifier, uint32_t offset, uint32_t value)
 	{
 		uint32_t foundScope = scope_;
 		uint32_t spinScope = scope_;
@@ -104,7 +108,10 @@ class CSimpleCompiler
 		while(spinScope-- != 0);
 
 		if (found)
-			variables_[foundScope][identifier] = value;
+		{
+			uint32_t* varaddrs = variables_[foundScope][identifier];
+			varaddrs[offset] = value;
+		}
 		else
 			std::cout << "E0001: Variable '" << identifier << "' not declared within scope." << std::endl;
 		return found;
@@ -112,13 +119,13 @@ class CSimpleCompiler
 
 	// Declare a new variable in current scope
 	// When the scope terminates, variable will be removed
-	void NewVariable(std::string& identifier)
+	void NewVariable(std::string& identifier, uint32_t size)
 	{
-		variables_[scope_][identifier] = 0; // Variables default to zero
+		variables_[scope_][identifier] = new uint32_t[size/sizeof(uint32_t)];
 	}
 
 	// If the identifier is available in current or lower scope, retrieve its value
-	bool Eval(std::string &identifier, uint32_t &result)
+	bool Eval(std::string &identifier, uint32_t offset, uint32_t &result)
 	{
 		uint32_t foundScope = scope_;
 		uint32_t spinScope = scope_;
@@ -135,7 +142,10 @@ class CSimpleCompiler
 		while(spinScope-- != 0);
 
 		if (found)
-			result = variables_[foundScope][identifier];
+		{
+			uint32_t* varaddrs = variables_[foundScope][identifier];
+			result = varaddrs[offset];
+		}
 		else
 		{
 			std::cout << "E0000: Variable '" << identifier << "' not found within scope." << std::endl;
@@ -173,7 +183,7 @@ private:
 	lug::variable<std::string> idx_{environment_};
 	lug::variable<std::string> id_{environment_};
 
-	typedef std::map<std::string, uint32_t> TVariableMap; // Map of variable name -> value
+	typedef std::map<std::string, uint32_t*> TVariableMap; // Map of variable name -> pointer to variable
 	std::map<uint32_t, TVariableMap> variables_; // Map of scope -> variable map
 	uint32_t scope_{0}; // Current scope depth
 

@@ -17,7 +17,7 @@
 
 		// Test: Both A and B should still be accessible from outer scope
 		{
-			A = B+R[1];
+			A = B+R[1]+R[0];
 		}
 	}
 }
