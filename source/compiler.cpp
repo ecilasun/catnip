@@ -39,8 +39,8 @@ class CSimpleCompiler
 		CStatementList			= CStatement > CStatementList
 								| CStatement;
 
-		CCompoundStatement		= "{"_sx < [this] { scope_++; printf("{\t\t\t#scope:%d\n",scope_); return lug::utf8::toupper(*id_); } > CStatementList > "}"_sx < [this] { CleanupScope(scope_); printf("}\t\t\t#scope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); scope_--; return lug::utf8::toupper(*id_); }
-								| "{"_sx < [this] { scope_++; printf("{\t\t\t#scope:%d\n",scope_); return lug::utf8::toupper(*id_); } > "}"_sx < [this] { CleanupScope(scope_); printf("}\t\t\t#scope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); scope_--; return lug::utf8::toupper(*id_); };
+		CCompoundStatement		= "{"_sx < [this] { scope_++; printf("{\t\t\t#beginscope:%d\n",scope_); return lug::utf8::toupper(*id_); } > CStatementList > "}"_sx < [this] { CleanupScope(scope_); printf("}\t\t\t#endscope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); scope_--; return lug::utf8::toupper(*id_); }
+								| "{"_sx < [this] { scope_++; printf("{\t\t\t#beginscope:%d\n",scope_); return lug::utf8::toupper(*id_); } > "}"_sx < [this] { CleanupScope(scope_); printf("}\t\t\t#endscope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); scope_--; return lug::utf8::toupper(*id_); };
 
 		// Variable declaration
 		CVar					= capture(id_)[CIdentifierLHS]													< [this] { NewVariable(*id_); printf("ALLOC %s, 4\n", id_->c_str()); };
@@ -52,8 +52,8 @@ class CSimpleCompiler
 		CVarStatement			= "var"_sx > CVarList > ";"_sx;
 
 		// Assignment
-		CAssignmentStatement	= capture(id_)[CIdentifierLHS] > "="_sx > CExpressionStatement					< [this] { uint32_t V = stack_.top(); stack_.pop(); if (AssignVariable(*id_, V)) printf("SET [%s]\t\t\t#=%d\n", id_->c_str(), V); else { parserdone = true; } };
-								/*| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx > "="_sx > CExpressionStatement	< [this] { uint32_t V = stack_.top(); stack_.pop(); uint32_t I = stack_.top(); stack_.pop(); AssignVariable(*id_, V); printf("SET [%s+%d] #=%d\n", id_->c_str(), I, V); };*/
+		CAssignmentStatement	= capture(id_)[CIdentifierLHS] > "="_sx > CExpressionStatement					< [this] { uint32_t V = stack_.top(); stack_.pop(); if (AssignVariable(*id_, V)) printf("SET [%s]\t\t\t#=%d\n", id_->c_str(), V); else { parserdone = true; } }
+								| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx > "="_sx > CExpressionStatement	< [this] { uint32_t V = stack_.top(); stack_.pop(); uint32_t I = stack_.top(); stack_.pop(); AssignVariable(*id_, V); printf("SET [%s+%d] #=%d\n", id_->c_str(), I, V); };
 
 		// Expressions
 		CExpressionStatement	= CExpression > ";"_sx
@@ -66,6 +66,7 @@ class CSimpleCompiler
 								| CFactor;
 		CFactor					= "("_sx > CExpression > ")"_sx
 								| CConstant
+								| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx					< [this] { uint32_t V,H; V = stack_.top(); stack_.pop(); if (Eval(*id_,H)) { stack_.push(H); printf("PUSH [%s+%d]\n", id_->c_str(), V); } else { parserdone = true; } return lug::utf8::toupper(*id_); }
 								| CIdentifierRHS;
 
 		// Main body
