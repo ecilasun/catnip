@@ -1,13 +1,13 @@
 {
 	var A, B;
-	A = 2;
+	A = 1;
 	var R[2*A];
 
 	{
 		var D;
 		D = 3;
 		B = 5+A;
-		R[0] = 0x7FFF/(3*(A-4)+B);
+		R[0] = 1+0x7FFF/(3*(A-4)+2*B);
 		R[1] = R[0]*2;
 	}
 
@@ -17,7 +17,7 @@
 
 		// Test: Both A and B should still be accessible from outer scope
 		{
-			A = B+R[1]+R[0];
+			A = B+(R[1]+R[0])/2;
 		}
 	}
 }

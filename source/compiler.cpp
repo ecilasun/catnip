@@ -23,10 +23,10 @@ class CSimpleCompiler
 		// TODO: add function definitions
 
 		CIdentifierLHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]						< [this] { return lug::utf8::toupper(*id_); };
-		CIdentifierRHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]						< [this] { uint32_t H; if (Eval(*id_,0,H)) { stack_.push(H); printf("PUSH [%s]\n", id_->c_str()); } else { parserdone = true; } return lug::utf8::toupper(*id_); };
+		CIdentifierRHS			= lexeme[capture(id_)["[A-Za-z]"_rx > *"[0-9A-Za-z]"_rx]]						< [this] { uint32_t H; if (Eval(*id_,0,H)) { printf("MOV R%d, [%s]\n", uint32_t(stack_.size()), id_->c_str()); stack_.push(H); } else { parserdone = true; } return lug::utf8::toupper(*id_); };
 		//CStringLiteral		= lexeme["\"" > capture(id_)[*"[^\"]"_rx] > "\""]								< [this] { stack_.push(*id_); return lug::utf8::toupper(*id_); };
-		CIntegerConst			= lexeme[capture(id_)[+"[0-9]"_rx]]												< [this] { uint32_t V = std::stoi(*id_); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
-		CHexConst				= lexeme[capture(id_)["0[xX]"_rx > *"[a-fA-F0-9]"_rx]]							< [this] { uint32_t V = std::stoul(*id_, nullptr, 16); stack_.push(V); printf("PUSH [%d]\n", V); return lug::utf8::toupper(*id_); };
+		CIntegerConst			= lexeme[capture(id_)[+"[0-9]"_rx]]												< [this] { uint32_t V = std::stoi(*id_); printf("MOV R%d, %d\n", uint32_t(stack_.size()), V); stack_.push(V); return lug::utf8::toupper(*id_); };
+		CHexConst				= lexeme[capture(id_)["0[xX]"_rx > *"[a-fA-F0-9]"_rx]]							< [this] { uint32_t V = std::stoul(*id_, nullptr, 16); printf("MOV R%d, %d\n", uint32_t(stack_.size()), V); stack_.push(V); return lug::utf8::toupper(*id_); };
 
 		CConstant				= CHexConst
 								| CIntegerConst;
@@ -43,8 +43,8 @@ class CSimpleCompiler
 								| "{"_sx < [this] { scope_++; printf("{\t\t\t#beginscope:%d\n",scope_); return lug::utf8::toupper(*id_); } > "}"_sx < [this] { CleanupScope(scope_); printf("}\t\t\t#endscope:%d, stacksize=%d\n", scope_, uint32_t(stack_.size())); scope_--; return lug::utf8::toupper(*id_); };
 
 		// Variable declaration
-		CVar					= capture(id_)[CIdentifierLHS]													< [this] { NewVariable(*id_,1); printf("ALLOC %s, 4\n", id_->c_str()); };
-		CVarArray				= capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx					< [this] { uint32_t V = stack_.top(); stack_.pop(); NewVariable(*id_,V); printf("ALLOC %s, %d*uint32_t\n", id_->c_str(), V); };
+		CVar					= capture(id_)[CIdentifierLHS]													< [this] { NewVariable(*id_,1); printf("DEFVAR %s, 1\n", id_->c_str()); };
+		CVarArray				= capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx					< [this] { uint32_t V = stack_.top(); stack_.pop(); NewVariable(*id_,V); printf("DEFVAR %s, R%d\t\t\t#count:%d\n", id_->c_str(), uint32_t(stack_.size()), V); };
 		CVarList				= CVar > ","_sx > CVarList
 								| CVarArray > ","_sx > CVarList
 								| CVarArray
@@ -52,17 +52,17 @@ class CSimpleCompiler
 		CVarStatement			= "var"_sx > CVarList > ";"_sx;
 
 		// Assignment
-		CAssignmentStatement	= capture(id_)[CIdentifierLHS] > "="_sx > CExpressionStatement					< [this] { uint32_t V = stack_.top(); stack_.pop(); if (AssignVariable(*id_, 0, V)) printf("SET [%s]\t\t\t#=%d\n", id_->c_str(), V); else { parserdone = true; } }
-								| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx > "="_sx > CExpressionStatement	< [this] { uint32_t V = stack_.top(); stack_.pop(); uint32_t I = stack_.top(); stack_.pop(); AssignVariable(*id_, I, V); printf("SET [%s+%d] #=%d\n", id_->c_str(), I, V); };
+		CAssignmentStatement	= capture(id_)[CIdentifierLHS] > "="_sx > CExpressionStatement					< [this] { uint32_t V = stack_.top(); stack_.pop(); if (AssignVariable(*id_, 0, V)) printf("MOV [%s], R%d\t\t\t#=%d\n", id_->c_str(), uint32_t(stack_.size()), V); else { parserdone = true; } }
+								| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx > "="_sx > CExpressionStatement	< [this] { uint32_t V = stack_.top(); stack_.pop(); uint32_t I = stack_.top(); stack_.pop(); AssignVariable(*id_, I, V); printf("MOV [%s+%d], R%d #=%d\n", id_->c_str(), I, uint32_t(stack_.size()), V); };
 
 		// Expressions
 		CExpressionStatement	= CExpression > ";"_sx
 								| ";"_sx;
-		CExpression				= CTerm > "+"_sx > CExpression													< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("ADD\t\t\t#%d+%d\n", A, B); stack_.push(A+B); }
-								| CTerm > "-"_sx > CExpression													< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("SUB\t\t\t#%d-%d\n", A, B); stack_.push(A-B); }
+		CExpression				= CTerm > "+"_sx > CExpression													< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("ADD R%d, R%d\t\t\t#%d+%d\n", uint32_t(stack_.size()), uint32_t(stack_.size()+1), A, B); stack_.push(A+B); }
+								| CTerm > "-"_sx > CExpression													< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("SUB R%d, R%d\t\t\t#%d-%d\n", uint32_t(stack_.size()), uint32_t(stack_.size()+1), A, B); stack_.push(A-B); }
 								| CTerm;
-		CTerm					= CFactor > "*"_sx > CTerm														< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("MUL\t\t\t#%d*%d\n", A, B); stack_.push(A*B); }
-								| CFactor > "/"_sx > CTerm														< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("DIV\t\t\t#%d/%d\n", A, B); stack_.push(A/B); }
+		CTerm					= CFactor > "*"_sx > CTerm														< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("MUL R%d, R%d\t\t\t#%d*%d\n", uint32_t(stack_.size()), uint32_t(stack_.size()+1), A, B); stack_.push(A*B); }
+								| CFactor > "/"_sx > CTerm														< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("DIV R%d, R%d\t\t\t#%d/%d\n", uint32_t(stack_.size()), uint32_t(stack_.size()+1), A, B); stack_.push(A/B); }
 								| CFactor;
 		CFactor					= "("_sx > CExpression > ")"_sx
 								| CConstant
@@ -85,7 +85,7 @@ class CSimpleCompiler
 		{
 			uint32_t *varaddr = var.second;
 			delete [] varaddr;
-			printf("DEALLOC %s\n", var.first.c_str());
+			printf("UNDEFVAR %s\n", var.first.c_str());
 		}
 		variables_[cleanScope].clear();
 	}
