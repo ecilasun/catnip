@@ -67,4 +67,4 @@ The CPU emulation actually emulates all the state machine stages of Neko CPU, th
 
 ## 3rd party libraries / tools
 
-This project currently uses WAF as its build system for portability, and SDL2 as its graphics output, which might change in the future.
+This project currently uses WAF as its build system for portability, and SDL2 as its graphics output, which might change in the future. For the compiler, the library 'lug' is currently utilized for a runtime grammar processing approach (https://github.com/jwtowner/lug)
