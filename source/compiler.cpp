@@ -65,14 +65,15 @@ class CSimpleCompiler
 								| CFactor > "/"_sx > CTerm														< [this] { uint32_t B = stack_.top(); stack_.pop(); uint32_t A = stack_.top(); stack_.pop(); printf("DIV R%d, R%d\t\t\t#%d/%d\n", uint32_t(stack_.size()), uint32_t(stack_.size()+1), A, B); stack_.push(A/B); }
 								| CFactor;
 		CFactor					= "("_sx > CExpression > ")"_sx
-								| CConstant
 								| capture(id_)[CIdentifierLHS] > "["_sx > CExpression > "]"_sx					< [this] { uint32_t V,H; V = stack_.top(); stack_.pop(); if (Eval(*id_,V,H)) { /*reuse same register*/ printf("LD R%d, [%s+R%d]\t\t\t#offset:%d\n", uint32_t(stack_.size()), id_->c_str(), uint32_t(stack_.size()), V); stack_.push(H); } else { parserdone = true; } return lug::utf8::toupper(*id_); }
-								| CIdentifierRHS;
+								| capture(id_)[CIdentifierLHS] > "("_sx > ")"_sx								< [this] { printf("CALL %s\t\t\t#retval:[funcRetArea]->R%d\n", id_->c_str(), uint32_t(stack_.size())); uint32_t V=CallFunc(*id_, uint32_t(stack_.size())); stack_.push(V);/*return register from function call*/ return lug::utf8::toupper(*id_); }
+								| CIdentifierRHS
+								| CConstant;
 
 		// Main body
 		CTranslationUnit		= CStatementList
-								| "<::EOF::>"_sx																< [this] { parserdone = true; }
-								| !any																			< [this] { parserdone = true; };
+								| "<::EOF::>"_sx																< [this] { parserdone = true; };
+								//| !any																			< [this] { parserdone = true; };
 
 		// The grammar
 		grammar_ = start(CTranslationUnit);
@@ -115,6 +116,13 @@ class CSimpleCompiler
 		else
 			std::cout << "E0001: Variable '" << identifier << "' not declared within scope." << std::endl;
 		return found;
+	}
+
+	uint32_t CallFunc(std::string& identifier, uint32_t returnRegister)
+	{
+		// Function writes output to [funcRetArea]
+		std::cout << "MOV R" << returnRegister << ", [funcRetArea]" << std::endl;
+		return 0xFFFFFFFF;
 	}
 
 	// Declare a new variable in current scope
@@ -268,8 +276,12 @@ int CompileCode(char *_inputname, char * /*_outputname*/)
 
 	if (!commentError)
 	{
-		// This is the source termination marker
-		sourcecode += " <::EOF::>";
+		// Header with defaults
+		sourcecode =	"var funcRetArea;\n" + // Function return value storage area
+						sourcecode;
+		// Footer with terminator
+		sourcecode =	sourcecode +
+						" <::EOF::>\n";
 		// Parse the code which is now stripped from all comments
 		compiler.Process(sourcecode);
 		return 0;
