@@ -1,10 +1,11 @@
+void main(void)
 {
-	var A, B;
+	int A, B;
 	A = 1;
-	var testarray[2*A];
+	int testarray[2*A];
 
 	{
-		var D;
+		int D;
 		D = 3;
 		B = 5+A;
 		testarray[0] = 1+0x7FFF/(3*(A-4)+2*B);

@@ -3,3 +3,4 @@ build/**/*
 waf*/**/*
 .lock*
 source/elang.y.re
+~flex_temp_*
