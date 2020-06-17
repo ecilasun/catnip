@@ -6,6 +6,18 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "(Linux) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/release/catnip",
+            "args": ["${workspaceFolder}/test/simplest.c", "${workspaceFolder}/test/simplest.asm"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/release/",
+            "symbolSearchPath": "${workspaceFolder}/build/release/",
+            "environment": [],
+            "externalConsole": true
+        },
+        {
             "name": "(Windows) Launch",
             "type": "cppvsdbg",
             "request": "launch",

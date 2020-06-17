@@ -830,7 +830,16 @@ inline grammar start(rule const& start_rule)
 			grprogram.concatenate(*subprogram);
 			grprogram.instructions.emplace_back(opcode::ret, operands::none, immediate{0});
 			if (auto top_rule = callstack.back().first; top_rule) {
+#if defined(__clang__)
+				for (auto X : top_rule->callees_) {
+					// Workaround for clang
+					auto callee_rule = std::get<0>(X);
+					auto callee_program = std::get<1>(X);
+					auto instr_offset = std::get<2>(X);
+					auto mode = std::get<3>(X);
+#else
 				for (auto [callee_rule, callee_program, instr_offset, mode] : top_rule->callees_) {
+#endif
 					calls.emplace_back(callee_program, address + instr_offset);
 					if (callee_rule && (mode & directives::eps) != directives::none && detail::escaping_find_if(
 							callstack.crbegin(), callstack.crend(), [callee_rule](auto& caller) {
@@ -1134,7 +1143,17 @@ public:
 		prune_depth_ = max_call_depth, call_depth_ = 0;
 		pc = 0, fc = 0;
 		while (!done) {
+#if defined(__clang__)
+			// Workaround for clang
+			auto X = instruction::decode(prog.instructions, pc);
+			auto op = std::get<0>(X);
+			auto imm = std::get<1>(X);
+			auto off = std::get<2>(X);
+			auto str = std::get<3>(X);
+			switch (op) {
+#else
 			switch (auto [op, imm, off, str] = instruction::decode(prog.instructions, pc); op) {
+#endif
 				case opcode::match: {
 					//std::cout << "opcode::match\n";
 					if (!match_sequence(sr, str, [this](auto i, auto n, auto s) { return input_.compare(i, n, s) == 0; }))

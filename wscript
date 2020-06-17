@@ -31,8 +31,14 @@ def build(ctx):
             platform_defines = ['_CRT_SECURE_NO_WARNINGS', 'CAT_MACOSX', 'DEBUG']
         else:
             platform_defines = ['_CRT_SECURE_NO_WARNINGS', 'CAT_LINUX', 'DEBUG']
-        compile_flags = ['-std=c++17']
+
+        # RELEASE - clang
+        compile_flags = ['-std=c++17', '-march=core-avx2', '-O3']
         linker_flags = []
+
+        # DEBUG - clang
+        # compile_flags = ['-std=c++17', '-march=core-avx2', '-O0', -g']
+        # linker_flags = []
 
         ctx.program(
             source=glob.glob('source/*.cpp'),
@@ -61,7 +67,11 @@ def build(ctx):
         # linker_flags = ['/DEBUG']
 
         # RELEASE - clang
-        # compile_flags = ['-std=c++17', '-g', '-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS', '-DDEBUG', '-D_SECURE_SCL=0']
+        # compile_flags = ['-std=c++17', '-march=core-avx2', '-O3', '-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS', '-DRELEASE', '-D_SECURE_SCL=0']
+        # linker_flags = [''] # '-stdlib=libc++'
+
+        # DEBUG - clang
+        # compile_flags = ['-std=c++17', '-march=core-avx2', '-g', '-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS', '-DDEBUG', '-D_SECURE_SCL=0']
         # linker_flags = [''] # '-stdlib=libc++'
 
         sdlpath = os.path.abspath('SDL')
