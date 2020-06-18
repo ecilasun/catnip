@@ -1,1 +1,2 @@
-int A=2+3*4-8%2, B=3-A;
+// Test init declaration: A=12, B=-3
+int A=2+3*4-8%3, B=3-A/2;
