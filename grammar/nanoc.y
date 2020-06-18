@@ -37,13 +37,15 @@ int err=0;
 
 %token CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 
+%type <string> primary_expression
+
 %start translation_unit
 %%
 
 primary_expression
-	: IDENTIFIER { printf("[identifier:%s] ",$1); }
-	| CONSTANT { printf("[constant:%u] ",$1); }
-	| STRING_LITERAL { printf("[str:%s] ",$1); }
+	: IDENTIFIER { printf("(id)%s ",$1); }
+	| CONSTANT { printf("(const)%u ",$1); }
+	| STRING_LITERAL { printf("'%s' ",$1); }
 	| '(' expression ')'
 	;
 

@@ -4,6 +4,7 @@ void main(void)
 	A = 1;
 	int testarray[2*A];
 
+	if (A!=0)
 	{
 		int D;
 		D = 3;
@@ -12,14 +13,6 @@ void main(void)
 		testarray[1] = testarray[0]*2 + testFunc();
 	}
 
-	{
-		// Test: D should be out of scope here since it's in another code block's scope
-		//A = D+1;
-
-		// Test: Both A and B should still be accessible from outer scope
-		{
-			A = B+(testarray[1]+testarray[0])/2;
-		}
-	}
+	A = B+(testarray[1]+testarray[0])/2;
 }
 
