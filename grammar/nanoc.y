@@ -4,6 +4,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stack>
+#include <string>
 
 extern int yylex(void);
 void yyerror(const char *);
@@ -13,6 +15,17 @@ extern FILE *yyin;
 extern char *yytext;
 extern FILE *fp;
 int err=0;
+
+void push(const char *str);
+void pop(std::string &_str);
+uint32_t regidx();
+
+struct SParserContext
+{
+	std::stack<std::string> m_Stack;
+};
+
+SParserContext g_context;
 
 %}
 
@@ -41,9 +54,9 @@ int err=0;
 %%
 
 primary_expression
-	: IDENTIFIER { printf("(id)%s ",$1); }
-	| CONSTANT { printf("(const)%u ",$1); }
-	| STRING_LITERAL { printf("'%s' ",$1); }
+	: IDENTIFIER { uint32_t r = regidx(); printf("SET R%d, %s\n", r, $1); push($1); }
+	| CONSTANT { uint32_t r = regidx(); char buf[64]; itoa($1,buf,10); printf("SET R%d, %s\n", r, buf); push(buf); }
+	| STRING_LITERAL { uint32_t r = regidx(); push($1); }
 	| '(' expression ')'
 	;
 
@@ -90,15 +103,15 @@ cast_expression
 
 multiplicative_expression
 	: cast_expression
-	| multiplicative_expression '*' cast_expression
-	| multiplicative_expression '/' cast_expression
-	| multiplicative_expression '%' cast_expression
+	| multiplicative_expression '*' cast_expression { uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L*R,buf,10); push(buf); printf("MUL R%d, R%d #%s\n", r-2, r-1, buf);}
+	| multiplicative_expression '/' cast_expression { uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L/R,buf,10); push(buf); printf("DIV R%d, R%d #%s\n", r-2, r-1, buf);}
+	| multiplicative_expression '%' cast_expression { uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L%R,buf,10); push(buf); printf("MOD R%d, R%d #%s\n", r-2, r-1, buf);}
 	;
 
 additive_expression
 	: multiplicative_expression
-	| additive_expression '+' multiplicative_expression
-	| additive_expression '-' multiplicative_expression
+	| additive_expression '+' multiplicative_expression { uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L+R,buf,10); push(buf); printf("ADD R%d, R%d #%s\n", r-2, r-1, buf);}
+	| additive_expression '-' multiplicative_expression { uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L-R,buf,10); push(buf); printf("SUB R%d, R%d #%s\n", r-2, r-1, buf);}
 	;
 
 shift_expression
@@ -202,7 +215,7 @@ init_declarator_list
 
 init_declarator
 	: declarator
-	| declarator '=' initializer
+	| declarator '=' initializer { uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); printf("ST [%s], R%d # %s\n", lhs.c_str(), r-1, rhs.c_str()); }
 	;
 
 storage_class_specifier
@@ -300,7 +313,7 @@ declarator
 	;
 
 direct_declarator
-	: IDENTIFIER
+	: IDENTIFIER																			{ uint32_t r = regidx(); printf("DECL R%d, %s\n", r, $1); push($1); }
 	| '(' declarator ')'
 	| direct_declarator '[' type_qualifier_list assignment_expression ']'
 	| direct_declarator '[' type_qualifier_list ']'
@@ -481,6 +494,22 @@ declaration_list
 	| declaration_list declaration
 	;
 %%
+
+void push(const char *str)
+{
+	g_context.m_Stack.push(std::string(str));
+}
+
+void pop(std::string &_str)
+{
+	_str = g_context.m_Stack.top();
+	g_context.m_Stack.pop();
+}
+
+uint32_t regidx()
+{
+	return uint32_t(g_context.m_Stack.size());
+}
 
 int parseC90()
 {
