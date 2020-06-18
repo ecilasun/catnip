@@ -12,7 +12,11 @@ IS	((u|U)|(u|U)?(l|L|ll|LL)|(l|L|ll|LL)(u|U))
 // 2nd revision: Based on https://gist.github.com/codebrainz/2933703
 
 #include <stdio.h>
+#if defined(__clang__)
+#include <unistd.h>
+#else
 #include <io.h>
+#endif
 #include "nanoc.y.hpp"
 
 extern YYSTYPE yylval;

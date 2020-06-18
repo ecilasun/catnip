@@ -37,8 +37,6 @@ int err=0;
 
 %token CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 
-%type <string> primary_expression
-
 %start translation_unit
 %%
 

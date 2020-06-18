@@ -24,8 +24,8 @@ def configure(conf):
         # Prefers msvc, but could also use conf.load('clang++') instead
         conf.load('clang++')
         # TODO: This might break, will need to fix if it does
-        conf.find_program('bison', path_list='')
-        conf.find_program('flex', path_list='')
+        conf.find_program('bison', path_list='/usr/bin')
+        conf.find_program('flex', path_list='/usr/bin')
     else:
         # Prefers msvc, but could also use conf.load('clang++') instead
         conf.load('msvc')
@@ -67,7 +67,26 @@ def build(bld):
         compile_flags = ['-std=c++17']
         linker_flags = []
 
+        bld.post_mode = Build.POST_LAZY
+
+        flexsource = glob.glob('grammar/*.l')
+        bisonsource = glob.glob('grammar/*.y')
+
+        sdlpath = os.path.abspath('SDL')
+        bld(features='subst',
+            source=bld.root.find_resource(os.path.join(sdlpath, 'SDL2.dll')),
+            target='SDL2.dll', is_copy=True, before='cxx')
+
+        bld(source=flexsource,
+            target='grammarscanner')
+        bld.add_group()
+
+        bld(source=bisonsource,
+            target='grammarparser')
+        bld.add_group()
+
         bld.program(
+            features='find_new_files',
             source=glob.glob('source/*.cpp'),
             cxxflags=compile_flags,
             ldflags=linker_flags,
@@ -76,7 +95,7 @@ def build(bld):
             includes=['source', 'includes', 'SDL'],
             libpath=[],
             lib=['SDL2'],
-            use=['parsercode'])
+            use=['grammarscanner', 'grammarparser'])
     else:
         platform_defines = ['_CRT_SECURE_NO_WARNINGS', 'CAT_WINDOWS']
         slib = '%ProgramFiles%Windows Kits/10/Lib/'
@@ -138,7 +157,7 @@ def build(bld):
             includes=includes,
             libpath=[win_sdk_lib_path, os.path.abspath('SDL')],
             lib=libs,
-            use=['scannergen'])
+            use=['grammarscanner', 'grammarparser'])
 
 
 from waflib.TaskGen import feature, before

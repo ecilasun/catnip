@@ -15,11 +15,21 @@ If you're using Visual Studio Code, this folder contains a .vscode directory wit
 ### Command line
 WAF (the build system) is included with this release. To build CatNip from command line, run these from the root directory where you've placed the catnip project.
 
-If you happen to be building on Linux, before everything else you'll need to install clang and SDL2 libraries as follows:
+If you happen to be building on Linux or MacOS, before everything else you'll need to install clang and SDL2 libraries as follows:
 ```
 sudo apt install clang
 sudo apt install libsdl2-dev
 ```
+
+Additionally you'll be needing the bison and flex packages on Linux or MacOS. At the time of writing I found that they were pre-installed on my MacOS, your setup might be different. As a build aid, bison and flex are already provided as binaries in the directory 'buildtools' for Windows.
+
+Therefore for Linux/MaxOS one needs to run the following to complete the build setup:
+```
+sudo apt install bison
+sudo apt install flex
+```
+
+P.S. I might make the WAF system actually set up things for the end user at a later point.
 
 For first time around, or if you change the wscript's configure or options functions, a configuration step is required:
 ```
@@ -49,7 +59,9 @@ To compile a .c file into an .asm file, use the following command line:
 
 ```
 .\build\release\catnip.exe .\test\simplest.c .\tes\simplest.asm
-``` 
+```
+
+NOTE: For the time being the compiler is still in the works and won't actually output correct (or perhaps any) assembly file.
 
 ## Emulator shortcuts
 
@@ -61,10 +73,10 @@ To 'reset' the CPU, you can hit the `SPACE` key which will rewind CPU state to I
 
 CatNip emulator will currently not give warnings about code execution errors, neither it will do safety checks while executing code, which might result in the emulator to unexpectedly shut down.
 
-The CPU timing is not accurate, so your software might run a little faster than it should. However, the timing between the VGA module and the CPU is somewhat close to the actual hardware, though it still requires fine tuning.
+The CPU timing is not 1:1, so your software might run a little faster than it should. However, the timing between the VGA module and the CPU is somewhat close to the actual hardware, though it still requires fine tuning.
 
 The CPU emulation actually emulates all the state machine stages of Neko CPU, therefore it should be as close as possible to the actual hardware in its capabilities.
 
 ## 3rd party libraries / tools
 
-This project currently uses WAF as its build system for portability, and SDL2 as its graphics output, which might change in the future. For the compiler, the library 'lug' is currently utilized for a runtime grammar processing approach (https://github.com/jwtowner/lug)
+This project currently uses WAF as its build system for portability, and SDL2 as its graphics output, which might change in the future. For the compiler, bison and flex tools are either provided (for Windows), or expected to be installed by the user (Linux/MacOS)
