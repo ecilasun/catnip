@@ -24,6 +24,8 @@ uint32_t regidx();
 struct SParserContext
 {
 	std::stack<std::string> m_Stack;
+	uint32_t m_DeclDim{1};
+	uint32_t m_DeclReg{0};
 };
 
 SParserContext g_context;
@@ -216,7 +218,17 @@ init_declarator_list
 
 init_declarator
 	: declarator
-	| declarator '=' initializer															{ uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); printf("ST [R%d], R%d # %s = %s\n", r-2, r-1, lhs.c_str(), rhs.c_str()); }
+	| declarator '=' initializer															{
+																								uint32_t r = regidx();
+																								printf("#arraysize=%d declreg=R%d\n", g_context.m_DeclDim, g_context.m_DeclReg);
+																								std::string lhs,rhs;
+																								for (int i=int(g_context.m_DeclDim)-1;i>=0;--i)
+																								{
+																									pop(rhs);
+																									printf("ST [R%d+%d], R%d # = %s\n", g_context.m_DeclReg, i, r+(i-g_context.m_DeclDim), rhs.c_str());
+																								}
+																								pop(lhs); // Pop decl. register
+																							}
 	;
 
 storage_class_specifier
@@ -314,11 +326,11 @@ declarator
 	;
 
 direct_declarator
-	: IDENTIFIER																			{ uint32_t r = regidx(); printf("DECL R%d, %s # temporary alias, value written to actual memory location at end of statement\n", r, $1); push($1); }
+	: IDENTIFIER																			{ uint32_t r = regidx(); g_context.m_DeclReg = r; printf("DECL R%d, %s # temporary alias, value written to actual memory location at end of statement\n", r, $1); push($1); }
 	| '(' declarator ')'
 	| direct_declarator '[' type_qualifier_list assignment_expression ']'
 	| direct_declarator '[' type_qualifier_list ']'
-	| direct_declarator '[' assignment_expression ']'										{ uint32_t r = regidx(); std::string V; pop(V); printf("DIM R%d # %s", r-1, V.c_str()); }
+	| direct_declarator '[' assignment_expression ']'										{ uint32_t r = regidx(); std::string V; pop(V); printf("DIM R%d # %s\n", r-1, V.c_str()); g_context.m_DeclDim = std::stoi(V); }
 	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'
 	| direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'
 	| direct_declarator '[' type_qualifier_list '*' ']'
