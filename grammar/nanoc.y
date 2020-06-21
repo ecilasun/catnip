@@ -314,11 +314,11 @@ declarator
 	;
 
 direct_declarator
-	: IDENTIFIER																			{ uint32_t r = regidx(); printf("DECL R%d, %s # temporary alias, value written at end of statement\n", r, $1); push($1); }
+	: IDENTIFIER																			{ uint32_t r = regidx(); printf("DECL R%d, %s # temporary alias, value written to actual memory location at end of statement\n", r, $1); push($1); }
 	| '(' declarator ')'
 	| direct_declarator '[' type_qualifier_list assignment_expression ']'
 	| direct_declarator '[' type_qualifier_list ']'
-	| direct_declarator '[' assignment_expression ']'
+	| direct_declarator '[' assignment_expression ']'										{ uint32_t r = regidx(); std::string V; pop(V); printf("DIM R%d # %s", r-1, V.c_str()); }
 	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'
 	| direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'
 	| direct_declarator '[' type_qualifier_list '*' ']'
