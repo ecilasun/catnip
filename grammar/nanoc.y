@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stack>
 #include <string>
+#include <map>
 
 extern int yylex(void);
 void yyerror(const char *);
@@ -16,19 +17,92 @@ extern char *yytext;
 extern FILE *fp;
 int err=0;
 
-uint32_t eval(const char *str);
 void push(const char *str);
 void pop(std::string &_str);
 uint32_t regidx();
 
 struct SParserContext
 {
+	SParserContext()
+	{
+		m_varAlloc = new uint32_t[131072];
+		memset(m_varAlloc, 0xCC, 131072*sizeof(uint32_t));
+		memset(m_Registers, 0x00, 512*sizeof(uint64_t));
+	}
 	std::stack<std::string> m_Stack;
 	uint32_t m_DeclDim{1};
 	uint32_t m_DeclReg{0};
+	uint32_t *m_varAlloc{0};
+	uint64_t m_Registers[512];
 };
 
 SParserContext g_context;
+
+std::map<uint32_t, uint32_t*> g_variableAddresses;
+
+uint32_t HashString(const char *_str)
+{
+	size_t Val = 2166136261U;
+
+	if(_str == nullptr)
+		return (uint32_t)Val;
+
+	char *pStr = (char *)_str;
+	while(*pStr)
+	{
+		Val = 16777619U * Val ^ (size_t)*pStr;
+		++pStr;
+	}
+
+	return (uint32_t)(Val);
+}
+
+uint32_t *AllocVar(uint32_t size)
+{
+	uint32_t *addr = g_context.m_varAlloc;
+	g_context.m_varAlloc += size;
+	return addr;
+}
+
+// Will advance the allocation forward using dimensionality of an array (1+adv total)
+void AdvanceAlloc(uint32_t adv)
+{
+	g_context.m_varAlloc += adv;
+}
+
+uint32_t *CreateVar(char *varname, uint32_t size)
+{
+	uint32_t var = HashString(varname);
+	uint32_t *addr = AllocVar(size);
+
+	g_variableAddresses[var] = addr;
+
+	return addr;
+}
+
+uint32_t *FindVar(char *varname)
+{
+	uint32_t var = HashString(varname);
+
+	auto found = g_variableAddresses.find(var);
+	if (found!=g_variableAddresses.end())
+		return found->second;
+	else
+	{
+		printf("ERROR: Variable not found!\n");
+		return 0x0; // nullptr
+	}
+}
+
+void SetReg(uint32_t r, uint64_t V)
+{
+	g_context.m_Registers[r] = V;
+}
+
+uint64_t RegVal(uint32_t r)
+{
+	return g_context.m_Registers[r];
+}
 
 %}
 
@@ -57,8 +131,8 @@ SParserContext g_context;
 %%
 
 primary_expression
-	: IDENTIFIER																			{ uint32_t r = regidx(); uint32_t V = eval($1); printf("SET R%d, [%s] # %d\n", r, $1, V); char buf[64]; itoa(V,buf,10); push(buf); }
-	| CONSTANT																				{ uint32_t r = regidx(); char buf[64]; itoa($1,buf,10); printf("SET R%d, %s\n", r, buf); push(buf); }
+	: IDENTIFIER																			{ uint32_t r = regidx(); uint32_t *addrs = FindVar($1); uint32_t V = *addrs; printf("SET R%d, [0x%.llx] # %s, %d\n", r, (uint64_t)addrs, $1, V); SetReg(r, V); char buf[64]; itoa(RegVal(r),buf,10); push(buf); }
+	| CONSTANT																				{ uint32_t r = regidx(); SetReg(r, $1); printf("SET R%d, %d\n", r, $1); char buf[64]; itoa(RegVal(r),buf,10); push(buf); }
 	| STRING_LITERAL { uint32_t r = regidx(); push($1); }
 	| '(' expression ')'
 	;
@@ -106,15 +180,15 @@ cast_expression
 
 multiplicative_expression
 	: cast_expression
-	| multiplicative_expression '*' cast_expression											{ uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L*R,buf,10); push(buf); printf("MUL R%d, R%d # %s\n", r-2, r-1, buf);}
-	| multiplicative_expression '/' cast_expression											{ uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L/R,buf,10); push(buf); printf("DIV R%d, R%d # %s\n", r-2, r-1, buf);}
-	| multiplicative_expression '%' cast_expression											{ uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L%R,buf,10); push(buf); printf("MOD R%d, R%d # %s\n", r-2, r-1, buf);}
+	| multiplicative_expression '*' cast_expression											{ uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L*R,buf,10); push(buf); printf("MUL R%d, R%d # %s\n", r-2, r-1, buf); SetReg(r-2, RegVal(r-2)*RegVal(r-1));}
+	| multiplicative_expression '/' cast_expression											{ uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L/R,buf,10); push(buf); printf("DIV R%d, R%d # %s\n", r-2, r-1, buf); SetReg(r-2, RegVal(r-2)/RegVal(r-1));}
+	| multiplicative_expression '%' cast_expression											{ uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L%R,buf,10); push(buf); printf("MOD R%d, R%d # %s\n", r-2, r-1, buf); SetReg(r-2, RegVal(r-2)%RegVal(r-1));}
 	;
 
 additive_expression
 	: multiplicative_expression
-	| additive_expression '+' multiplicative_expression										{ uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L+R,buf,10); push(buf); printf("ADD R%d, R%d # %s\n", r-2, r-1, buf);}
-	| additive_expression '-' multiplicative_expression										{ uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L-R,buf,10); push(buf); printf("SUB R%d, R%d # %s\n", r-2, r-1, buf);}
+	| additive_expression '+' multiplicative_expression										{ uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L+R,buf,10); push(buf); printf("ADD R%d, R%d # %s\n", r-2, r-1, buf); SetReg(r-2, RegVal(r-2)+RegVal(r-1)); }
+	| additive_expression '-' multiplicative_expression										{ uint32_t r = regidx(); std::string lhs,rhs; pop(rhs); pop(lhs); uint32_t L = std::stoi(lhs); uint32_t R = std::stoi(rhs); char buf[64]; itoa(L-R,buf,10); push(buf); printf("SUB R%d, R%d # %s\n", r-2, r-1, buf); SetReg(r-2, RegVal(r-2)-RegVal(r-1)); }
 	;
 
 shift_expression
@@ -222,10 +296,14 @@ init_declarator
 																								uint32_t r = regidx();
 																								printf("#arraysize=%d declreg=R%d\n", g_context.m_DeclDim, g_context.m_DeclReg);
 																								std::string lhs,rhs;
+																								// TODO: Reverse this to ensure forward memory write order (it's inverted atm)
 																								for (int i=int(g_context.m_DeclDim)-1;i>=0;--i)
 																								{
 																									pop(rhs);
 																									printf("ST [R%d+%d], R%d # = %s\n", g_context.m_DeclReg, i, r+(i-g_context.m_DeclDim), rhs.c_str());
+																									uint32_t *addrs = (uint32_t*)(RegVal(g_context.m_DeclReg))+i;
+																									*addrs = RegVal(r+(i-g_context.m_DeclDim));
+																									printf("   (%.8llx <- %.8llx)\n", RegVal(g_context.m_DeclReg)+i*4, RegVal(r+(i-g_context.m_DeclDim)));
 																								}
 																								pop(lhs); // Pop decl. register
 																							}
@@ -326,11 +404,11 @@ declarator
 	;
 
 direct_declarator
-	: IDENTIFIER																			{ uint32_t r = regidx(); g_context.m_DeclReg = r; printf("DECL R%d, %s # temporary alias, value written to actual memory location at end of statement\n", r, $1); push($1); }
+	: IDENTIFIER																			{ uint32_t r = regidx(); g_context.m_DeclReg = r; uint32_t *addrs = CreateVar($1, 1); printf("SET R%d, 0x%llx # %s (new)\n", r, (uint64_t)addrs, $1); SetReg(r, (uint64_t)addrs); push($1); }
 	| '(' declarator ')'
 	| direct_declarator '[' type_qualifier_list assignment_expression ']'
 	| direct_declarator '[' type_qualifier_list ']'
-	| direct_declarator '[' assignment_expression ']'										{ uint32_t r = regidx(); std::string V; pop(V); printf("DIM R%d # %s\n", r-1, V.c_str()); g_context.m_DeclDim = std::stoi(V); }
+	| direct_declarator '[' assignment_expression ']'										{ uint32_t r = regidx(); std::string V; pop(V); printf("DIM R%d # %s\n", r-1, V.c_str()); g_context.m_DeclDim = std::stoi(V); AdvanceAlloc(g_context.m_DeclDim/4-1); }
 	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'
 	| direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'
 	| direct_declarator '[' type_qualifier_list '*' ']'
@@ -507,13 +585,6 @@ declaration_list
 	| declaration_list declaration
 	;
 %%
-
-uint32_t eval(const char *str)
-{
-	// TODO: Find the symbol in current (or higher) scope, return its value
-	// For now we return zero
-	return 0;
-}
 
 void push(const char *str)
 {
