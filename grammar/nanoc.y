@@ -25,21 +25,23 @@ struct SParserContext
 {
 	SParserContext()
 	{
-		m_varAlloc = new uint32_t[131072];
-		memset(m_varAlloc, 0xCC, 131072*sizeof(uint32_t));
-		memset(m_Registers, 0x00, 512*sizeof(uint64_t));
+		m_Heap = new uint32_t[0xFFFFF];
+		memset(m_Heap, 0xCC, 131072*sizeof(uint32_t));
+		memset(m_Registers, 0x00, 512*sizeof(uint32_t));
 	}
 	std::stack<std::string> m_Stack;
 	uint32_t m_DeclDim{1};
 	uint32_t m_DeclReg{0};
-	uint32_t *m_varAlloc{0};
-	uint64_t m_Registers[512];
+	uint32_t m_IsConstant{0};
+	uint32_t m_VarAlloc{0x00000000}; // Default base address in heap
+	uint32_t *m_Heap{nullptr};
+	uint32_t m_Registers[512];
 	uint32_t m_CurrentRegister{0};
 };
 
 SParserContext g_context;
 
-std::map<uint32_t, uint32_t*> g_variableAddresses;
+std::map<uint32_t, uint32_t> g_variableAddresses;
 
 uint32_t HashString(const char *_str)
 {
@@ -77,24 +79,24 @@ uint32_t CurrentRegister()
 	return g_context.m_CurrentRegister;
 }
 
-uint32_t *AllocVar(uint32_t size)
+uint32_t AllocVar(uint32_t size)
 {
-	uint32_t *addr = g_context.m_varAlloc;
-	g_context.m_varAlloc += size;
+	uint32_t addr = g_context.m_VarAlloc;
+	g_context.m_VarAlloc += size;
 	return addr;
 }
 
-uint32_t *CreateVar(char *varname, uint32_t size)
+uint32_t CreateVar(char *varname, uint32_t size)
 {
 	uint32_t var = HashString(varname);
-	uint32_t *addr = AllocVar(size);
+	uint32_t addr = AllocVar(size);
 
 	g_variableAddresses[var] = addr;
 
 	return addr;
 }
 
-uint32_t *FindVar(char *varname)
+uint32_t FindVar(char *varname)
 {
 	uint32_t var = HashString(varname);
 
@@ -103,17 +105,17 @@ uint32_t *FindVar(char *varname)
 		return found->second;
 	else
 	{
-		printf("ERROR: Variable not found!\n");
-		return 0x0; // nullptr
+		printf("ERROR: Variable not found\n");
+		return 0xFFFFFFFF;
 	}
 }
 
-void SetReg(uint32_t r, uint64_t V)
+void SetReg(uint32_t r, uint32_t V)
 {
 	g_context.m_Registers[r] = V;
 }
 
-uint64_t RegVal(uint32_t r)
+uint32_t RegVal(uint32_t r)
 {
 	return g_context.m_Registers[r];
 }
@@ -129,6 +131,7 @@ uint64_t RegVal(uint32_t r)
 %token <string> IDENTIFIER
 %token <numeric> CONSTANT
 %token <string> STRING_LITERAL
+
 %token SIZEOF
 %token PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LESS_OP GREATER_OP LE_OP GE_OP EQ_OP NE_OP
 %token AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
@@ -145,14 +148,38 @@ uint64_t RegVal(uint32_t r)
 %%
 
 primary_expression
-	: IDENTIFIER																			{ uint32_t *V = FindVar($1); if (V!=nullptr) { uint32_t r = PushRegister(); printf("SET R%d, [0x%.8llx]", r, (uint64_t)V); SetReg(r, *V); printf("  // R%d = 0x%.8llx\n", r, (uint64_t)*V); } }
-	| CONSTANT																				{ uint32_t r = PushRegister(); printf("SET R%d, %d\n", r, $1); SetReg(r, $1); }
+	: IDENTIFIER																			{	uint32_t V = FindVar($1);
+																								if (V != 0xFFFFFFFF)
+																								{
+																									uint32_t r = PushRegister();
+																									printf("SET R%d, 0x%.8x", r, V);
+																									SetReg(r, V);
+																									printf("  // R%d = %s (0x%.8x)\n", r, $1, V);
+																								}
+																								g_context.m_IsConstant = 0;
+																							}
+	| CONSTANT																				{	uint32_t r = PushRegister();
+																								printf("SET R%d, %d\n", r, $1);
+																								SetReg(r, $1);
+																								g_context.m_IsConstant = 1;
+																							}
 	| STRING_LITERAL																		{ push($1); /* TODO: store address of pooled string in a register*/ }
 	| '(' expression ')'
 	;
 
 postfix_expression
-	: primary_expression
+	: primary_expression																	{	if (!g_context.m_IsConstant)
+																								{
+																									// Swap register contents (address) with value at that adress
+																									uint32_t r = CurrentRegister();
+																									printf("LD R%d, [R%d]\n", r, r);
+																									SetReg(r, g_context.m_Heap[RegVal(r)]);
+																								}
+																								else
+																								{
+																									// Already got the value loaded
+																								}
+																							}
 	| postfix_expression '[' expression ']'
 	| postfix_expression '(' ')'
 	| postfix_expression '(' argument_expression_list ')'
@@ -257,7 +284,7 @@ conditional_expression
 
 assignment_expression
 	: conditional_expression
-	| unary_expression assignment_operator assignment_expression			{ std::string V1,V2; pop(V1); pop(V2); printf("assignment: %s <- %s\n", V2.c_str(), V1.c_str()); }
+	| unary_expression assignment_operator assignment_expression			{ uint32_t r1 = PopRegister(); uint32_t r2 = PopRegister(); printf("*ST [R%d], R%d", r2, r1); /*uint32_t addr = (uint32_t*)RegVal(r2); *addr = RegVal(r1);*/ printf("  // R%d = 0x%.8x, R%d = 0x%.8x\n", r2, RegVal(r2), r1, RegVal(r1)); }
 	;
 
 assignment_operator
@@ -317,9 +344,9 @@ init_declarator
 																								for (int i=0;i<g_context.m_DeclDim;++i)
 																								{
 																									printf("ST [R%d+%d], R%d", g_context.m_DeclReg, i, reglist[i]);
-																									uint32_t *addrs = (uint32_t*)(RegVal(g_context.m_DeclReg))+i;
-																									*addrs = RegVal(reglist[i]);
-																									printf("  // (0x%.8llx <- 0x%.8llx)\n", RegVal(g_context.m_DeclReg)+i*4, RegVal(reglist[i]));
+																									uint32_t addrs = (RegVal(g_context.m_DeclReg))+i;
+																									g_context.m_Heap[addrs] = RegVal(reglist[i]);
+																									printf("  // (0x%.8x <- 0x%.8x)\n", addrs, RegVal(reglist[i]));
 																								}
 																								PopRegister(); // Pop decl. register as well
 																								g_context.m_DeclDim = 1; // Reset declaration dimension
@@ -417,7 +444,7 @@ function_specifier
 
 declarator
 	: pointer direct_declarator																{ printf("  -00C\n"); }
-	| direct_declarator																		{ std::string V; pop(V); g_context.m_DeclReg = PushRegister(); uint32_t *addrs = CreateVar((char*)V.c_str(), g_context.m_DeclDim); printf("SET R%d, 0x%llx # %s[%d] (new)\n", g_context.m_DeclReg, (uint64_t)addrs, V.c_str(), g_context.m_DeclDim); SetReg(g_context.m_DeclReg, (uint64_t)addrs); }
+	| direct_declarator																		{ std::string V; pop(V); g_context.m_DeclReg = PushRegister(); uint32_t addrs = CreateVar((char*)V.c_str(), g_context.m_DeclDim); printf("SET R%d, 0x%.8x # %s[%d] (new)\n", g_context.m_DeclReg, (uint32_t)addrs, V.c_str(), g_context.m_DeclDim); SetReg(g_context.m_DeclReg, (uint64_t)addrs); }
 	;
 
 direct_declarator
@@ -553,8 +580,8 @@ block_item
 	;
 
 expression_statement
-	: ';'
-	| expression ';'
+	: ';'																					{ printf("//noop expressionstatement\n"); }
+	| expression ';'																		{ printf("//expressionstatement\n"); }
 	;
 
 selection_statement
