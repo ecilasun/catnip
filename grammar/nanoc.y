@@ -322,6 +322,7 @@ init_declarator
 																									printf("  // (0x%.8llx <- 0x%.8llx)\n", RegVal(g_context.m_DeclReg)+i*4, RegVal(reglist[i]));
 																								}
 																								PopRegister(); // Pop decl. register as well
+																								g_context.m_DeclDim = 1; // Reset declaration dimension
 																							}
 	;
 
@@ -432,7 +433,7 @@ direct_declarator
 	| direct_declarator '[' ']'																{ printf("  -004\n"); }
 	| direct_declarator '(' parameter_type_list ')'											{ printf("  -003\n"); }
 	| direct_declarator '(' identifier_list ')'												{ printf("  -002\n"); }
-	| direct_declarator '(' ')'																{ /*std::string V; pop(V); printf("  func %s\n", V.c_str());*/ }
+	| direct_declarator '(' ')'																{ printf("//FUNCDECL\n"); }
 	;
 
 pointer
