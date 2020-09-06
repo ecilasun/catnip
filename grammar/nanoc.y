@@ -22,6 +22,17 @@ void push(const char *str);
 void pop(std::string &_str);
 uint32_t regidx();
 
+enum EUnaryOp
+{
+	U_NONE,
+	U_ADDRS,
+	U_VAL,
+	U_POS,
+	U_NEGATE,
+	U_BITINV,
+	U_LOGICNOT,
+};
+
 struct SParserContext
 {
 	SParserContext()
@@ -39,7 +50,7 @@ struct SParserContext
 	uint32_t *m_Heap{nullptr};
 	uint32_t m_Registers[512];
 	uint32_t m_CurrentRegister{0};
-	uint32_t m_LHS{1};
+	EUnaryOp m_UnaryOp{U_NONE};
 };
 
 SParserContext g_context;
@@ -198,18 +209,27 @@ unary_expression
 	: postfix_expression
 	| INC_OP unary_expression
 	| DEC_OP unary_expression
-	| unary_operator cast_expression
+	| unary_operator cast_expression										{
+																				if (g_context.m_UnaryOp == U_NEGATE) { uint32_t r = PreviousRegister(); printf("NEG R%d\n", r); SetReg(r, -RegVal(r)); }
+																				if (g_context.m_UnaryOp == U_BITINV) { uint32_t r = PreviousRegister(); printf("INV R%d\n", r); SetReg(r, ~RegVal(r)); }
+																				if (g_context.m_UnaryOp == U_LOGICNOT) { uint32_t r = PreviousRegister(); printf("NOT R%d\n", r); SetReg(r, !RegVal(r)); }
+																				if (g_context.m_UnaryOp == U_ADDRS) { uint32_t r = PreviousRegister(); printf("ADDRS ????\n"); }
+																				if (g_context.m_UnaryOp == U_VAL) { uint32_t r = PreviousRegister(); printf("ST R%d, [R%d]\n", r, r); SetReg(r, g_context.m_Heap[RegVal(r)]);}
+																				if (g_context.m_UnaryOp == U_POS) { uint32_t r = PreviousRegister(); printf("POS ????\n"); }
+
+																				g_context.m_UnaryOp = U_NONE;
+																			}
 	| SIZEOF unary_expression
 	| SIZEOF '(' type_name ')'
 	;
 
 unary_operator
-	: '&'
-	| '*'
-	| '+'
-	| '-'
-	| '~'
-	| '!'
+	: '&'																	{	g_context.m_UnaryOp = U_ADDRS; }
+	| '*'																	{	g_context.m_UnaryOp = U_VAL; }
+	| '+'																	{	g_context.m_UnaryOp = U_POS; }
+	| '-'																	{	g_context.m_UnaryOp = U_NEGATE; }
+	| '~'																	{	g_context.m_UnaryOp = U_BITINV; }
+	| '!'																	{	g_context.m_UnaryOp = U_LOGICNOT; }
 	;
 
 cast_expression
@@ -238,7 +258,7 @@ multiplicative_expression
 																								uint32_t r2=PopRegister();
 																								uint32_t r1=PopRegister();
 																								printf("MUL R%d R%d", r1,r2);
-																								uint32_t V = RegVal(r1)*RegVal(r2);
+																								uint32_t V = int(RegVal(r1)) * int(RegVal(r2));
 																								SetReg(r1, V); PushRegister();
 																								printf(" // R%d = %d\n", r1, V); 
 																							}
@@ -246,7 +266,7 @@ multiplicative_expression
 																								uint32_t r2=PopRegister();
 																								uint32_t r1=PopRegister();
 																								printf("DIV R%d R%d", r1,r2);
-																								uint32_t V = RegVal(r1)/RegVal(r2);
+																								uint32_t V = int(RegVal(r1)) / int(RegVal(r2));
 																								SetReg(r1, V);
 																								PushRegister();
 																								printf(" // R%d = %d\n", r1, V);
@@ -255,7 +275,7 @@ multiplicative_expression
 																								uint32_t r2=PopRegister();
 																								uint32_t r1=PopRegister();
 																								printf("MOD R%d R%d", r1,r2);
-																								uint32_t V = RegVal(r1)%RegVal(r2);
+																								uint32_t V = int(RegVal(r1)) % int(RegVal(r2));
 																								SetReg(r1, V);
 																								PushRegister();
 																								printf(" // R%d = %d\n", r1, V);
@@ -268,7 +288,7 @@ additive_expression
 																								uint32_t r2=PopRegister();
 																								uint32_t r1=PopRegister();
 																								printf("ADD R%d R%d", r1,r2);
-																								uint32_t V = RegVal(r1)+RegVal(r2);
+																								uint32_t V = int(RegVal(r1)) + int(RegVal(r2));
 																								SetReg(r1, V);
 																								PushRegister();
 																								printf(" // R%d = %d\n", r1, V);
@@ -277,7 +297,7 @@ additive_expression
 																								uint32_t r2=PopRegister();
 																								uint32_t r1=PopRegister();
 																								printf("SUB R%d R%d", r1,r2);
-																								uint32_t V = RegVal(r1)-RegVal(r2);
+																								uint32_t V = int(RegVal(r1)) - int(RegVal(r2));
 																								SetReg(r1, V);
 																								PushRegister();
 																								printf(" // R%d = %d\n", r1, V);
@@ -377,7 +397,9 @@ declaration
 declaration_specifiers
 	: storage_class_specifier																{	printf("// TODO: storage_class_specifier\n"); }
 	| storage_class_specifier declaration_specifiers
-	| type_specifier																		{	printf("// TODO: type_specifier\n"); }
+	| type_specifier																		{	printf("// TODO: type_specifier\n");
+																								g_context.m_DeclDim = 1;
+																							}
 	| type_specifier declaration_specifiers
 	| type_qualifier																		{	printf("// TODO: type_qualifier\n"); }
 	| type_qualifier declaration_specifiers
@@ -507,7 +529,11 @@ direct_declarator
 	| '(' declarator ')'
 	| direct_declarator '[' type_qualifier_list assignment_expression ']'					{	printf("  -00A\n"); }
 	| direct_declarator '[' type_qualifier_list ']'											{	printf("  -009\n"); }
-	| direct_declarator '[' assignment_expression ']'										{	uint32_t r = PopRegister(); g_context.m_InitAsgnCounter = g_context.m_DeclDim = RegVal(r); printf("DIM R%d  // Array dimension = %d\n", r, g_context.m_DeclDim); }
+	| direct_declarator '[' assignment_expression ']'										{
+																								uint32_t r = PopRegister();
+																								g_context.m_InitAsgnCounter = g_context.m_DeclDim = RegVal(r);
+																								printf("DIM R%d  // Array dimension = %d\n", r, g_context.m_DeclDim);
+																							}
 	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'			{	printf("  -008\n"); }
 	| direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'			{	printf("  -007\n"); }
 	| direct_declarator '[' type_qualifier_list '*' ']'										{	printf("  -006\n"); }
