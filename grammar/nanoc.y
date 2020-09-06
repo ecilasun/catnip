@@ -68,6 +68,7 @@ struct SParserContext
 	ETypeName m_TypeName{T_VOID};
 	ETypeModifier m_TypeModifier{T_SIGNED};
 	int m_IsPointer{0};
+	int m_AssignOffset{0};
 };
 
 SParserContext g_context;
@@ -206,6 +207,7 @@ primary_expression
 																										printf("SET R%d, 0x%.8x", r, V);
 																										SetReg(r, V);
 																									}
+																									g_context.m_DeclReg = r;
 																									printf("  // R%d = %s%s (0x%.8x)\n", r, var.m_IsPointer ? "*":"", $1, V);
 																								}
 																								g_context.m_IsConstant = 0;
@@ -228,7 +230,7 @@ primary_expression
 
 postfix_expression
 	: primary_expression
-	| postfix_expression '[' expression ']'
+	| postfix_expression '[' expression ']'													{ uint32_t r = PopRegister(); g_context.m_AssignOffset = RegVal(r); printf("// Assignment offset: %d\n", g_context.m_AssignOffset);}
 	| postfix_expression '(' ')'
 	| postfix_expression '(' argument_expression_list ')'
 	| postfix_expression '.' IDENTIFIER
@@ -398,10 +400,11 @@ assignment_expression
 	| unary_expression assignment_operator assignment_expression							{
 																								uint32_t r1 = PopRegister();
 																								uint32_t r2 = PopRegister();
-																								printf("ST [R%d], R%d", r2, r1);
-																								uint32_t addr = RegVal(r2);
+																								printf("ST [R%d+%d], R%d", r2, g_context.m_AssignOffset, r1);
+																								uint32_t addr = RegVal(r2)+g_context.m_AssignOffset;
 																								g_context.m_Heap[addr] = RegVal(r1);
 																								printf("  // [0x%.8x] = 0x%.8x\n", addr, RegVal(r1));
+																								g_context.m_AssignOffset = 0;
 																							}
 	;
 
