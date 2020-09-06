@@ -342,7 +342,7 @@ assignment_expression
 																								printf("ST [R%d], R%d", r2, r1);
 																								uint32_t addr = RegVal(r2);
 																								g_context.m_Heap[addr] = RegVal(r1);
-																								printf("  // [0x%.8x] = 0x%.8x\n", r2, RegVal(r2), r1, RegVal(r1));
+																								printf("  // [0x%.8x] = 0x%.8x\n", addr, RegVal(r1));
 																							}
 	;
 
@@ -518,7 +518,7 @@ direct_declarator
 	| direct_declarator '(' ')'																{
 																								std::string V;
 																								pop(V);
-																								printf("// Function: %s\n", V.c_str());
+																								printf("@FUNC '%s'\n", V.c_str());
 																							}
 	;
 
