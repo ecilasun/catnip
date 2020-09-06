@@ -17,6 +17,7 @@ extern char *yytext;
 extern FILE *fp;
 int err=0;
 
+bool stackempty();
 void push(const char *str);
 void pop(std::string &_str);
 uint32_t regidx();
@@ -31,12 +32,14 @@ struct SParserContext
 	}
 	std::stack<std::string> m_Stack;
 	uint32_t m_DeclDim{1};
+	uint32_t m_InitAsgnCounter{1};
 	uint32_t m_DeclReg{0};
 	uint32_t m_IsConstant{0};
 	uint32_t m_VarAlloc{0x00000000}; // Default base address in heap
 	uint32_t *m_Heap{nullptr};
 	uint32_t m_Registers[512];
 	uint32_t m_CurrentRegister{0};
+	uint32_t m_LHS{1};
 };
 
 SParserContext g_context;
@@ -74,9 +77,9 @@ uint32_t PopRegister()
 	return --g_context.m_CurrentRegister;
 }
 
-uint32_t CurrentRegister()
+uint32_t PreviousRegister()
 {
-	return g_context.m_CurrentRegister;
+	return g_context.m_CurrentRegister-1;
 }
 
 uint32_t AllocVar(uint32_t size)
@@ -148,7 +151,8 @@ uint32_t RegVal(uint32_t r)
 %%
 
 primary_expression
-	: IDENTIFIER																			{	uint32_t V = FindVar($1);
+	: IDENTIFIER																			{
+																								uint32_t V = FindVar($1);
 																								if (V != 0xFFFFFFFF)
 																								{
 																									uint32_t r = PushRegister();
@@ -157,29 +161,23 @@ primary_expression
 																									printf("  // R%d = %s (0x%.8x)\n", r, $1, V);
 																								}
 																								g_context.m_IsConstant = 0;
+																								g_context.m_InitAsgnCounter = g_context.m_DeclDim = 1;
 																							}
-	| CONSTANT																				{	uint32_t r = PushRegister();
+	| CONSTANT																				{
+																								uint32_t r = PushRegister();
 																								printf("SET R%d, %d\n", r, $1);
 																								SetReg(r, $1);
 																								g_context.m_IsConstant = 1;
 																							}
-	| STRING_LITERAL																		{ push($1); /* TODO: store address of pooled string in a register*/ }
+	| STRING_LITERAL																		{
+																								// TODO: store address of pooled string in a register
+																								push($1);
+																							}
 	| '(' expression ')'
 	;
 
 postfix_expression
-	: primary_expression																	{	if (!g_context.m_IsConstant)
-																								{
-																									// Swap register contents (address) with value at that adress
-																									uint32_t r = CurrentRegister();
-																									printf("LD R%d, [R%d]\n", r, r);
-																									SetReg(r, g_context.m_Heap[RegVal(r)]);
-																								}
-																								else
-																								{
-																									// Already got the value loaded
-																								}
-																							}
+	: primary_expression
 	| postfix_expression '[' expression ']'
 	| postfix_expression '(' ')'
 	| postfix_expression '(' argument_expression_list ')'
@@ -215,21 +213,75 @@ unary_operator
 	;
 
 cast_expression
-	: unary_expression
+	: unary_expression																		{
+																								if (!g_context.m_IsConstant)
+																								{
+																									// Swap register contents (address) with value at that adress
+																									uint32_t r = PreviousRegister();
+																									printf("LD R%d, [R%d]", r, r);
+																									SetReg(r, g_context.m_Heap[RegVal(r)]);
+																									printf("  // R%d = %d\n", r, RegVal(r));
+																								}
+																								else
+																								{
+																									// Already got the value loaded in previous register
+																									//uint32_t r = PreviousRegister();
+																									//printf("  // R%d = %d\n", r, RegVal(r));
+																								}
+																							}
 	| '(' type_name ')' cast_expression
 	;
 
 multiplicative_expression
 	: cast_expression
-	| multiplicative_expression '*' cast_expression											{ uint32_t r2=PopRegister(); uint32_t r1=PopRegister(); printf("MUL R%d R%d", r1,r2); uint32_t V = RegVal(r1)*RegVal(r2); SetReg(r1, V); PushRegister(); printf(" // R%d = %d\n", r1, V); }
-	| multiplicative_expression '/' cast_expression											{ uint32_t r2=PopRegister(); uint32_t r1=PopRegister(); printf("DIV R%d R%d", r1,r2); uint32_t V = RegVal(r1)/RegVal(r2); SetReg(r1, V); PushRegister(); printf(" // R%d = %d\n", r1, V); }
-	| multiplicative_expression '%' cast_expression											{ uint32_t r2=PopRegister(); uint32_t r1=PopRegister(); printf("MOD R%d R%d", r1,r2); uint32_t V = RegVal(r1)%RegVal(r2); SetReg(r1, V); PushRegister(); printf(" // R%d = %d\n", r1, V); }
+	| multiplicative_expression '*' cast_expression											{
+																								uint32_t r2=PopRegister();
+																								uint32_t r1=PopRegister();
+																								printf("MUL R%d R%d", r1,r2);
+																								uint32_t V = RegVal(r1)*RegVal(r2);
+																								SetReg(r1, V); PushRegister();
+																								printf(" // R%d = %d\n", r1, V); 
+																							}
+	| multiplicative_expression '/' cast_expression											{
+																								uint32_t r2=PopRegister();
+																								uint32_t r1=PopRegister();
+																								printf("DIV R%d R%d", r1,r2);
+																								uint32_t V = RegVal(r1)/RegVal(r2);
+																								SetReg(r1, V);
+																								PushRegister();
+																								printf(" // R%d = %d\n", r1, V);
+																							}
+	| multiplicative_expression '%' cast_expression											{
+																								uint32_t r2=PopRegister();
+																								uint32_t r1=PopRegister();
+																								printf("MOD R%d R%d", r1,r2);
+																								uint32_t V = RegVal(r1)%RegVal(r2);
+																								SetReg(r1, V);
+																								PushRegister();
+																								printf(" // R%d = %d\n", r1, V);
+																							}
 	;
 
 additive_expression
 	: multiplicative_expression
-	| additive_expression '+' multiplicative_expression										{ uint32_t r2=PopRegister(); uint32_t r1=PopRegister(); printf("ADD R%d R%d", r1,r2); uint32_t V = RegVal(r1)+RegVal(r2); SetReg(r1, V); PushRegister(); printf(" // R%d = %d\n", r1, V); }
-	| additive_expression '-' multiplicative_expression										{ uint32_t r2=PopRegister(); uint32_t r1=PopRegister(); printf("SUB R%d R%d", r1,r2); uint32_t V = RegVal(r1)-RegVal(r2); SetReg(r1, V); PushRegister(); printf(" // R%d = %d\n", r1, V); }
+	| additive_expression '+' multiplicative_expression										{
+																								uint32_t r2=PopRegister();
+																								uint32_t r1=PopRegister();
+																								printf("ADD R%d R%d", r1,r2);
+																								uint32_t V = RegVal(r1)+RegVal(r2);
+																								SetReg(r1, V);
+																								PushRegister();
+																								printf(" // R%d = %d\n", r1, V);
+																							}
+	| additive_expression '-' multiplicative_expression										{
+																								uint32_t r2=PopRegister();
+																								uint32_t r1=PopRegister();
+																								printf("SUB R%d R%d", r1,r2);
+																								uint32_t V = RegVal(r1)-RegVal(r2);
+																								SetReg(r1, V);
+																								PushRegister();
+																								printf(" // R%d = %d\n", r1, V);
+																							}
 	;
 
 shift_expression
@@ -284,21 +336,28 @@ conditional_expression
 
 assignment_expression
 	: conditional_expression
-	| unary_expression assignment_operator assignment_expression			{ uint32_t r1 = PopRegister(); uint32_t r2 = PopRegister(); printf("*ST [R%d], R%d", r2, r1); /*uint32_t addr = (uint32_t*)RegVal(r2); *addr = RegVal(r1);*/ printf("  // R%d = 0x%.8x, R%d = 0x%.8x\n", r2, RegVal(r2), r1, RegVal(r1)); }
+	| unary_expression assignment_operator assignment_expression							{
+																								uint32_t r1 = PopRegister();
+																								uint32_t r2 = PopRegister();
+																								printf("ST [R%d], R%d", r2, r1);
+																								uint32_t addr = RegVal(r2);
+																								g_context.m_Heap[addr] = RegVal(r1);
+																								printf("  // [0x%.8x] = 0x%.8x\n", r2, RegVal(r2), r1, RegVal(r1));
+																							}
 	;
 
 assignment_operator
 	: '='
-	| MUL_ASSIGN
-	| DIV_ASSIGN
-	| MOD_ASSIGN
-	| ADD_ASSIGN
-	| SUB_ASSIGN
-	| LEFT_ASSIGN
-	| RIGHT_ASSIGN
-	| AND_ASSIGN
-	| XOR_ASSIGN
-	| OR_ASSIGN
+	| MUL_ASSIGN																			{	printf("\t*MULASGN\n"); }
+	| DIV_ASSIGN																			{	printf("\t*DIVASGN\n"); }
+	| MOD_ASSIGN																			{	printf("\t*MODASGN\n"); }
+	| ADD_ASSIGN																			{	printf("\t*ADDASGN\n"); }
+	| SUB_ASSIGN																			{	printf("\t*SUBASGN\n"); }
+	| LEFT_ASSIGN																			{	printf("\t*LEFTASGN\n"); }
+	| RIGHT_ASSIGN																			{	printf("\t*RIGHTASGN\n"); }
+	| AND_ASSIGN																			{	printf("\t*ANDASGN\n"); }
+	| XOR_ASSIGN																			{	printf("\t*XORASGN\n"); }
+	| OR_ASSIGN																				{	printf("\t*ORASGN\n"); }
 	;
 
 expression
@@ -316,13 +375,13 @@ declaration
 	;
 
 declaration_specifiers
-	: storage_class_specifier
+	: storage_class_specifier																{	printf("// TODO: storage_class_specifier\n"); }
 	| storage_class_specifier declaration_specifiers
-	| type_specifier
+	| type_specifier																		{	printf("// TODO: type_specifier\n"); }
 	| type_specifier declaration_specifiers
-	| type_qualifier
+	| type_qualifier																		{	printf("// TODO: type_qualifier\n"); }
 	| type_qualifier declaration_specifiers
-	| function_specifier
+	| function_specifier																	{	printf("// TODO: function_specifier\n"); }
 	| function_specifier declaration_specifiers
 	;
 
@@ -332,25 +391,21 @@ init_declarator_list
 	;
 
 init_declarator
-	: declarator
-	| declarator '=' initializer															{
-																								// The list is reverse order due to register stack, fix ordering here by using a register list
-																								uint32_t reglist[512];
-																								for (int i=int(g_context.m_DeclDim)-1;i>=0;--i)
+	: declarator																			{
+																								if (!stackempty())
 																								{
-																									uint32_t r = PopRegister();
-																									reglist[i] = r;
+																									// Just remove from stack and create the variable
+																									std::string V;
+																									pop(V);
+																									//g_context.m_DeclReg = PushRegister();
+																									uint32_t addrs0 = CreateVar((char*)V.c_str(), g_context.m_DeclDim);
+																									printf("// VAR %s[%d]\n", V.c_str(), g_context.m_DeclDim);
+																									//printf("SET R%d, 0x%.8x # %s[%d] (new)\n", g_context.m_DeclReg, (uint32_t)addrs0, V.c_str(), g_context.m_DeclDim);
+																									//SetReg(g_context.m_DeclReg, (uint64_t)addrs0);
+																									//PopRegister(); // Pop decl. register
 																								}
-																								for (int i=0;i<g_context.m_DeclDim;++i)
-																								{
-																									printf("ST [R%d+%d], R%d", g_context.m_DeclReg, i, reglist[i]);
-																									uint32_t addrs = (RegVal(g_context.m_DeclReg))+i;
-																									g_context.m_Heap[addrs] = RegVal(reglist[i]);
-																									printf("  // (0x%.8x <- 0x%.8x)\n", addrs, RegVal(reglist[i]));
-																								}
-																								PopRegister(); // Pop decl. register as well
-																								g_context.m_DeclDim = 1; // Reset declaration dimension
 																							}
+	| declarator '=' initializer
 	;
 
 storage_class_specifier
@@ -443,24 +498,28 @@ function_specifier
 	;
 
 declarator
-	: pointer direct_declarator																{ printf("  -00C\n"); }
-	| direct_declarator																		{ std::string V; pop(V); g_context.m_DeclReg = PushRegister(); uint32_t addrs = CreateVar((char*)V.c_str(), g_context.m_DeclDim); printf("SET R%d, 0x%.8x # %s[%d] (new)\n", g_context.m_DeclReg, (uint32_t)addrs, V.c_str(), g_context.m_DeclDim); SetReg(g_context.m_DeclReg, (uint64_t)addrs); }
+	: pointer direct_declarator																{ /* TODO */}
+	| direct_declarator																		{ /**/ }
 	;
 
 direct_declarator
-	: IDENTIFIER																			{ push($1); }
+	: IDENTIFIER																			{	push($1);			}
 	| '(' declarator ')'
-	| direct_declarator '[' type_qualifier_list assignment_expression ']'					{ printf("  -00A\n"); }
-	| direct_declarator '[' type_qualifier_list ']'											{ printf("  -009\n"); }
-	| direct_declarator '[' assignment_expression ']'										{ uint32_t r = PopRegister(); g_context.m_DeclDim = RegVal(r); printf("DIM R%d  // Array dimension = %d\n", r, g_context.m_DeclDim); }
-	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'			{ printf("  -008\n"); }
-	| direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'			{ printf("  -007\n"); }
-	| direct_declarator '[' type_qualifier_list '*' ']'										{ printf("  -006\n"); }
-	| direct_declarator '[' '*' ']'															{ printf("  -005\n"); }
-	| direct_declarator '[' ']'																{ printf("  -004\n"); }
-	| direct_declarator '(' parameter_type_list ')'											{ printf("  -003\n"); }
-	| direct_declarator '(' identifier_list ')'												{ printf("  -002\n"); }
-	| direct_declarator '(' ')'																{ printf("//FUNCDECL\n"); }
+	| direct_declarator '[' type_qualifier_list assignment_expression ']'					{	printf("  -00A\n"); }
+	| direct_declarator '[' type_qualifier_list ']'											{	printf("  -009\n"); }
+	| direct_declarator '[' assignment_expression ']'										{	uint32_t r = PopRegister(); g_context.m_InitAsgnCounter = g_context.m_DeclDim = RegVal(r); printf("DIM R%d  // Array dimension = %d\n", r, g_context.m_DeclDim); }
+	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'			{	printf("  -008\n"); }
+	| direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'			{	printf("  -007\n"); }
+	| direct_declarator '[' type_qualifier_list '*' ']'										{	printf("  -006\n"); }
+	| direct_declarator '[' '*' ']'															{	printf("  -005\n"); }
+	| direct_declarator '[' ']'																{	printf("  -004\n"); }
+	| direct_declarator '(' parameter_type_list ')'											{	printf("  -003\n"); }
+	| direct_declarator '(' identifier_list ')'												{	printf("  -002\n"); }
+	| direct_declarator '(' ')'																{
+																								std::string V;
+																								pop(V);
+																								printf("// Function: %s\n", V.c_str());
+																							}
 	;
 
 pointer
@@ -523,7 +582,28 @@ direct_abstract_declarator
 	;
 
 initializer
-	: assignment_expression
+	: assignment_expression														{
+																					if (!stackempty())
+																					{
+																						std::string V;
+																						pop(V);
+																						g_context.m_DeclReg = PushRegister();
+																						uint32_t addrs0 = CreateVar((char*)V.c_str(), g_context.m_DeclDim);
+																						printf("// VAR %s[%d]\n", V.c_str(), g_context.m_DeclDim);
+																						printf("SET R%d, 0x%.8x", g_context.m_DeclReg, (uint32_t)addrs0);
+																						printf("  // &%s\n", V.c_str());
+																						SetReg(g_context.m_DeclReg, (uint64_t)addrs0);
+																						PopRegister(); // Pop decl. register
+																					}
+
+																					uint32_t r = PopRegister();
+																					uint32_t i = g_context.m_DeclDim-g_context.m_InitAsgnCounter;
+																					printf("ST [R%d+%d], R%d", g_context.m_DeclReg, i, r);
+																					uint32_t addrs1 = (RegVal(g_context.m_DeclReg))+i;
+																					g_context.m_Heap[addrs1] = RegVal(r);
+																					printf("  // [0x%.8x] = 0x%.8x\n", addrs1, RegVal(r));
+																					g_context.m_InitAsgnCounter--;
+																				}
 	| '{' initializer_list '}'
 	| '{' initializer_list ',' '}'
 	;
@@ -580,8 +660,8 @@ block_item
 	;
 
 expression_statement
-	: ';'																					{ printf("//noop expressionstatement\n"); }
-	| expression ';'																		{ printf("//expressionstatement\n"); }
+	: ';'
+	| expression ';'
 	;
 
 selection_statement
@@ -601,11 +681,11 @@ iteration_statement
 	;
 
 jump_statement
-	: GOTO IDENTIFIER ';'
-	| CONTINUE ';'
-	| BREAK ';'
-	| RETURN ';'
-	| RETURN expression ';'
+	: GOTO IDENTIFIER ';'																{	printf("\t*GOTO %s\n", $2); }
+	| CONTINUE ';'																		{	printf("\t*CONT\n"); }
+	| BREAK ';'																			{	printf("\t*BREAK\n"); }
+	| RETURN ';'																		{	printf("\t*RET\n"); }
+	| RETURN expression ';'																{	printf("\t*RETEXP\n"); }
 	;
 
 translation_unit
@@ -633,6 +713,11 @@ declaration_list
 void push(const char *str)
 {
 	g_context.m_Stack.push(std::string(str));
+}
+
+bool stackempty()
+{
+	return g_context.m_Stack.size() == 0 ? true : false;
 }
 
 void pop(std::string &_str)
