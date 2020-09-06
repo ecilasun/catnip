@@ -145,7 +145,7 @@ uint64_t RegVal(uint32_t r)
 %%
 
 primary_expression
-	: IDENTIFIER																			{ uint32_t *V = FindVar($1); if (V!=nullptr) { uint32_t r = PushRegister(); printf("SET R%d, [0x%.8llx]\n", r, (uint64_t)V); SetReg(r, *V); } }
+	: IDENTIFIER																			{ uint32_t *V = FindVar($1); if (V!=nullptr) { uint32_t r = PushRegister(); printf("SET R%d, [0x%.8llx]", r, (uint64_t)V); SetReg(r, *V); printf("  // R%d = 0x%.8llx\n", r, (uint64_t)*V); } }
 	| CONSTANT																				{ uint32_t r = PushRegister(); printf("SET R%d, %d\n", r, $1); SetReg(r, $1); }
 	| STRING_LITERAL																		{ push($1); /* TODO: store address of pooled string in a register*/ }
 	| '(' expression ')'
@@ -307,15 +307,21 @@ init_declarator_list
 init_declarator
 	: declarator
 	| declarator '=' initializer															{
+																								// The list is reverse order due to register stack, fix ordering here by using a register list
+																								uint32_t reglist[512];
 																								for (int i=int(g_context.m_DeclDim)-1;i>=0;--i)
 																								{
 																									uint32_t r = PopRegister();
-																									printf("ST [R%d+%d], R%d", g_context.m_DeclReg, i, r);
-																									uint32_t *addrs = (uint32_t*)(RegVal(g_context.m_DeclReg))+i;
-																									*addrs = RegVal(r);
-																									printf("  // (0x%.8llx <- 0x%.8llx)\n", RegVal(g_context.m_DeclReg)+i*4, RegVal(r));
+																									reglist[i] = r;
 																								}
-																								PopRegister(); // Pop decl. register
+																								for (int i=0;i<g_context.m_DeclDim;++i)
+																								{
+																									printf("ST [R%d+%d], R%d", g_context.m_DeclReg, i, reglist[i]);
+																									uint32_t *addrs = (uint32_t*)(RegVal(g_context.m_DeclReg))+i;
+																									*addrs = RegVal(reglist[i]);
+																									printf("  // (0x%.8llx <- 0x%.8llx)\n", RegVal(g_context.m_DeclReg)+i*4, RegVal(reglist[i]));
+																								}
+																								PopRegister(); // Pop decl. register as well
 																							}
 	;
 
@@ -426,7 +432,7 @@ direct_declarator
 	| direct_declarator '[' ']'																{ printf("  -004\n"); }
 	| direct_declarator '(' parameter_type_list ')'											{ printf("  -003\n"); }
 	| direct_declarator '(' identifier_list ')'												{ printf("  -002\n"); }
-	| direct_declarator '(' ')'																{ printf("  -001\n"); }
+	| direct_declarator '(' ')'																{ /*std::string V; pop(V); printf("  func %s\n", V.c_str());*/ }
 	;
 
 pointer
