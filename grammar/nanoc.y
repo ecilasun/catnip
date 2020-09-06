@@ -33,6 +33,20 @@ enum EUnaryOp
 	U_LOGICNOT,
 };
 
+enum ETypeName
+{
+	T_VOID,
+	T_CHAR,
+	T_INT,
+	T_CUSTOM
+};
+
+enum ETypeModifier
+{
+	T_SIGNED,
+	T_UNSIGNED,
+};
+
 struct SParserContext
 {
 	SParserContext()
@@ -51,11 +65,22 @@ struct SParserContext
 	uint32_t m_Registers[512];
 	uint32_t m_CurrentRegister{0};
 	EUnaryOp m_UnaryOp{U_NONE};
+	ETypeName m_TypeName{T_VOID};
+	ETypeModifier m_TypeModifier{T_SIGNED};
+	int m_IsPointer{0};
 };
 
 SParserContext g_context;
 
-std::map<uint32_t, uint32_t> g_variableAddresses;
+struct SVariable
+{
+	uint32_t m_Address;
+	ETypeName m_TypeName;
+	ETypeModifier m_TypeModifier;
+	int m_IsPointer;
+};
+
+std::map<uint32_t, SVariable> g_variables;
 
 uint32_t HashString(const char *_str)
 {
@@ -105,18 +130,21 @@ uint32_t CreateVar(char *varname, uint32_t size)
 	uint32_t var = HashString(varname);
 	uint32_t addr = AllocVar(size);
 
-	g_variableAddresses[var] = addr;
+	g_variables[var] = {addr, g_context.m_TypeName, g_context.m_TypeModifier, g_context.m_IsPointer};
 
 	return addr;
 }
 
-uint32_t FindVar(char *varname)
+uint32_t FindVar(char *varname, SVariable &variable)
 {
 	uint32_t var = HashString(varname);
 
-	auto found = g_variableAddresses.find(var);
-	if (found!=g_variableAddresses.end())
-		return found->second;
+	auto found = g_variables.find(var);
+	if (found!=g_variables.end())
+	{
+		variable = found->second;
+		return found->second.m_Address;
+	}
 	else
 	{
 		printf("ERROR: Variable not found\n");
@@ -163,22 +191,33 @@ uint32_t RegVal(uint32_t r)
 
 primary_expression
 	: IDENTIFIER																			{
-																								uint32_t V = FindVar($1);
+																								SVariable var;
+																								uint32_t V = FindVar($1, var);
 																								if (V != 0xFFFFFFFF)
 																								{
 																									uint32_t r = PushRegister();
-																									printf("SET R%d, 0x%.8x", r, V);
-																									SetReg(r, V);
-																									printf("  // R%d = %s (0x%.8x)\n", r, $1, V);
+																									if (var.m_IsPointer)
+																									{
+																										printf("SET R%d, 0x%.8x", r, g_context.m_Heap[var.m_Address]);
+																										SetReg(r, g_context.m_Heap[var.m_Address]);
+																									}
+																									else
+																									{
+																										printf("SET R%d, 0x%.8x", r, V);
+																										SetReg(r, V);
+																									}
+																									printf("  // R%d = %s%s (0x%.8x)\n", r, var.m_IsPointer ? "*":"", $1, V);
 																								}
 																								g_context.m_IsConstant = 0;
 																								g_context.m_InitAsgnCounter = g_context.m_DeclDim = 1;
+																								g_context.m_IsPointer = 0;
 																							}
 	| CONSTANT																				{
 																								uint32_t r = PushRegister();
 																								printf("SET R%d, %d\n", r, $1);
 																								SetReg(r, $1);
 																								g_context.m_IsConstant = 1;
+																								//g_context.m_IsPointer = 0;
 																							}
 	| STRING_LITERAL																		{
 																								// TODO: store address of pooled string in a register
@@ -397,8 +436,8 @@ declaration
 declaration_specifiers
 	: storage_class_specifier																{	printf("// TODO: storage_class_specifier\n"); }
 	| storage_class_specifier declaration_specifiers
-	| type_specifier																		{	printf("// TODO: type_specifier\n");
-																								g_context.m_DeclDim = 1;
+	| type_specifier																		{	printf("// Type: TypeModifier: %d\n", g_context.m_TypeName, g_context.m_TypeModifier);
+																								g_context.m_InitAsgnCounter = g_context.m_DeclDim = 1;
 																							}
 	| type_specifier declaration_specifiers
 	| type_qualifier																		{	printf("// TODO: type_qualifier\n"); }
@@ -421,7 +460,7 @@ init_declarator
 																									pop(V);
 																									//g_context.m_DeclReg = PushRegister();
 																									uint32_t addrs0 = CreateVar((char*)V.c_str(), g_context.m_DeclDim);
-																									printf("// VAR %s[%d]\n", V.c_str(), g_context.m_DeclDim);
+																									printf("// VAR %s%s[%d]\n", g_context.m_IsPointer ? "*":"", V.c_str(), g_context.m_DeclDim);
 																									//printf("SET R%d, 0x%.8x # %s[%d] (new)\n", g_context.m_DeclReg, (uint32_t)addrs0, V.c_str(), g_context.m_DeclDim);
 																									//SetReg(g_context.m_DeclReg, (uint64_t)addrs0);
 																									//PopRegister(); // Pop decl. register
@@ -439,18 +478,18 @@ storage_class_specifier
 	;
 
 type_specifier
-	: VOID
-	| CHAR
-	| SHORT
-	| INT
-	| LONG
-	| FLOAT
-	| DOUBLE
-	| SIGNED
-	| UNSIGNED
+	: VOID											{ g_context.m_TypeName = T_VOID; }
+	| CHAR											{ g_context.m_TypeName = T_CHAR;}
+	| SHORT											{ printf("ERROR: SHORT not supported!"); }
+	| INT											{ g_context.m_TypeName = T_INT; }
+	| LONG											{ printf("ERROR: LONG not supported!"); }
+	| FLOAT											{ printf("ERROR: FLOAT not supported!"); }
+	| DOUBLE										{ printf("ERROR: DOUBLE not supported!"); }
+	| SIGNED										{ g_context.m_TypeModifier = T_SIGNED; }
+	| UNSIGNED										{ g_context.m_TypeModifier = T_UNSIGNED; }
 	| struct_or_union_specifier
 	| enum_specifier
-	| TYPE_NAME
+	| TYPE_NAME										{ g_context.m_TypeName = T_CUSTOM; }
 	;
 
 struct_or_union_specifier
@@ -549,10 +588,10 @@ direct_declarator
 	;
 
 pointer
-	: '*'
-	| '*' type_qualifier_list
-	| '*' pointer
-	| '*' type_qualifier_list pointer
+	: '*'																					{ printf("// *\n"); g_context.m_IsPointer = 1; }
+	| '*' type_qualifier_list																{ printf("// *\n"); g_context.m_IsPointer = 1; }
+	| '*' pointer																			{ printf("// *\n"); g_context.m_IsPointer = 1; }
+	| '*' type_qualifier_list pointer														{ printf("// *\n"); g_context.m_IsPointer = 1; }
 	;
 
 type_qualifier_list
@@ -588,9 +627,9 @@ type_name
 	;
 
 abstract_declarator
-	: pointer
-	| direct_abstract_declarator
-	| pointer direct_abstract_declarator
+	: pointer															{ printf("// pointer"); }
+	| direct_abstract_declarator										{ printf("// direct_abstract_declarator"); }
+	| pointer direct_abstract_declarator								{ printf("// pointer direct_abstract_declarator"); }
 	;
 
 direct_abstract_declarator
@@ -615,7 +654,7 @@ initializer
 																						pop(V);
 																						g_context.m_DeclReg = PushRegister();
 																						uint32_t addrs0 = CreateVar((char*)V.c_str(), g_context.m_DeclDim);
-																						printf("// VAR %s[%d]\n", V.c_str(), g_context.m_DeclDim);
+																						printf("// VAR %s%s[%d]\n", V.c_str(), g_context.m_IsPointer ? "*":"", g_context.m_DeclDim);
 																						printf("SET R%d, 0x%.8x", g_context.m_DeclReg, (uint32_t)addrs0);
 																						printf("  // &%s\n", V.c_str());
 																						SetReg(g_context.m_DeclReg, (uint64_t)addrs0);
@@ -624,10 +663,12 @@ initializer
 
 																					uint32_t r = PopRegister();
 																					uint32_t i = g_context.m_DeclDim-g_context.m_InitAsgnCounter;
+																					
 																					printf("ST [R%d+%d], R%d", g_context.m_DeclReg, i, r);
 																					uint32_t addrs1 = (RegVal(g_context.m_DeclReg))+i;
 																					g_context.m_Heap[addrs1] = RegVal(r);
 																					printf("  // [0x%.8x] = 0x%.8x\n", addrs1, RegVal(r));
+
 																					g_context.m_InitAsgnCounter--;
 																				}
 	| '{' initializer_list '}'
