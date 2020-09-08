@@ -104,6 +104,8 @@ L?\"(\\.|[^\\"\n])*\"	{ count(); sscanf(yytext, "%s", yylval.string); return(STR
 "&&"			{ count();  return(AND_OP); }
 "||"			{ count();  return(OR_OP); }
 "<="			{ count();  return(LE_OP); }
+"<"				{ count();  return(LESS_OP); }
+">"				{ count();  return(GREATER_OP); }
 ">="			{ count();  return(GE_OP); }
 "=="			{ count();  return(EQ_OP); }
 "!="			{ count();  return(NE_OP); }
@@ -126,8 +128,6 @@ L?\"(\\.|[^\\"\n])*\"	{ count(); sscanf(yytext, "%s", yylval.string); return(STR
 "*"			{ count();  return('*'); }
 "/"			{ count();  return('/'); }
 "%"			{ count();  return('%'); }
-"<"			{ count();  return('<'); }
-">"			{ count();  return('>'); }
 "^"			{ count();  return('^'); }
 "|"			{ count();  return('|'); }
 "?"			{ count();  return('?'); }

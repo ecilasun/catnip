@@ -108,6 +108,11 @@ uint32_t PushRegister()
 	return g_context.m_CurrentRegister++;
 }
 
+void ResetRegisters()
+{
+	g_context.m_CurrentRegister = 0;
+}
+
 uint32_t PopRegister()
 {
 	if (g_context.m_CurrentRegister == 0)
@@ -609,7 +614,8 @@ direct_declarator
 	| direct_declarator '(' ')'																{
 																								std::string V;
 																								pop(V);
-																								printf("@FUNC '%s'\n", V.c_str());
+																								printf("\n@FUNC '%s'\n", V.c_str());
+																								ResetRegisters();
 																							}
 	;
 
@@ -768,17 +774,20 @@ iteration_statement
 	: WHILE '(' expression ')' statement
 	| DO statement WHILE '(' expression ')' ';'
 	| FOR '(' expression_statement expression_statement ')' statement
-	| FOR '(' expression_statement expression_statement expression ')' statement
+	| FOR '(' expression_statement expression_statement expression ')' statement		{	printf("// end of full if\n"); }
 	| FOR '(' declaration expression_statement ')' statement
-	| FOR '(' declaration expression_statement expression ')' statement
+	| FOR '(' declaration expression_statement expression ')' statement					{	printf("// end of full if and decl\n"); }
 	;
 
 jump_statement
 	: GOTO IDENTIFIER ';'																{	printf("\t*GOTO %s\n", $2); }
 	| CONTINUE ';'																		{	printf("\t*CONT\n"); }
 	| BREAK ';'																			{	printf("\t*BREAK\n"); }
-	| RETURN ';'																		{	printf("\t*RET\n"); }
-	| RETURN expression ';'																{	printf("\t*RETEXP\n"); }
+	| RETURN ';'																		{	printf("RET\n"); }
+	| RETURN expression ';'																{	
+																							uint32_t r = PreviousRegister();
+																							printf("RET R%d\n", r);
+																						}
 	;
 
 translation_unit

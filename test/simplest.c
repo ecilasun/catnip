@@ -6,10 +6,17 @@ int D[4] = {10, 20, 30, 40};
 // NOTE: Actual hardware VRAM starts at 0x80000000, here we cheat for simpler memory access
 int *VRAM = 0x10000;
 
-int test()
+void test()
 {
      int E = A*B/-6;          // Should contain 6 at 0x0000000f
      C[2] = 5+D[3];           // Should contain 45 at 0x00000004
      VRAM[4] = 0xFF-C[2];     // Should contain 210 at 0x00010004
      E = &B;                  // E should contain address of B, 0x00000001
+
+     for (int i=0;i<5;i++)
+     {
+         E = E + 1; 
+     }
+
+     return E;
 }
