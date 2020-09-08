@@ -15,7 +15,10 @@ void test()
 
      for (int i=2;i<5;i++)
      {
-         E = E + 1; 
+         for (int j=3;j<12;j++)
+         {
+            E = E + 1;
+         }
      }
 
      return E;

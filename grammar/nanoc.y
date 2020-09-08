@@ -71,6 +71,8 @@ struct SParserContext
 	int m_LHS{1};
 	int m_AddressOp{0};
 	int m_ForLoop{0};
+	uint32_t m_ForLoopName{0};
+	std::stack<uint32_t> m_ForLoopStack;
 };
 
 SParserContext g_context;
@@ -100,6 +102,18 @@ uint32_t HashString(const char *_str)
 	}
 
 	return (uint32_t)(Val);
+}
+
+void PushForLoop(uint32_t forloopname)
+{
+	g_context.m_ForLoopStack.push(forloopname);
+}
+
+uint32_t PopForLoop()
+{
+	g_context.m_ForLoopStack.pop();
+	uint32_t forloopname = g_context.m_ForLoopStack.top();
+	return forloopname;
 }
 
 uint32_t PushRegister()
@@ -392,19 +406,19 @@ relational_expression
 	| relational_expression LESS_OP shift_expression										{	uint32_t r2 = PopRegister();
 																								uint32_t r1 = PopRegister();
 																								printf("CMPL R%d R%d\n", r1,r2);
-																								printf("JMPNZ @end_for_loop\n"); }
+																								printf("JMPNZ @end_for_loop%d\n", g_context.m_ForLoopName); }
 	| relational_expression GREATER_OP shift_expression										{	uint32_t r2 = PopRegister();
 																								uint32_t r1 = PopRegister();
 																								printf("CMPG R%d R%d\n", r1,r2);
-																								printf("JMPNZ @end_for_loop\n"); }
+																								printf("JMPNZ @end_for_loop%d\n", g_context.m_ForLoopName); }
 	| relational_expression LE_OP shift_expression											{	uint32_t r2 = PopRegister();
 																								uint32_t r1 = PopRegister();
 																								printf("CMPLE R%d R%d\n", r1,r2);
-																								printf("JMPNZ @end_for_loop\n"); }
+																								printf("JMPNZ @end_for_loop%d\n", g_context.m_ForLoopName); }
 	| relational_expression GE_OP shift_expression											{	uint32_t r2 = PopRegister();
 																								uint32_t r1 = PopRegister();
 																								printf("CMPGE R%d R%d\n", r1,r2);
-																								printf("JMPNZ @end_for_loop\n"); }
+																								printf("JMPNZ @end_for_loop$d\n", g_context.m_ForLoopName); }
 	;
 
 equality_expression
@@ -793,19 +807,19 @@ iteration_statement_begin
 	;
 
 iteration_statement_prologue_expr
-	: iteration_statement_begin expression_statement											{	printf("@LABEL for_loop\n"); g_context.m_ForLoop = 1; }
+	: iteration_statement_begin expression_statement											{	printf("@LABEL for_loop%d\n", ++g_context.m_ForLoopName); PushForLoop(g_context.m_ForLoopName); g_context.m_ForLoop = 1; }
 	;
 iteration_statement_prologue_decl
-	: iteration_statement_begin declaration														{	printf("@LABEL for_loop\n"); g_context.m_ForLoop = 1; }
+	: iteration_statement_begin declaration														{	printf("@LABEL for_loop%d\n", ++g_context.m_ForLoopName); PushForLoop(g_context.m_ForLoopName); g_context.m_ForLoop = 1; }
 	;
 
 iteration_statement
 	: WHILE '(' expression ')' statement
 	| DO statement WHILE '(' expression ')' ';'
-	| iteration_statement_prologue_expr expression_statement ')' statement						{	printf("JMP @for_loop\n@LABEL end_for_loop\n"); g_context.m_ForLoop = 0; }
-	| iteration_statement_prologue_expr expression_statement expression ')' statement			{	printf("JMP @for_loop\n@LABEL end_for_loop\n"); g_context.m_ForLoop = 0; }
-	| iteration_statement_prologue_decl expression_statement ')' statement						{	printf("JMP @for_loop\n@LABEL end_for_loop\n"); g_context.m_ForLoop = 0; }
-	| iteration_statement_prologue_decl expression_statement expression ')' statement			{	printf("JMP @for_loop\n@LABEL end_for_loop\n"); g_context.m_ForLoop = 0; }
+	| iteration_statement_prologue_expr expression_statement ')' statement						{	printf("JMP @for_loop%d\n@LABEL end_for_loop%d\n", g_context.m_ForLoopName, g_context.m_ForLoopName); g_context.m_ForLoopName = PopForLoop(); g_context.m_ForLoop = 0; }
+	| iteration_statement_prologue_expr expression_statement expression ')' statement			{	printf("JMP @for_loop%d\n@LABEL end_for_loop%d\n", g_context.m_ForLoopName, g_context.m_ForLoopName); g_context.m_ForLoopName = PopForLoop(); g_context.m_ForLoop = 0; }
+	| iteration_statement_prologue_decl expression_statement ')' statement						{	printf("JMP @for_loop%d\n@LABEL end_for_loop%d\n", g_context.m_ForLoopName, g_context.m_ForLoopName); g_context.m_ForLoopName = PopForLoop(); g_context.m_ForLoop = 0; }
+	| iteration_statement_prologue_decl expression_statement expression ')' statement			{	printf("JMP @for_loop%d\n@LABEL end_for_loop%d\n", g_context.m_ForLoopName, g_context.m_ForLoopName); g_context.m_ForLoopName = PopForLoop(); g_context.m_ForLoop = 0; }
 	;
 
 jump_statement
