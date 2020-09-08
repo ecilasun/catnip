@@ -70,6 +70,7 @@ struct SParserContext
 	int m_IsPointer{0};
 	int m_LHS{1};
 	int m_AddressOp{0};
+	int m_ForLoop{0};
 };
 
 SParserContext g_context;
@@ -199,8 +200,8 @@ uint32_t RegVal(uint32_t r)
 primary_expression
 	: IDENTIFIER																			{
 																								SVariable var;
-																								uint32_t V = FindVar($1, var);
-																								if (V != 0xFFFFFFFF)
+																								uint32_t var_addrs = FindVar($1, var);
+																								if (var_addrs != 0xFFFFFFFF)
 																								{
 																									uint32_t r = PushRegister();
 																									if (var.m_IsPointer)
@@ -210,11 +211,11 @@ primary_expression
 																									}
 																									else
 																									{
-																										printf("SET R%d, 0x%.8x", r, V);
-																										SetReg(r, V);
+																										printf("SET R%d, 0x%.8x", r, var_addrs);
+																										SetReg(r, var_addrs);
 																									}
 																									g_context.m_DeclReg = r;
-																									printf("  // R%d = %s%s (0x%.8x)\n", r, var.m_IsPointer ? "*":"", $1, V);
+																									printf("  // R%d = %s%s (at 0x%.8x)\n", r, var.m_IsPointer ? "*":"", $1, var_addrs);
 																								}
 																								g_context.m_IsConstant = 0;
 																								g_context.m_InitAsgnCounter = g_context.m_DeclDim = 1;
@@ -261,7 +262,10 @@ postfix_expression
 	| postfix_expression '(' argument_expression_list ')'
 	| postfix_expression '.' IDENTIFIER
 	| postfix_expression PTR_OP IDENTIFIER
-	| postfix_expression INC_OP
+	| postfix_expression INC_OP												{	uint32_t r = PreviousRegister();
+																				printf("INC [R%d]", r);
+																				g_context.m_Heap[RegVal(r)] =+1;
+																				printf("  // R%d = %d\n", r, RegVal(r)); }
 	| postfix_expression DEC_OP
 	| '(' type_name ')' '{' initializer_list '}'
 	| '(' type_name ')' '{' initializer_list ',' '}'
@@ -274,7 +278,10 @@ argument_expression_list
 
 unary_expression
 	: postfix_expression
-	| INC_OP unary_expression
+	| INC_OP unary_expression												{	uint32_t r = PreviousRegister();
+																				printf("INC [R%d]", r);
+																				g_context.m_Heap[RegVal(r)] =+1;
+																				printf("  // R%d = %d\n", r, RegVal(r)); }
 	| DEC_OP unary_expression
 	| unary_operator cast_expression										{
 																				if (g_context.m_UnaryOp == U_NEGATE) { uint32_t r = PreviousRegister(); printf("NEG R%d\n", r); SetReg(r, -RegVal(r)); }
@@ -382,10 +389,22 @@ shift_expression
 
 relational_expression
 	: shift_expression
-	| relational_expression LESS_OP shift_expression
-	| relational_expression GREATER_OP shift_expression
-	| relational_expression LE_OP shift_expression
-	| relational_expression GE_OP shift_expression
+	| relational_expression LESS_OP shift_expression										{	uint32_t r2 = PopRegister();
+																								uint32_t r1 = PopRegister();
+																								printf("CMPL R%d R%d\n", r1,r2);
+																								printf("JMPNZ @end_for_loop\n"); }
+	| relational_expression GREATER_OP shift_expression										{	uint32_t r2 = PopRegister();
+																								uint32_t r1 = PopRegister();
+																								printf("CMPG R%d R%d\n", r1,r2);
+																								printf("JMPNZ @end_for_loop\n"); }
+	| relational_expression LE_OP shift_expression											{	uint32_t r2 = PopRegister();
+																								uint32_t r1 = PopRegister();
+																								printf("CMPLE R%d R%d\n", r1,r2);
+																								printf("JMPNZ @end_for_loop\n"); }
+	| relational_expression GE_OP shift_expression											{	uint32_t r2 = PopRegister();
+																								uint32_t r1 = PopRegister();
+																								printf("CMPGE R%d R%d\n", r1,r2);
+																								printf("JMPNZ @end_for_loop\n"); }
 	;
 
 equality_expression
@@ -451,7 +470,7 @@ assignment_operator
 	;
 
 expression
-	: assignment_expression
+	: assignment_expression																	{	/*if (g_context.m_ForLoop) printf("//Part of FOR\n");*/ }
 	| expression ',' assignment_expression
 	;
 
@@ -760,7 +779,7 @@ block_item
 
 expression_statement
 	: ';'
-	| expression ';'													{ g_context.m_LHS = 1; }
+	| expression ';'																			{	/*printf("// expression_statement\n");*/ g_context.m_LHS = 1; }
 	;
 
 selection_statement
@@ -769,14 +788,24 @@ selection_statement
 	| SWITCH '(' expression ')' statement
 	;
 
+iteration_statement_begin
+	: FOR '('
+	;
+
+iteration_statement_prologue_expr
+	: iteration_statement_begin expression_statement											{	printf("@LABEL for_loop\n"); g_context.m_ForLoop = 1; }
+	;
+iteration_statement_prologue_decl
+	: iteration_statement_begin declaration														{	printf("@LABEL for_loop\n"); g_context.m_ForLoop = 1; }
+	;
 
 iteration_statement
 	: WHILE '(' expression ')' statement
 	| DO statement WHILE '(' expression ')' ';'
-	| FOR '(' expression_statement expression_statement ')' statement
-	| FOR '(' expression_statement expression_statement expression ')' statement		{	printf("// end of full if\n"); }
-	| FOR '(' declaration expression_statement ')' statement
-	| FOR '(' declaration expression_statement expression ')' statement					{	printf("// end of full if and decl\n"); }
+	| iteration_statement_prologue_expr expression_statement ')' statement						{	printf("JMP @for_loop\n@LABEL end_for_loop\n"); g_context.m_ForLoop = 0; }
+	| iteration_statement_prologue_expr expression_statement expression ')' statement			{	printf("JMP @for_loop\n@LABEL end_for_loop\n"); g_context.m_ForLoop = 0; }
+	| iteration_statement_prologue_decl expression_statement ')' statement						{	printf("JMP @for_loop\n@LABEL end_for_loop\n"); g_context.m_ForLoop = 0; }
+	| iteration_statement_prologue_decl expression_statement expression ')' statement			{	printf("JMP @for_loop\n@LABEL end_for_loop\n"); g_context.m_ForLoop = 0; }
 	;
 
 jump_statement
