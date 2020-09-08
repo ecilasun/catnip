@@ -70,7 +70,7 @@ struct SParserContext
 	int m_IsPointer{0};
 	int m_LHS{1};
 	int m_AddressOp{0};
-	int m_ForLoop{0};
+	int m_IsForLoop{0};
 	uint32_t m_ForLoopName{0};
 	std::stack<uint32_t> m_ForLoopStack;
 };
@@ -278,8 +278,9 @@ postfix_expression
 	| postfix_expression PTR_OP IDENTIFIER
 	| postfix_expression INC_OP												{	uint32_t r = PreviousRegister();
 																				printf("INC [R%d]", r);
-																				g_context.m_Heap[RegVal(r)] =+1;
-																				printf("  // R%d = %d\n", r, RegVal(r)); }
+																				uint32_t val = g_context.m_Heap[RegVal(r)] + 1;
+																				g_context.m_Heap[RegVal(r)] = val;
+																				printf("  // R%d = %d\n", r, val); }
 	| postfix_expression DEC_OP
 	| '(' type_name ')' '{' initializer_list '}'
 	| '(' type_name ')' '{' initializer_list ',' '}'
@@ -294,8 +295,9 @@ unary_expression
 	: postfix_expression
 	| INC_OP unary_expression												{	uint32_t r = PreviousRegister();
 																				printf("INC [R%d]", r);
-																				g_context.m_Heap[RegVal(r)] =+1;
-																				printf("  // R%d = %d\n", r, RegVal(r)); }
+																				uint32_t val = g_context.m_Heap[RegVal(r)] + 1;
+																				g_context.m_Heap[RegVal(r)] = val;
+																				printf("  // R%d = %d\n", r, val); }
 	| DEC_OP unary_expression
 	| unary_operator cast_expression										{
 																				if (g_context.m_UnaryOp == U_NEGATE) { uint32_t r = PreviousRegister(); printf("NEG R%d\n", r); SetReg(r, -RegVal(r)); }
@@ -324,7 +326,7 @@ cast_expression
 	: unary_expression																		{
 																								if (!g_context.m_IsConstant)
 																								{
-																									if (!g_context.m_AddressOp)
+																									if (!g_context.m_AddressOp /*&& !g_context.m_IsForLoop*/ /*TODO*/)
 																									{
 																										// Swap register contents (address) with value at that adress
 																										uint32_t r = PreviousRegister();
@@ -484,7 +486,7 @@ assignment_operator
 	;
 
 expression
-	: assignment_expression																	{	/*if (g_context.m_ForLoop) printf("//Part of FOR\n");*/ }
+	: assignment_expression																	{	/*if (g_context.m_IsForLoop) printf("//Part of FOR\n");*/ }
 	| expression ',' assignment_expression
 	;
 
@@ -735,6 +737,7 @@ initializer
 																					printf("  // [0x%.8x] = 0x%.8x\n", addrs1, RegVal(r));
 
 																					g_context.m_InitAsgnCounter--;
+																					g_context.m_IsPointer = 0;
 																				}
 	| '{' initializer_list '}'
 	| '{' initializer_list ',' '}'
@@ -807,19 +810,19 @@ iteration_statement_begin
 	;
 
 iteration_statement_prologue_expr
-	: iteration_statement_begin expression_statement											{	printf("@LABEL for_loop%d\n", ++g_context.m_ForLoopName); PushForLoop(g_context.m_ForLoopName); g_context.m_ForLoop = 1; }
+	: iteration_statement_begin expression_statement											{	printf("@LABEL for_loop%d\n", ++g_context.m_ForLoopName); PushForLoop(g_context.m_ForLoopName); g_context.m_IsForLoop = 1; }
 	;
 iteration_statement_prologue_decl
-	: iteration_statement_begin declaration														{	printf("@LABEL for_loop%d\n", ++g_context.m_ForLoopName); PushForLoop(g_context.m_ForLoopName); g_context.m_ForLoop = 1; }
+	: iteration_statement_begin declaration														{	printf("@LABEL for_loop%d\n", ++g_context.m_ForLoopName); PushForLoop(g_context.m_ForLoopName); g_context.m_IsForLoop = 1; }
 	;
 
 iteration_statement
 	: WHILE '(' expression ')' statement
 	| DO statement WHILE '(' expression ')' ';'
-	| iteration_statement_prologue_expr expression_statement ')' statement						{	printf("JMP @for_loop%d\n@LABEL end_for_loop%d\n", g_context.m_ForLoopName, g_context.m_ForLoopName); g_context.m_ForLoopName = PopForLoop(); g_context.m_ForLoop = 0; }
-	| iteration_statement_prologue_expr expression_statement expression ')' statement			{	printf("JMP @for_loop%d\n@LABEL end_for_loop%d\n", g_context.m_ForLoopName, g_context.m_ForLoopName); g_context.m_ForLoopName = PopForLoop(); g_context.m_ForLoop = 0; }
-	| iteration_statement_prologue_decl expression_statement ')' statement						{	printf("JMP @for_loop%d\n@LABEL end_for_loop%d\n", g_context.m_ForLoopName, g_context.m_ForLoopName); g_context.m_ForLoopName = PopForLoop(); g_context.m_ForLoop = 0; }
-	| iteration_statement_prologue_decl expression_statement expression ')' statement			{	printf("JMP @for_loop%d\n@LABEL end_for_loop%d\n", g_context.m_ForLoopName, g_context.m_ForLoopName); g_context.m_ForLoopName = PopForLoop(); g_context.m_ForLoop = 0; }
+	| iteration_statement_prologue_expr expression_statement ')' statement						{	printf("JMP @for_loop%d\n@LABEL end_for_loop%d\n", g_context.m_ForLoopName, g_context.m_ForLoopName); g_context.m_ForLoopName = PopForLoop(); g_context.m_IsForLoop = 0; }
+	| iteration_statement_prologue_expr expression_statement expression ')' statement			{	printf("JMP @for_loop%d\n@LABEL end_for_loop%d\n", g_context.m_ForLoopName, g_context.m_ForLoopName); g_context.m_ForLoopName = PopForLoop(); g_context.m_IsForLoop = 0; }
+	| iteration_statement_prologue_decl expression_statement ')' statement						{	printf("JMP @for_loop%d\n@LABEL end_for_loop%d\n", g_context.m_ForLoopName, g_context.m_ForLoopName); g_context.m_ForLoopName = PopForLoop(); g_context.m_IsForLoop = 0; }
+	| iteration_statement_prologue_decl expression_statement expression ')' statement			{	printf("JMP @for_loop%d\n@LABEL end_for_loop%d\n", g_context.m_ForLoopName, g_context.m_ForLoopName); g_context.m_ForLoopName = PopForLoop(); g_context.m_IsForLoop = 0; }
 	;
 
 jump_statement

@@ -8,18 +8,19 @@ int *VRAM = 0x10000;
 
 void test()
 {
-     int E = A*B/-6;          // Should contain 6 at 0x0000000f
-     C[2] = 5+D[3];           // Should contain 45 at 0x00000004
-     VRAM[4] = 0xFF-C[2];     // Should contain 210 at 0x00010004
-     E = &B;                  // E should contain address of B, 0x00000001
+    int E = A*B/-6;          // Should contain 6 at 0x0000000f
+    C[2] = 5+D[3];           // Should contain 45 at 0x00000004
+    VRAM[4] = 0xFF-C[2];     // Should contain 210 at 0x00010004
+    E = &B;                  // E should contain address of B, 0x00000001
 
-     for (int i=2;i<5;i++)
-     {
-         for (int j=3;j<12;j++)
-         {
-            E = E + 1;
-         }
-     }
+    for (int y=2;y<10;y++)
+    {
+        for (int x=8;x<16;x++)
+        {
+           int addrs = x + y*320; // For 320x240 framebuffer
+           VRAM[addrs] = 0xFF;
+        }
+    }
 
-     return E;
+    return E;
 }
