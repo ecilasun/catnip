@@ -68,8 +68,6 @@ struct SParserContext
 	ETypeName m_TypeName{T_VOID};
 	ETypeModifier m_TypeModifier{T_SIGNED};
 	int m_IsPointer{0};
-	int m_AssignOffset{0};
-	int m_AssignOffsetRHS{0};
 	int m_LHS{1};
 };
 
@@ -235,16 +233,21 @@ postfix_expression
 	| postfix_expression '[' expression ']'													{
 																								uint32_t r = PopRegister();
 																								if (g_context.m_LHS)
-																									g_context.m_AssignOffset = RegVal(r);
+																								{
+																									uint32_t r2 = PreviousRegister();
+																									printf("ADD R%d, R%d", r2, r);
+																									SetReg(r2, RegVal(r2) + RegVal(r));
+																									printf("  // R%d = %d\n", r2, RegVal(r2));
+																								}
 																								else
 																								{
-																									g_context.m_AssignOffsetRHS = RegVal(r);
-																									r = PreviousRegister();
-																									printf("LD R%d, [R%d+%d]\n", r, r, g_context.m_AssignOffsetRHS);
-																									uint32_t addr = RegVal(r)+g_context.m_AssignOffsetRHS;
-																									SetReg(r, g_context.m_Heap[addr]);
+																									uint32_t r2 = PreviousRegister();
+																									printf("ADD R%d, R%d\n", r2, r);
+																									SetReg(r2, RegVal(r2) + RegVal(r));
+																									printf("LD R%d, [R%d]", r2, r2);
+																									SetReg(r2, g_context.m_Heap[RegVal(r2)]);
+																									printf("  // R%d = %d\n", r2, RegVal(r2));
 																								}
-																								printf("// Assignment offset LHS:%d RHS:%d\n", g_context.m_AssignOffset, g_context.m_AssignOffsetRHS);
 																							}
 	| postfix_expression '(' ')'
 	| postfix_expression '(' argument_expression_list ')'
@@ -415,11 +418,10 @@ assignment_expression
 	| unary_expression assignment_operator assignment_expression							{
 																								uint32_t r1 = PopRegister();
 																								uint32_t r2 = PopRegister();
-																								printf("ST [R%d+%d], R%d", r2, g_context.m_AssignOffset, r1);
-																								uint32_t addr = RegVal(r2)+g_context.m_AssignOffset;
+																								printf("ST [R%d], R%d", r2, r1);
+																								uint32_t addr = RegVal(r2);
 																								g_context.m_Heap[addr] = RegVal(r1);
 																								printf("  // [0x%.8x] = 0x%.8x\n", addr, RegVal(r1));
-																								g_context.m_AssignOffset = 0;
 																							}
 	;
 
