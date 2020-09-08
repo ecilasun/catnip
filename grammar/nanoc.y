@@ -69,6 +69,8 @@ struct SParserContext
 	ETypeModifier m_TypeModifier{T_SIGNED};
 	int m_IsPointer{0};
 	int m_AssignOffset{0};
+	int m_AssignOffsetRHS{0};
+	int m_LHS{1};
 };
 
 SParserContext g_context;
@@ -230,7 +232,20 @@ primary_expression
 
 postfix_expression
 	: primary_expression
-	| postfix_expression '[' expression ']'													{ uint32_t r = PopRegister(); g_context.m_AssignOffset = RegVal(r); printf("// Assignment offset: %d\n", g_context.m_AssignOffset);}
+	| postfix_expression '[' expression ']'													{
+																								uint32_t r = PopRegister();
+																								if (g_context.m_LHS)
+																									g_context.m_AssignOffset = RegVal(r);
+																								else
+																								{
+																									g_context.m_AssignOffsetRHS = RegVal(r);
+																									r = PreviousRegister();
+																									printf("LD R%d, [R%d+%d]\n", r, r, g_context.m_AssignOffsetRHS);
+																									uint32_t addr = RegVal(r)+g_context.m_AssignOffsetRHS;
+																									SetReg(r, g_context.m_Heap[addr]);
+																								}
+																								printf("// Assignment offset LHS:%d RHS:%d\n", g_context.m_AssignOffset, g_context.m_AssignOffsetRHS);
+																							}
 	| postfix_expression '(' ')'
 	| postfix_expression '(' argument_expression_list ')'
 	| postfix_expression '.' IDENTIFIER
@@ -287,7 +302,7 @@ cast_expression
 																								{
 																									// Already got the value loaded in previous register
 																									//uint32_t r = PreviousRegister();
-																									//printf("  // R%d = %d\n", r, RegVal(r));
+																									//printf("// R%d = %d\n", r, RegVal(r));
 																								}
 																							}
 	| '(' type_name ')' cast_expression
@@ -409,7 +424,7 @@ assignment_expression
 	;
 
 assignment_operator
-	: '='
+	: '='																					{	g_context.m_LHS = 0; /* Switching to right hand side */ }
 	| MUL_ASSIGN																			{	printf("\t*MULASGN\n"); }
 	| DIV_ASSIGN																			{	printf("\t*DIVASGN\n"); }
 	| MOD_ASSIGN																			{	printf("\t*MODASGN\n"); }
@@ -731,7 +746,7 @@ block_item
 
 expression_statement
 	: ';'
-	| expression ';'
+	| expression ';'													{ g_context.m_LHS = 1; }
 	;
 
 selection_statement

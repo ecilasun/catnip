@@ -7,6 +7,6 @@ int *VRAM = 0x10000;
 int test()
 {
      int E = A*B/-6;
-     D[2] = 2+E;
-     VRAM[3] = 0xFF;
+     C[2] = 5+D[3];
+     VRAM[4] = 0xFF-C[2];
 }
