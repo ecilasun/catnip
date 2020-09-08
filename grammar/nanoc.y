@@ -69,6 +69,7 @@ struct SParserContext
 	ETypeModifier m_TypeModifier{T_SIGNED};
 	int m_IsPointer{0};
 	int m_LHS{1};
+	int m_AddressOp{0};
 };
 
 SParserContext g_context;
@@ -216,8 +217,9 @@ primary_expression
 																							}
 	| CONSTANT																				{
 																								uint32_t r = PushRegister();
-																								printf("SET R%d, %d\n", r, $1);
+																								printf("SET R%d, %d", r, $1);
 																								SetReg(r, $1);
+																								printf("  // R%d = %d\n", r, RegVal(r));
 																								g_context.m_IsConstant = 1;
 																								//g_context.m_IsPointer = 0;
 																							}
@@ -242,8 +244,9 @@ postfix_expression
 																								else
 																								{
 																									uint32_t r2 = PreviousRegister();
-																									printf("ADD R%d, R%d\n", r2, r);
+																									printf("ADD R%d, R%d", r2, r);
 																									SetReg(r2, RegVal(r2) + RegVal(r));
+																									printf("  // R%d = %d\n", r2, RegVal(r2));
 																									printf("LD R%d, [R%d]", r2, r2);
 																									SetReg(r2, g_context.m_Heap[RegVal(r2)]);
 																									printf("  // R%d = %d\n", r2, RegVal(r2));
@@ -272,7 +275,7 @@ unary_expression
 																				if (g_context.m_UnaryOp == U_NEGATE) { uint32_t r = PreviousRegister(); printf("NEG R%d\n", r); SetReg(r, -RegVal(r)); }
 																				if (g_context.m_UnaryOp == U_BITINV) { uint32_t r = PreviousRegister(); printf("INV R%d\n", r); SetReg(r, ~RegVal(r)); }
 																				if (g_context.m_UnaryOp == U_LOGICNOT) { uint32_t r = PreviousRegister(); printf("NOT R%d\n", r); SetReg(r, !RegVal(r)); }
-																				if (g_context.m_UnaryOp == U_ADDRS) { uint32_t r = PreviousRegister(); printf("ADDRS ????\n"); }
+																				//if (g_context.m_UnaryOp == U_ADDRS) { uint32_t r = PreviousRegister(); printf("// address of on R%d\n", r); }
 																				if (g_context.m_UnaryOp == U_VAL) { uint32_t r = PreviousRegister(); printf("ST R%d, [R%d]\n", r, r); SetReg(r, g_context.m_Heap[RegVal(r)]);}
 																				if (g_context.m_UnaryOp == U_POS) { uint32_t r = PreviousRegister(); printf("POS ????\n"); }
 
@@ -283,7 +286,7 @@ unary_expression
 	;
 
 unary_operator
-	: '&'																	{	g_context.m_UnaryOp = U_ADDRS; }
+	: '&'																	{	g_context.m_UnaryOp = U_ADDRS; g_context.m_AddressOp = 1;}
 	| '*'																	{	g_context.m_UnaryOp = U_VAL; }
 	| '+'																	{	g_context.m_UnaryOp = U_POS; }
 	| '-'																	{	g_context.m_UnaryOp = U_NEGATE; }
@@ -295,11 +298,14 @@ cast_expression
 	: unary_expression																		{
 																								if (!g_context.m_IsConstant)
 																								{
-																									// Swap register contents (address) with value at that adress
-																									uint32_t r = PreviousRegister();
-																									printf("LD R%d, [R%d]", r, r);
-																									SetReg(r, g_context.m_Heap[RegVal(r)]);
-																									printf("  // R%d = %d\n", r, RegVal(r));
+																									if (!g_context.m_AddressOp)
+																									{
+																										// Swap register contents (address) with value at that adress
+																										uint32_t r = PreviousRegister();
+																										printf("LD R%d, [R%d]", r, r);
+																										SetReg(r, g_context.m_Heap[RegVal(r)]);
+																										printf("  // R%d = %d\n", r, RegVal(r));
+																									}
 																								}
 																								else
 																								{
@@ -312,14 +318,14 @@ cast_expression
 	;
 
 multiplicative_expression
-	: cast_expression
+	: cast_expression																		{ g_context.m_AddressOp = 0; /* Get rid of addressof operation */ }
 	| multiplicative_expression '*' cast_expression											{
 																								uint32_t r2=PopRegister();
 																								uint32_t r1=PopRegister();
 																								printf("MUL R%d R%d", r1,r2);
 																								uint32_t V = int(RegVal(r1)) * int(RegVal(r2));
 																								SetReg(r1, V); PushRegister();
-																								printf(" // R%d = %d\n", r1, V); 
+																								printf("  // R%d = %d\n", r1, V); 
 																							}
 	| multiplicative_expression '/' cast_expression											{
 																								uint32_t r2=PopRegister();
@@ -328,7 +334,7 @@ multiplicative_expression
 																								uint32_t V = int(RegVal(r1)) / int(RegVal(r2));
 																								SetReg(r1, V);
 																								PushRegister();
-																								printf(" // R%d = %d\n", r1, V);
+																								printf("  // R%d = %d\n", r1, V);
 																							}
 	| multiplicative_expression '%' cast_expression											{
 																								uint32_t r2=PopRegister();
@@ -337,7 +343,7 @@ multiplicative_expression
 																								uint32_t V = int(RegVal(r1)) % int(RegVal(r2));
 																								SetReg(r1, V);
 																								PushRegister();
-																								printf(" // R%d = %d\n", r1, V);
+																								printf("  // R%d = %d\n", r1, V);
 																							}
 	;
 
@@ -350,7 +356,7 @@ additive_expression
 																								uint32_t V = int(RegVal(r1)) + int(RegVal(r2));
 																								SetReg(r1, V);
 																								PushRegister();
-																								printf(" // R%d = %d\n", r1, V);
+																								printf("  // R%d = %d\n", r1, V);
 																							}
 	| additive_expression '-' multiplicative_expression										{
 																								uint32_t r2=PopRegister();
@@ -359,7 +365,7 @@ additive_expression
 																								uint32_t V = int(RegVal(r1)) - int(RegVal(r2));
 																								SetReg(r1, V);
 																								PushRegister();
-																								printf(" // R%d = %d\n", r1, V);
+																								printf("  // R%d = %d\n", r1, V);
 																							}
 	;
 
@@ -674,7 +680,7 @@ initializer
 																						pop(V);
 																						g_context.m_DeclReg = PushRegister();
 																						uint32_t addrs0 = CreateVar((char*)V.c_str(), g_context.m_DeclDim);
-																						//printf("// VAR %s%s[%d]\n", V.c_str(), g_context.m_IsPointer ? "*":"", g_context.m_DeclDim);
+																						printf("// VARDECL %s%s[%d]\n", V.c_str(), g_context.m_IsPointer ? "*":"", g_context.m_DeclDim);
 																						printf("SET R%d, 0x%.8x", g_context.m_DeclReg, (uint32_t)addrs0);
 																						printf("  // &%s\n", V.c_str());
 																						SetReg(g_context.m_DeclReg, (uint64_t)addrs0);
