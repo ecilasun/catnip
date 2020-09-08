@@ -456,7 +456,7 @@ declaration
 declaration_specifiers
 	: storage_class_specifier																{	printf("// TODO: storage_class_specifier\n"); }
 	| storage_class_specifier declaration_specifiers
-	| type_specifier																		{	printf("// Type: TypeModifier: %d\n", g_context.m_TypeName, g_context.m_TypeModifier);
+	| type_specifier																		{	//printf("// Type: TypeModifier: %d\n", g_context.m_TypeName, g_context.m_TypeModifier);
 																								g_context.m_InitAsgnCounter = g_context.m_DeclDim = 1;
 																							}
 	| type_specifier declaration_specifiers
@@ -480,7 +480,7 @@ init_declarator
 																									pop(V);
 																									//g_context.m_DeclReg = PushRegister();
 																									uint32_t addrs0 = CreateVar((char*)V.c_str(), g_context.m_DeclDim);
-																									printf("// VAR %s%s[%d]\n", g_context.m_IsPointer ? "*":"", V.c_str(), g_context.m_DeclDim);
+																									printf("// VARDECL %s%s[%d]\n", g_context.m_IsPointer ? "*":"", V.c_str(), g_context.m_DeclDim);
 																									//printf("SET R%d, 0x%.8x # %s[%d] (new)\n", g_context.m_DeclReg, (uint32_t)addrs0, V.c_str(), g_context.m_DeclDim);
 																									//SetReg(g_context.m_DeclReg, (uint64_t)addrs0);
 																									//PopRegister(); // Pop decl. register
@@ -608,10 +608,10 @@ direct_declarator
 	;
 
 pointer
-	: '*'																					{ printf("// *\n"); g_context.m_IsPointer = 1; }
-	| '*' type_qualifier_list																{ printf("// *\n"); g_context.m_IsPointer = 1; }
-	| '*' pointer																			{ printf("// *\n"); g_context.m_IsPointer = 1; }
-	| '*' type_qualifier_list pointer														{ printf("// *\n"); g_context.m_IsPointer = 1; }
+	: '*'																					{ g_context.m_IsPointer = 1; }
+	| '*' type_qualifier_list																{ printf("// * ?\n"); g_context.m_IsPointer = 1; }
+	| '*' pointer																			{ printf("// * ??\n"); g_context.m_IsPointer = 1; }
+	| '*' type_qualifier_list pointer														{ printf("// * ???\n"); g_context.m_IsPointer = 1; }
 	;
 
 type_qualifier_list
@@ -674,7 +674,7 @@ initializer
 																						pop(V);
 																						g_context.m_DeclReg = PushRegister();
 																						uint32_t addrs0 = CreateVar((char*)V.c_str(), g_context.m_DeclDim);
-																						printf("// VAR %s%s[%d]\n", V.c_str(), g_context.m_IsPointer ? "*":"", g_context.m_DeclDim);
+																						//printf("// VAR %s%s[%d]\n", V.c_str(), g_context.m_IsPointer ? "*":"", g_context.m_DeclDim);
 																						printf("SET R%d, 0x%.8x", g_context.m_DeclReg, (uint32_t)addrs0);
 																						printf("  // &%s\n", V.c_str());
 																						SetReg(g_context.m_DeclReg, (uint64_t)addrs0);
