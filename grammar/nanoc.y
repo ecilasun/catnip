@@ -20,7 +20,6 @@ int err=0;
 bool stackempty();
 void push(const char *str);
 void pop(std::string &_str);
-uint32_t regidx();
 
 enum EUnaryOp
 {
@@ -872,11 +871,6 @@ void pop(std::string &_str)
 {
 	_str = g_context.m_Stack.top();
 	g_context.m_Stack.pop();
-}
-
-uint32_t regidx()
-{
-	return uint32_t(g_context.m_Stack.size());
 }
 
 int parseC90()
