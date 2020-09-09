@@ -6,9 +6,10 @@ int D[4] = {10, 20, 30, 40};
 // NOTE: Actual hardware VRAM starts at 0x80000000, here we cheat for simpler memory access
 int *VRAM = 0x10000;
 
-int beta()
+int beta(int a)
 {
-    return 8;
+    int i = 8;
+    return i;
 }
 
 void test()
@@ -18,7 +19,7 @@ void test()
     VRAM[4] = 0xFF-C[2];     // Should contain 210 at 0x00010004
     E = &B;                  // E should contain address of B, 0x00000001
 
-    beta();
+    beta(1);
 
     for (int y=2;y<10;y++)
     {
@@ -28,6 +29,9 @@ void test()
            VRAM[addrs] = 0xFF;
         }
     }
+}
 
-    return E;
+void meh()
+{
+
 }

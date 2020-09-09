@@ -7,6 +7,7 @@
 #include <stack>
 #include <string>
 #include <map>
+#include <vector>
 
 extern int yylex(void);
 void yyerror(const char *);
@@ -87,6 +88,7 @@ struct SVariable
 struct SFunction
 {
 	int m_TBD;
+	std::vector<std::string> m_Parameters;
 };
 
 std::map<uint32_t, SVariable> g_variables;
@@ -116,6 +118,8 @@ void PushForLoop(uint32_t forloopname)
 
 uint32_t PopForLoop()
 {
+	if (g_context.m_ForLoopStack.size()==0)
+		printf("ERROR: For loop stack underflow\n");
 	g_context.m_ForLoopStack.pop();
 	uint32_t forloopname = g_context.m_ForLoopStack.top();
 	return forloopname;
@@ -162,9 +166,9 @@ uint32_t CreateVar(char *varname, uint32_t size)
 	return addr;
 }
 
-void CreateFunction(char *funcname)
+void CreateFunction(char *funcname, uint32_t &fun)
 {
-	uint32_t fun = HashString(funcname);
+	fun = HashString(funcname);
 	g_functions[fun] = { 0 };
 }
 
@@ -254,16 +258,8 @@ primary_expression
 																									printf("  // R%d = %s%s (at 0x%.8x)\n", r, var.m_IsPointer ? "*":"", $1, var_addrs);
 																								}
 																								else
-																								{
-																									SFunction fun;
-																									bool isfunc = FindFunction($1, fun);
-																									if (isfunc)
-																									{
-																										printf("// TODO: push registers, set params\n");
-																										printf("CALL @%s\n", $1);
-																										uint32_t r = PushRegister();
-																									}
-																								}
+																									push($1); // Possibly function call
+
 																								g_context.m_IsConstant = 0;
 																								g_context.m_InitAsgnCounter = g_context.m_DeclDim = 1;
 																								g_context.m_IsPointer = 0;
@@ -306,7 +302,23 @@ postfix_expression
 																								}
 																							}
 	| postfix_expression '(' ')'
-	| postfix_expression '(' argument_expression_list ')'
+	| postfix_expression '(' argument_expression_list ')'									{
+																								std::string V;
+																								pop(V);
+																								printf("// Push parameters for %s\n", V.c_str());
+																								SFunction fun;
+																								bool isfunc = FindFunction((char*)V.c_str(), fun);
+																								if (isfunc)
+																								{
+																									for (uint32_t i=0; i<fun.m_Parameters.size(); ++i)
+																									{
+																										uint32_t r = PopRegister();
+																										printf("PUSH R%d\n", r);
+																									}
+																									printf("CALL @%s\n", V.c_str());
+																									uint32_t r = PushRegister();
+																								}
+																							}
 	| postfix_expression '.' IDENTIFIER
 	| postfix_expression PTR_OP IDENTIFIER
 	| postfix_expression INC_OP																{	uint32_t r = PreviousRegister();
@@ -685,13 +697,40 @@ direct_declarator
 	| direct_declarator '[' type_qualifier_list '*' ']'										{	printf("  -006\n"); }
 	| direct_declarator '[' '*' ']'															{	printf("  -005\n"); }
 	| direct_declarator '[' ']'																{	printf("  -004\n"); }
-	| direct_declarator '(' parameter_type_list ')'											{	printf("  -003\n"); }
-	| direct_declarator '(' identifier_list ')'												{	printf("  -002\n"); }
-	| direct_declarator '(' ')'																{
+	| direct_declarator '(' parameter_type_list ')'											{
+																								printf("\n@FUNCTION\n");
+																								std::vector<std::string> parameters;
+																								std::string V;
+																								do{
+																									pop(V);
+																									parameters.push_back(V);
+																									printf("@PARAM %s\n", V.c_str());
+																								} while(g_context.m_Stack.size()>1);
+																								pop(V);
+																								printf("@NAME '%s'\n", V.c_str());
+																								uint32_t fun;
+																								CreateFunction((char*)V.c_str(), fun);
+																								g_functions[fun].m_Parameters = parameters;
+																								ResetRegisters();
+																							}
+	| direct_declarator '(' identifier_list ')'												{
+																								printf("\n@FUNCTION\n");
 																								std::string V;
 																								pop(V);
-																								printf("\n@FUNC '%s'\n", V.c_str());
-																								CreateFunction((char*)V.c_str());
+																								printf("@NAME(ilist) '%s'\n", V.c_str());
+																								uint32_t fun;
+																								CreateFunction((char*)V.c_str(), fun);
+																								g_functions[fun].m_Parameters.clear();
+																								ResetRegisters();
+																							}
+	| direct_declarator '(' ')'																{
+																								printf("\n@FUNCTION\n");
+																								std::string V;
+																								pop(V);
+																								printf("@NAME '%s'\n", V.c_str());
+																								uint32_t fun;
+																								CreateFunction((char*)V.c_str(), fun);
+																								g_functions[fun].m_Parameters.clear();
 																								ResetRegisters();
 																							}
 	;
@@ -884,8 +923,8 @@ translation_unit
 	;
 
 external_declaration
-	: function_definition
-	| declaration
+	: function_definition																{	printf("// ENDFUNCTION\n\n"); }
+	| declaration																		{	printf("// ENDDECLARATION\n\n"); }
 	;
 
 function_definition
@@ -912,13 +951,14 @@ bool stackempty()
 
 void pop(std::string &_str)
 {
+	if (stackempty())
+		printf("ERROR: string stack underflow\n");
 	_str = g_context.m_Stack.top();
 	g_context.m_Stack.pop();
 }
 
 int parseC90()
 {
-
 	if (!yyparse() && err==0)
 		printf("\nC90: no errors!\n");
 	else
