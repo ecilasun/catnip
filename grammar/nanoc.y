@@ -119,11 +119,14 @@ void PushForLoop(uint32_t forloopname)
 
 uint32_t PopForLoop()
 {
-	if (g_context.m_ForLoopStack.size()==0)
-		printf("ERROR: For loop stack underflow\n");
 	g_context.m_ForLoopStack.pop();
-	uint32_t forloopname = g_context.m_ForLoopStack.top();
-	return forloopname;
+	if (g_context.m_ForLoopStack.size()!=0)
+	{
+		printf("ERROR: For loop stack underflow\n");
+		uint32_t forloopname = g_context.m_ForLoopStack.top();
+		return forloopname;
+	}
+	return 0xFFFFFFFF;
 }
 
 uint32_t PushRegister()

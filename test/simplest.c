@@ -21,14 +21,14 @@ void test()
 
     beta(1);
 
-    /*for (int y=2;y<10;y++)
+    for (int y=2;y<10;y++)
     {
         for (int x=8;x<16;x++)
         {
            int addrs = x + y*320; // For 320x240 framebuffer
            VRAM[addrs] = 0xFF;
         }
-    }*/
+    }
     return;
 }
 
