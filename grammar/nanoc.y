@@ -84,7 +84,13 @@ struct SVariable
 	int m_IsPointer;
 };
 
+struct SFunction
+{
+	int m_TBD;
+};
+
 std::map<uint32_t, SVariable> g_variables;
+std::map<uint32_t, SFunction> g_functions;
 
 uint32_t HashString(const char *_str)
 {
@@ -156,6 +162,26 @@ uint32_t CreateVar(char *varname, uint32_t size)
 	return addr;
 }
 
+void CreateFunction(char *funcname)
+{
+	uint32_t fun = HashString(funcname);
+	g_functions[fun] = { 0 };
+}
+
+bool FindFunction(char *funcname, SFunction &function)
+{
+	uint32_t fun = HashString(funcname);
+
+	auto found = g_functions.find(fun);
+	if (found!=g_functions.end())
+	{
+		function = found->second;
+		return true;
+	}
+	else
+		return false;
+}
+
 uint32_t FindVar(char *varname, SVariable &variable)
 {
 	uint32_t var = HashString(varname);
@@ -167,10 +193,7 @@ uint32_t FindVar(char *varname, SVariable &variable)
 		return found->second.m_Address;
 	}
 	else
-	{
-		printf("ERROR: Variable not found\n");
 		return 0xFFFFFFFF;
-	}
 }
 
 void SetReg(uint32_t r, uint32_t V)
@@ -230,6 +253,17 @@ primary_expression
 																									g_context.m_DeclReg = r;
 																									printf("  // R%d = %s%s (at 0x%.8x)\n", r, var.m_IsPointer ? "*":"", $1, var_addrs);
 																								}
+																								else
+																								{
+																									SFunction fun;
+																									bool isfunc = FindFunction($1, fun);
+																									if (isfunc)
+																									{
+																										printf("// TODO: push registers, set params\n");
+																										printf("CALL @%s\n", $1);
+																										uint32_t r = PushRegister();
+																									}
+																								}
 																								g_context.m_IsConstant = 0;
 																								g_context.m_InitAsgnCounter = g_context.m_DeclDim = 1;
 																								g_context.m_IsPointer = 0;
@@ -275,12 +309,16 @@ postfix_expression
 	| postfix_expression '(' argument_expression_list ')'
 	| postfix_expression '.' IDENTIFIER
 	| postfix_expression PTR_OP IDENTIFIER
-	| postfix_expression INC_OP												{	uint32_t r = PreviousRegister();
-																				printf("INC [R%d]", r);
-																				uint32_t val = g_context.m_Heap[RegVal(r)] + 1;
-																				g_context.m_Heap[RegVal(r)] = val;
-																				printf("  // R%d = %d\n", r, val); }
-	| postfix_expression DEC_OP
+	| postfix_expression INC_OP																{	uint32_t r = PreviousRegister();
+																								printf("INC [R%d]", r);
+																								uint32_t val = g_context.m_Heap[RegVal(r)] + 1;
+																								g_context.m_Heap[RegVal(r)] = val;
+																								printf("  // R%d++ = %d\n", r, val); }
+	| postfix_expression DEC_OP																{	uint32_t r = PreviousRegister();
+																								printf("DEC [R%d]", r);
+																								uint32_t val = g_context.m_Heap[RegVal(r)] - 1;
+																								g_context.m_Heap[RegVal(r)] = val;
+																								printf("  // R%d-- = %d\n", r, val); }
 	| '(' type_name ')' '{' initializer_list '}'
 	| '(' type_name ')' '{' initializer_list ',' '}'
 	;
@@ -296,8 +334,12 @@ unary_expression
 																				printf("INC [R%d]", r);
 																				uint32_t val = g_context.m_Heap[RegVal(r)] + 1;
 																				g_context.m_Heap[RegVal(r)] = val;
-																				printf("  // R%d = %d\n", r, val); }
-	| DEC_OP unary_expression
+																				printf("  // ++R%d = %d\n", r, val); }
+	| DEC_OP unary_expression												{	uint32_t r = PreviousRegister();
+																				printf("DEC [R%d]", r);
+																				uint32_t val = g_context.m_Heap[RegVal(r)] - 1;
+																				g_context.m_Heap[RegVal(r)] = val;
+																				printf("  // --R%d = %d\n", r, val); }
 	| unary_operator cast_expression										{
 																				if (g_context.m_UnaryOp == U_NEGATE) { uint32_t r = PreviousRegister(); printf("NEG R%d\n", r); SetReg(r, -RegVal(r)); }
 																				if (g_context.m_UnaryOp == U_BITINV) { uint32_t r = PreviousRegister(); printf("INV R%d\n", r); SetReg(r, ~RegVal(r)); }
@@ -649,6 +691,7 @@ direct_declarator
 																								std::string V;
 																								pop(V);
 																								printf("\n@FUNC '%s'\n", V.c_str());
+																								CreateFunction((char*)V.c_str());
 																								ResetRegisters();
 																							}
 	;
