@@ -8,7 +8,7 @@ int *VRAM = 0x10000;
 
 int beta(int a)
 {
-    int i = 8;
+    int i = a*8;
     return i;
 }
 

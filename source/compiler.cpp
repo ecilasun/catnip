@@ -10,6 +10,7 @@ int CompileCode(char *_inputname, char * /*_outputname*/)
 
 	// Prologue
 	printf("// Prologue\n");
+	printf("RESETSTACKCURSOR\n  // Set stack cursor to zero\n");
 	printf("CALL @__global_init\n");
 	printf("CALL @main\n");
 	printf("BREAK\n\n");

@@ -73,6 +73,7 @@ struct SParserContext
 	int m_IsForLoop{0};
 	int m_IsGlobalInit{1};
 	uint32_t m_ForLoopName{0};
+	uint32_t m_CurrentFunction{0};
 	std::stack<uint32_t> m_ForLoopStack;
 };
 
@@ -262,7 +263,23 @@ primary_expression
 																									printf("  // R%d = %s%s (at 0x%.8x)\n", r, var.m_IsPointer ? "*":"", $1, var_addrs);
 																								}
 																								else
-																									push($1); // Possibly function call
+																								{	
+																									bool found = false;
+																									SFunction &fun = g_functions[g_context.m_CurrentFunction];
+																									for (int i=0;i<fun.m_Parameters.size();++i)
+																									{
+																										if (fun.m_Parameters[i] == $1)
+																										{
+																											uint32_t r = PushRegister();
+																											printf("READFROMSTACKCURSOR R%d, %d", r, i);
+																											printf("  // Read parameter address from stack offset %d (%s)\n", i, $1);
+																											found = true;
+																										}
+																									}
+
+																									if (!found)
+																										push($1); // Possibly function name for a function call then
+																								}
 
 																								g_context.m_IsConstant = 0;
 																								g_context.m_InitAsgnCounter = g_context.m_DeclDim = 1;
@@ -310,6 +327,7 @@ postfix_expression
 																								std::string V;
 																								pop(V);
 																								printf("// Push parameters for %s\n", V.c_str());
+																								printf("SAVESTACKCURSOR\n");
 																								SFunction fun;
 																								bool isfunc = FindFunction((char*)V.c_str(), fun);
 																								if (isfunc)
@@ -722,11 +740,7 @@ direct_declarator
 																								CreateFunction((char*)V.c_str(), fun);
 																								g_functions[fun].m_Parameters = parameters;
 																								ResetRegisters();
-																								for (uint32_t p=0;p<g_functions[fun].m_Parameters.size();++p)
-																								{
-																									uint32_t r = PushRegister();
-																									printf("POP R%d\n", r);
-																								}
+																								g_context.m_CurrentFunction = fun;
 																							}
 	| direct_declarator '(' identifier_list ')'												{
 																								printf("\n@FUNCTION\n");
@@ -925,9 +939,12 @@ jump_statement
 	: GOTO IDENTIFIER ';'																{	printf("\t*GOTO %s\n", $2); }
 	| CONTINUE ';'																		{	printf("\t*CONT\n"); }
 	| BREAK ';'																			{	printf("\t*BREAK\n"); }
-	| RETURN ';'																		{	printf("RET\n"); }
+	| RETURN ';'																		{	
+																							printf("REWINDSTACKCURSOR\n");
+																							printf("RET\n"); }
 	| RETURN expression ';'																{	
 																							uint32_t r = PreviousRegister();
+																							printf("REWINDSTACKCURSOR\n");
 																							printf("RET R%d\n", r);
 																						}
 	;
