@@ -338,7 +338,7 @@ postfix_expression
 																										printf("PUSH R%d\n", r);
 																									}
 																									printf("CALL @%s\n", V.c_str());
-																									uint32_t r = PushRegister();
+																									PushRegister(); // On return, we need a register to copy the return value to
 																								}
 																							}
 	| postfix_expression '.' IDENTIFIER
@@ -945,7 +945,7 @@ jump_statement
 	| RETURN expression ';'																{	
 																							uint32_t r = PreviousRegister();
 																							printf("REWINDSTACKCURSOR\n");
-																							printf("RET R%d\n", r);
+																							printf("RET R%d\n", r); // TODO: we need to use this register on return
 																						}
 	;
 
