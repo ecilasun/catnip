@@ -71,6 +71,7 @@ struct SParserContext
 	int m_LHS{1};
 	int m_AddressOp{0};
 	int m_IsForLoop{0};
+	int m_IsGlobalInit{1};
 	uint32_t m_ForLoopName{0};
 	std::stack<uint32_t> m_ForLoopStack;
 };
@@ -698,6 +699,12 @@ direct_declarator
 	| direct_declarator '[' '*' ']'															{	printf("  -005\n"); }
 	| direct_declarator '[' ']'																{	printf("  -004\n"); }
 	| direct_declarator '(' parameter_type_list ')'											{
+																								if (g_context.m_IsGlobalInit)
+																								{
+																									printf("RET\n");
+																									printf("// ENDGLOBALINIT\n\n");
+																									g_context.m_IsGlobalInit = 0;
+																								}
 																								printf("\n@FUNCTION\n");
 																								std::vector<std::string> parameters;
 																								std::string V;
@@ -712,6 +719,11 @@ direct_declarator
 																								CreateFunction((char*)V.c_str(), fun);
 																								g_functions[fun].m_Parameters = parameters;
 																								ResetRegisters();
+																								for (uint32_t p=0;p<g_functions[fun].m_Parameters.size();++p)
+																								{
+																									uint32_t r = PushRegister();
+																									printf("POP R%d\n", r);
+																								}
 																							}
 	| direct_declarator '(' identifier_list ')'												{
 																								printf("\n@FUNCTION\n");
@@ -924,7 +936,7 @@ translation_unit
 
 external_declaration
 	: function_definition																{	printf("// ENDFUNCTION\n\n"); }
-	| declaration																		{	printf("// ENDDECLARATION\n\n"); }
+	| declaration
 	;
 
 function_definition
