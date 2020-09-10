@@ -109,6 +109,11 @@ std::string PopString()
 %type <astnode> direct_declarator
 %type <astnode> parameter_list
 %type <astnode> declarator
+%type <astnode> jump_statement
+%type <astnode> relational_expression
+%type <astnode> equality_expression
+%type <astnode> shift_expression
+%type <astnode> unary_expression
 
 %start translation_unit
 %%
@@ -130,13 +135,13 @@ primary_expression
 
 postfix_expression
 	: primary_expression																	{ $$ = new SBaseASTNode(PopString()); }
-	| postfix_expression '[' expression ']'													{ $$ = new SBaseASTNode("[read]"); }
+	| postfix_expression '[' expression ']'													{ $$ = new SBaseASTNode("[expr]"); }
 	| postfix_expression '(' ')'															{ $$ = new SBaseASTNode("<-call"); }
 	| postfix_expression '(' argument_expression_list ')'									{ $$ = new SBaseASTNode("<-call(..)"); }
 	| postfix_expression '.' IDENTIFIER														{ $$ = new SBaseASTNode(); }
 	| postfix_expression PTR_OP IDENTIFIER													{ $$ = new SBaseASTNode(); }
-	| postfix_expression INC_OP																{ $$ = new SBaseASTNode(); }
-	| postfix_expression DEC_OP																{ $$ = new SBaseASTNode(); }
+	| postfix_expression INC_OP																{ $$ = new SBaseASTNode("++"); }
+	| postfix_expression DEC_OP																{ $$ = new SBaseASTNode("--"); }
 	| '(' type_name ')' '{' initializer_list '}'											{ $$ = new SBaseASTNode(); }
 	| '(' type_name ')' '{' initializer_list ',' '}'										{ $$ = new SBaseASTNode(); }
 	;
@@ -148,11 +153,11 @@ argument_expression_list
 
 unary_expression
 	: postfix_expression
-	| INC_OP unary_expression
-	| DEC_OP unary_expression
+	| INC_OP unary_expression																{ $$ = new SBaseASTNode("++"); }
+	| DEC_OP unary_expression																{ $$ = new SBaseASTNode("--"); }
 	| unary_operator cast_expression
-	| SIZEOF unary_expression
-	| SIZEOF '(' type_name ')'
+	| SIZEOF unary_expression																{ $$ = new SBaseASTNode("sizeof(expr)"); }
+	| SIZEOF '(' type_name ')'																{ $$ = new SBaseASTNode("sizeof(..)"); }
 	;
 
 unary_operator
@@ -180,29 +185,29 @@ multiplicative_expression
 	;
 
 additive_expression
-	: multiplicative_expression																{ $$ = new SBaseASTNode("MulExp"); }
+	: multiplicative_expression																//{ $$ = new SBaseASTNode("MulExp"); }
 	| additive_expression '+' multiplicative_expression										{ $$ = new SBaseASTNode("ADD"); }
 	| additive_expression '-' multiplicative_expression										{ $$ = new SBaseASTNode("SUB"); }
 	;
 
 shift_expression
 	: additive_expression
-	| shift_expression LEFT_OP additive_expression
-	| shift_expression RIGHT_OP additive_expression
+	| shift_expression LEFT_OP additive_expression											{ $$ = new SBaseASTNode("<<"); }
+	| shift_expression RIGHT_OP additive_expression											{ $$ = new SBaseASTNode(">>"); }
 	;
 
 relational_expression
 	: shift_expression
-	| relational_expression LESS_OP shift_expression
-	| relational_expression GREATER_OP shift_expression
-	| relational_expression LE_OP shift_expression
-	| relational_expression GE_OP shift_expression
+	| relational_expression LESS_OP shift_expression										{ $$ = new SBaseASTNode("<"); }
+	| relational_expression GREATER_OP shift_expression										{ $$ = new SBaseASTNode(">"); }
+	| relational_expression LE_OP shift_expression											{ $$ = new SBaseASTNode("<="); }
+	| relational_expression GE_OP shift_expression											{ $$ = new SBaseASTNode(">="); }
 	;
 
 equality_expression
 	: relational_expression
-	| equality_expression EQ_OP relational_expression
-	| equality_expression NE_OP relational_expression
+	| equality_expression EQ_OP relational_expression										{ $$ = new SBaseASTNode("=="); }
+	| equality_expression NE_OP relational_expression										{ $$ = new SBaseASTNode("!="); }
 	;
 
 and_expression
@@ -236,7 +241,7 @@ conditional_expression
 	;
 
 assignment_expression
-	: conditional_expression												{ $$ = new SBaseASTNode("CndExp"); }
+	: conditional_expression												{ $$ = new SBaseASTNode("'"); }
 	| unary_expression assignment_operator assignment_expression			{ $$ = new SBaseASTNode("AsnExp"); }
 	;
 
@@ -513,8 +518,8 @@ block_item_list
 	;
 
 block_item
-	: declaration															{ printf("\n"); }
-	| statement																{ printf("\n"); }
+	: declaration															{ printf("//enddecl\n"); }
+	| statement																{ printf("//endstatement\n"); }
 	;
 
 expression_statement
@@ -533,27 +538,27 @@ iteration_statement_begin
 	;
 
 iteration_statement_prologue_expr
-	: iteration_statement_begin expression_statement
+	: iteration_statement_begin expression_statement											{ printf("//FOR loop body top\n");}
 	;
 iteration_statement_prologue_decl
-	: iteration_statement_begin declaration
+	: iteration_statement_begin declaration														{ printf("//FOR loop body top\n");}
 	;
 
 iteration_statement
 	: WHILE '(' expression ')' statement
 	| DO statement WHILE '(' expression ')' ';'
-	| iteration_statement_prologue_expr expression_statement ')' statement
-	| iteration_statement_prologue_expr expression_statement expression ')' statement
-	| iteration_statement_prologue_decl expression_statement ')' statement
-	| iteration_statement_prologue_decl expression_statement expression ')' statement
+	| iteration_statement_prologue_expr expression_statement ')' statement						{ printf("//FOR loop body bottom\n");}
+	| iteration_statement_prologue_expr expression_statement expression ')' statement			{ printf("//FOR loop body bottom\n");}
+	| iteration_statement_prologue_decl expression_statement ')' statement						{ printf("//FOR loop body bottom\n");}
+	| iteration_statement_prologue_decl expression_statement expression ')' statement			{ printf("//FOR loop body bottom\n");}
 	;
 
 jump_statement
-	: GOTO IDENTIFIER ';'
-	| CONTINUE ';'
-	| BREAK ';'
-	| RETURN ';'
-	| RETURN expression ';'
+	: GOTO IDENTIFIER ';'																	{ $$ = new SBaseASTNode("goto" + PopString()); }
+	| CONTINUE ';'																			{ $$ = new SBaseASTNode("continue"); }
+	| BREAK ';'																				{ $$ = new SBaseASTNode("break"); }
+	| RETURN ';'																			{ $$ = new SBaseASTNode("ret"); }
+	| RETURN expression ';'																	{ $$ = new SBaseASTNode("ret(expr)"); }
 	;
 
 translation_unit
