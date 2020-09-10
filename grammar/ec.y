@@ -114,36 +114,45 @@ std::string PopString()
 %type <astnode> equality_expression
 %type <astnode> shift_expression
 %type <astnode> unary_expression
+%type <astnode> conditional_expression
+%type <astnode> logical_and_expression
+%type <astnode> logical_or_expression
+%type <astnode> inclusive_or_expression
+%type <astnode> exclusive_or_expression
+%type <astnode> and_expression
+%type <astnode> selection_statement_logic
+%type <astnode> selection_statement_logic_else
+%type <astnode> selection_statement
 
 %start translation_unit
 %%
 
 primary_expression
-	: IDENTIFIER																			{
-																								PushString($1);
-																							}
-	| CONSTANT																				{
-																								std::string tmp;
-																								tmp = std::to_string($1);
-																								PushString(tmp);
-																							}
-	| STRING_LITERAL																		{
-																								PushString($1);
-																							}
+	: IDENTIFIER																				{
+																									PushString($1);
+																								}
+	| CONSTANT																					{
+																									std::string tmp;
+																									tmp = std::to_string($1);
+																									PushString(tmp);
+																								}
+	| STRING_LITERAL																			{
+																									PushString($1);
+																								}
 	| '(' expression ')'
 	;
 
 postfix_expression
-	: primary_expression																	{ $$ = new SBaseASTNode(PopString()); }
-	| postfix_expression '[' expression ']'													{ $$ = new SBaseASTNode("[expr]"); }
-	| postfix_expression '(' ')'															{ $$ = new SBaseASTNode("<-call"); }
-	| postfix_expression '(' argument_expression_list ')'									{ $$ = new SBaseASTNode("<-call(..)"); }
-	| postfix_expression '.' IDENTIFIER														{ $$ = new SBaseASTNode(); }
-	| postfix_expression PTR_OP IDENTIFIER													{ $$ = new SBaseASTNode(); }
-	| postfix_expression INC_OP																{ $$ = new SBaseASTNode("++"); }
-	| postfix_expression DEC_OP																{ $$ = new SBaseASTNode("--"); }
-	| '(' type_name ')' '{' initializer_list '}'											{ $$ = new SBaseASTNode(); }
-	| '(' type_name ')' '{' initializer_list ',' '}'										{ $$ = new SBaseASTNode(); }
+	: primary_expression																		{ $$ = new SBaseASTNode(PopString()); }
+	| postfix_expression '[' expression ']'														{ $$ = new SBaseASTNode("[expr]"); }
+	| postfix_expression '(' ')'																{ $$ = new SBaseASTNode("<-call"); }
+	| postfix_expression '(' argument_expression_list ')'										{ $$ = new SBaseASTNode("<-call(..)"); }
+	| postfix_expression '.' IDENTIFIER															{ $$ = new SBaseASTNode(); }
+	| postfix_expression PTR_OP IDENTIFIER														{ $$ = new SBaseASTNode(); }
+	| postfix_expression INC_OP																	{ $$ = new SBaseASTNode("++"); }
+	| postfix_expression DEC_OP																	{ $$ = new SBaseASTNode("--"); }
+	| '(' type_name ')' '{' initializer_list '}'												{ $$ = new SBaseASTNode(); }
+	| '(' type_name ')' '{' initializer_list ',' '}'											{ $$ = new SBaseASTNode(); }
 	;
 
 argument_expression_list
@@ -153,20 +162,20 @@ argument_expression_list
 
 unary_expression
 	: postfix_expression
-	| INC_OP unary_expression																{ $$ = new SBaseASTNode("++"); }
-	| DEC_OP unary_expression																{ $$ = new SBaseASTNode("--"); }
+	| INC_OP unary_expression																	{ $$ = new SBaseASTNode("++"); }
+	| DEC_OP unary_expression																	{ $$ = new SBaseASTNode("--"); }
 	| unary_operator cast_expression
-	| SIZEOF unary_expression																{ $$ = new SBaseASTNode("sizeof(expr)"); }
-	| SIZEOF '(' type_name ')'																{ $$ = new SBaseASTNode("sizeof(..)"); }
+	| SIZEOF unary_expression																	{ $$ = new SBaseASTNode("sizeof(expr)"); }
+	| SIZEOF '(' type_name ')'																	{ $$ = new SBaseASTNode("sizeof(..)"); }
 	;
 
 unary_operator
-	: '&'																					{ $$ = new SBaseASTNode("&"); }
-	| '*'																					{ $$ = new SBaseASTNode("*"); }
-	| '+'																					{ $$ = new SBaseASTNode("+"); }
-	| '-'																					{ $$ = new SBaseASTNode("-"); }
-	| '~'																					{ $$ = new SBaseASTNode("~"); }
-	| '!'																					{ $$ = new SBaseASTNode("!"); }
+	: '&'																						{ $$ = new SBaseASTNode("&"); }
+	| '*'																						{ $$ = new SBaseASTNode("*"); }
+	| '+'																						{ $$ = new SBaseASTNode("+"); }
+	| '-'																						{ $$ = new SBaseASTNode("-"); }
+	| '~'																						{ $$ = new SBaseASTNode("~"); }
+	| '!'																						{ $$ = new SBaseASTNode("!"); }
 	;
 
 cast_expression
@@ -175,74 +184,74 @@ cast_expression
 	;
 
 multiplicative_expression
-	: cast_expression																		{
-																								// Looks like here I can decide on final value of a variable, constant or function return value
-																								$$ = new SBaseASTNode("^");
-																							}
-	| multiplicative_expression '*' cast_expression											{ $$ = new SBaseASTNode("MUL"); }
-	| multiplicative_expression '/' cast_expression											{ $$ = new SBaseASTNode("DIV"); }
-	| multiplicative_expression '%' cast_expression											{ $$ = new SBaseASTNode("MOD"); }
+	: cast_expression																			{
+																									// Looks like here I can decide on final value of a variable, constant or function return value
+																									$$ = new SBaseASTNode("^");
+																								}
+	| multiplicative_expression '*' cast_expression												{ $$ = new SBaseASTNode("MUL"); }
+	| multiplicative_expression '/' cast_expression												{ $$ = new SBaseASTNode("DIV"); }
+	| multiplicative_expression '%' cast_expression												{ $$ = new SBaseASTNode("MOD"); }
 	;
 
 additive_expression
-	: multiplicative_expression																//{ $$ = new SBaseASTNode("MulExp"); }
-	| additive_expression '+' multiplicative_expression										{ $$ = new SBaseASTNode("ADD"); }
-	| additive_expression '-' multiplicative_expression										{ $$ = new SBaseASTNode("SUB"); }
+	: multiplicative_expression																	//{ $$ = new SBaseASTNode("MulExp"); }
+	| additive_expression '+' multiplicative_expression											{ $$ = new SBaseASTNode("ADD"); }
+	| additive_expression '-' multiplicative_expression											{ $$ = new SBaseASTNode("SUB"); }
 	;
 
 shift_expression
 	: additive_expression
-	| shift_expression LEFT_OP additive_expression											{ $$ = new SBaseASTNode("<<"); }
-	| shift_expression RIGHT_OP additive_expression											{ $$ = new SBaseASTNode(">>"); }
+	| shift_expression LEFT_OP additive_expression												{ $$ = new SBaseASTNode("<<"); }
+	| shift_expression RIGHT_OP additive_expression												{ $$ = new SBaseASTNode(">>"); }
 	;
 
 relational_expression
 	: shift_expression
-	| relational_expression LESS_OP shift_expression										{ $$ = new SBaseASTNode("<"); }
-	| relational_expression GREATER_OP shift_expression										{ $$ = new SBaseASTNode(">"); }
-	| relational_expression LE_OP shift_expression											{ $$ = new SBaseASTNode("<="); }
-	| relational_expression GE_OP shift_expression											{ $$ = new SBaseASTNode(">="); }
+	| relational_expression LESS_OP shift_expression											{ $$ = new SBaseASTNode("<"); }
+	| relational_expression GREATER_OP shift_expression											{ $$ = new SBaseASTNode(">"); }
+	| relational_expression LE_OP shift_expression												{ $$ = new SBaseASTNode("<="); }
+	| relational_expression GE_OP shift_expression												{ $$ = new SBaseASTNode(">="); }
 	;
 
 equality_expression
 	: relational_expression
-	| equality_expression EQ_OP relational_expression										{ $$ = new SBaseASTNode("=="); }
-	| equality_expression NE_OP relational_expression										{ $$ = new SBaseASTNode("!="); }
+	| equality_expression EQ_OP relational_expression											{ $$ = new SBaseASTNode("=="); }
+	| equality_expression NE_OP relational_expression											{ $$ = new SBaseASTNode("!="); }
 	;
 
 and_expression
 	: equality_expression
-	| and_expression '&' equality_expression
+	| and_expression '&' equality_expression													{ $$ = new SBaseASTNode("AND"); }
 	;
 
 exclusive_or_expression
 	: and_expression
-	| exclusive_or_expression '^' and_expression
+	| exclusive_or_expression '^' and_expression												{ $$ = new SBaseASTNode("XOR"); }
 	;
 
 inclusive_or_expression
 	: exclusive_or_expression
-	| inclusive_or_expression '|' exclusive_or_expression
+	| inclusive_or_expression '|' exclusive_or_expression										{ $$ = new SBaseASTNode("OR"); }
 	;
 
 logical_and_expression
 	: inclusive_or_expression
-	| logical_and_expression AND_OP inclusive_or_expression
+	| logical_and_expression AND_OP inclusive_or_expression										{ $$ = new SBaseASTNode("&&"); }
 	;
 
 logical_or_expression
 	: logical_and_expression
-	| logical_or_expression OR_OP logical_and_expression
+	| logical_or_expression OR_OP logical_and_expression										{ $$ = new SBaseASTNode("||"); }
 	;
 
 conditional_expression
 	: logical_or_expression
-	| logical_or_expression '?' expression ':' conditional_expression
+	| logical_or_expression '?' expression ':' conditional_expression							{ $$ = new SBaseASTNode("?:"); }
 	;
 
 assignment_expression
-	: conditional_expression												{ $$ = new SBaseASTNode("'"); }
-	| unary_expression assignment_operator assignment_expression			{ $$ = new SBaseASTNode("AsnExp"); }
+	: conditional_expression
+	| unary_expression assignment_operator assignment_expression								{ $$ = new SBaseASTNode("AsnExp"); }
 	;
 
 assignment_operator
@@ -290,8 +299,8 @@ init_declarator_list
 	;
 
 init_declarator
-	: declarator													{ $$ = new SBaseASTNode("DECL " + PopString()); }
-	| declarator '=' initializer									{ $$ = new SBaseASTNode("DECL= " + PopString()); }
+	: declarator																				{ $$ = new SBaseASTNode("DECL " + PopString()); }
+	| declarator '=' initializer																{ $$ = new SBaseASTNode("DECL= " + PopString()); }
 	;
 
 storage_class_specifier
@@ -452,17 +461,17 @@ abstract_declarator
 	;
 
 direct_abstract_declarator
-	: '(' abstract_declarator ')'														{ $$ = new SBaseASTNode("(a)"); }
-	| '[' ']'																			{ $$ = new SBaseASTNode("[]"); }
-	| '[' assignment_expression ']'														{ $$ = new SBaseASTNode("[=]"); }
-	| direct_abstract_declarator '[' ']'												{ $$ = new SBaseASTNode("d[]"); }
-	| direct_abstract_declarator '[' assignment_expression ']'							{ $$ = new SBaseASTNode("[N]"); }
-	| '[' '*' ']'																		{ $$ = new SBaseASTNode("[*]"); }
-	| direct_abstract_declarator '[' '*' ']'											{ $$ = new SBaseASTNode("d[*]"); }
-	| '(' ')'																			{ $$ = new SBaseASTNode("()"); }
-	| '(' parameter_type_list ')'														{ $$ = new SBaseASTNode("(p)"); }
-	| direct_abstract_declarator '(' ')'												{ $$ = new SBaseASTNode("()"); }
-	| direct_abstract_declarator '(' parameter_type_list ')'							{ $$ = new SBaseASTNode("d(p)"); }
+	: '(' abstract_declarator ')'																{ $$ = new SBaseASTNode("(a)"); }
+	| '[' ']'																					{ $$ = new SBaseASTNode("[]"); }
+	| '[' assignment_expression ']'																{ $$ = new SBaseASTNode("[=]"); }
+	| direct_abstract_declarator '[' ']'														{ $$ = new SBaseASTNode("d[]"); }
+	| direct_abstract_declarator '[' assignment_expression ']'									{ $$ = new SBaseASTNode("[N]"); }
+	| '[' '*' ']'																				{ $$ = new SBaseASTNode("[*]"); }
+	| direct_abstract_declarator '[' '*' ']'													{ $$ = new SBaseASTNode("d[*]"); }
+	| '(' ')'																					{ $$ = new SBaseASTNode("()"); }
+	| '(' parameter_type_list ')'																{ $$ = new SBaseASTNode("(p)"); }
+	| direct_abstract_declarator '(' ')'														{ $$ = new SBaseASTNode("()"); }
+	| direct_abstract_declarator '(' parameter_type_list ')'									{ $$ = new SBaseASTNode("d(p)"); }
 	;
 
 initializer
@@ -488,8 +497,8 @@ designator_list
 	;
 
 designator
-	: '[' constant_expression ']'														{ $$ = new SBaseASTNode("[dest]"); }
-	| '.' IDENTIFIER																	{ $$ = new SBaseASTNode(".dest"); }
+	: '[' constant_expression ']'																{ $$ = new SBaseASTNode("[dest]"); }
+	| '.' IDENTIFIER																			{ $$ = new SBaseASTNode(".dest"); }
 	;
 
 statement
@@ -518,19 +527,47 @@ block_item_list
 	;
 
 block_item
-	: declaration															{ printf("//enddecl\n"); }
-	| statement																{ printf("\n"); } // Just to align visually
+	: declaration																				{ printf(";\n"); }
+	| statement																					//{ printf(";\n"); }
 	;
 
 expression_statement
 	: ';'
-	| expression ';'
+	| expression ';'																			{ printf(";\n"); }
+	;
+
+selection_statement_prologue
+	: IF '('
+	;
+
+selection_statement_logic
+	: selection_statement_prologue expression ')'												{
+																									// Last expression result is used to either execute or skip this block to IF_FALSEBLOCK
+																									$$ = new SBaseASTNode("IF_TRUEBLOCK\n");
+																								}
+	;
+
+selection_statement_logic_else
+	: selection_statement_logic statement ELSE													{
+																									// Start of the 'else' block
+																									// The IF_TRUEBLOCK should skip to the END_IF just before we hit this (i.e. JMP @endlabel0000)
+																									printf("//JMP @endlabel0000\n");
+																									$$ = new SBaseASTNode("IF_FALSEBLOCK\n");
+																								}
 	;
 
 selection_statement
-	: IF '(' expression ')' statement
-	| IF '(' expression ')' statement ELSE statement
-	| SWITCH '(' expression ')' statement
+	: selection_statement_logic statement														{
+																									printf("//endlabel0000:\n");
+																									$$ = new SBaseASTNode("END_IF"); printf("\n");
+																								}
+	| selection_statement_logic_else statement													{
+																									printf("//endlabel0000:\n");
+																									$$ = new SBaseASTNode("END_IFELSE"); printf("\n");
+																								}
+	| SWITCH '(' expression ')' statement														{
+																									$$ = new SBaseASTNode("switch");
+																								}
 	;
 
 iteration_statement_begin
@@ -547,18 +584,18 @@ iteration_statement_prologue_decl
 iteration_statement
 	: WHILE '(' expression ')' statement
 	| DO statement WHILE '(' expression ')' ';'
-	| iteration_statement_prologue_expr expression_statement ')' statement						{ printf(" }\n");}
-	| iteration_statement_prologue_expr expression_statement expression ')' statement			{ printf(" }\n");}
-	| iteration_statement_prologue_decl expression_statement ')' statement						{ printf(" }\n");}
-	| iteration_statement_prologue_decl expression_statement expression ')' statement			{ printf(" }\n");}
+	| iteration_statement_prologue_expr expression_statement ')' statement						{ printf(" LOOP }\n");}
+	| iteration_statement_prologue_expr expression_statement expression ')' statement			{ printf(" LOOP }\n");}
+	| iteration_statement_prologue_decl expression_statement ')' statement						{ printf(" LOOP }\n");}
+	| iteration_statement_prologue_decl expression_statement expression ')' statement			{ printf(" LOOP }\n");}
 	;
 
 jump_statement
-	: GOTO IDENTIFIER ';'																	{ $$ = new SBaseASTNode("goto" + PopString()); }
-	| CONTINUE ';'																			{ $$ = new SBaseASTNode("continue"); }
-	| BREAK ';'																				{ $$ = new SBaseASTNode("break"); }
-	| RETURN ';'																			{ $$ = new SBaseASTNode("ret"); }
-	| RETURN expression ';'																	{ $$ = new SBaseASTNode("ret(expr)"); }
+	: GOTO IDENTIFIER ';'																		{ $$ = new SBaseASTNode("goto" + PopString()); }
+	| CONTINUE ';'																				{ $$ = new SBaseASTNode("continue"); }
+	| BREAK ';'																					{ $$ = new SBaseASTNode("break"); }
+	| RETURN ';'																				{ $$ = new SBaseASTNode("ret"); }
+	| RETURN expression ';'																		{ $$ = new SBaseASTNode("ret(expr)"); }
 	;
 
 translation_unit
@@ -567,8 +604,8 @@ translation_unit
 	;
 
 external_declaration
-	: function_definition																	{ printf(" }\n"); }
-	| declaration																			{ printf(" ;\n"); }
+	: function_definition																		{ printf(" }\n"); }
+	| declaration																				{ printf(" ;\n"); }
 	;
 
 function_definition

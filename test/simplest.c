@@ -19,7 +19,18 @@ void test()
     VRAM[4] = 0xFF-C[2];     // Should contain 210 at 0x00010004
     E = &B;                  // E should contain address of B, 0x00000001
 
-    A = beta(1);
+    A = beta(1) ? 3:5;
+
+    if (A<3 && A%2==0)
+    {
+        A++;
+        E=A;
+    }
+    else
+    {
+        A--;
+        E=0xFF-A;
+    }
 
     for (int y=2;y<10;y++)
     {
@@ -29,6 +40,7 @@ void test()
            VRAM[addrs] = 0xFF;
         }
     }
+
     return;
 }
 
