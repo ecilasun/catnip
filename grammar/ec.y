@@ -144,7 +144,7 @@ primary_expression
 
 postfix_expression
 	: primary_expression																		{ $$ = new SBaseASTNode(PopString()); }
-	| postfix_expression '[' expression ']'														{ $$ = new SBaseASTNode("[expr]"); }
+	| postfix_expression '[' expression ']'														{ $$ = new SBaseASTNode("OFFSET[]"); }
 	| postfix_expression '(' ')'																{ $$ = new SBaseASTNode("<-call"); }
 	| postfix_expression '(' argument_expression_list ')'										{ $$ = new SBaseASTNode("<-call(..)"); }
 	| postfix_expression '.' IDENTIFIER															{ $$ = new SBaseASTNode(); }
@@ -543,6 +543,8 @@ selection_statement_prologue
 selection_statement_logic
 	: selection_statement_prologue expression ')'												{
 																									// Last expression result is used to either execute or skip this block to IF_FALSEBLOCK
+																									printf("//CMP\n");
+																									printf("//JZ @elselabel0000\n");
 																									$$ = new SBaseASTNode("IF_TRUEBLOCK\n");
 																								}
 	;
@@ -550,19 +552,22 @@ selection_statement_logic
 selection_statement_logic_else
 	: selection_statement_logic statement ELSE													{
 																									// Start of the 'else' block
-																									// The IF_TRUEBLOCK should skip to the END_IF just before we hit this (i.e. JMP @endlabel0000)
-																									printf("//JMP @endlabel0000\n");
+																									// The IF_TRUEBLOCK should skip to the END_IF just before we hit this (i.e. JMP @endiflabel0000)
+																									printf("//JMP @endiflabel0000\n");
+																									printf("//elselabel0000:\n");
 																									$$ = new SBaseASTNode("IF_FALSEBLOCK\n");
 																								}
 	;
 
 selection_statement
 	: selection_statement_logic statement														{
-																									printf("//endlabel0000:\n");
+																									// End is also the else condition for simple if()
+																									printf("//elselabel0000:\n");
+																									printf("//endiflabel0000:\n");
 																									$$ = new SBaseASTNode("END_IF"); printf("\n");
 																								}
 	| selection_statement_logic_else statement													{
-																									printf("//endlabel0000:\n");
+																									printf("//endiflabel0000:\n");
 																									$$ = new SBaseASTNode("END_IFELSE"); printf("\n");
 																								}
 	| SWITCH '(' expression ')' statement														{
@@ -575,19 +580,19 @@ iteration_statement_begin
 	;
 
 iteration_statement_prologue_expr
-	: iteration_statement_begin expression_statement											{ printf(" {\n");}
+	: iteration_statement_begin expression_statement											{ printf(" {\n//forstartlabel0000:\n");}
 	;
 iteration_statement_prologue_decl
-	: iteration_statement_begin declaration														{ printf(" {\n");}
+	: iteration_statement_begin declaration														{ printf(" {\n//forstartlabel0000:\n");}
 	;
 
 iteration_statement
 	: WHILE '(' expression ')' statement
 	| DO statement WHILE '(' expression ')' ';'
-	| iteration_statement_prologue_expr expression_statement ')' statement						{ printf(" LOOP }\n");}
-	| iteration_statement_prologue_expr expression_statement expression ')' statement			{ printf(" LOOP }\n");}
-	| iteration_statement_prologue_decl expression_statement ')' statement						{ printf(" LOOP }\n");}
-	| iteration_statement_prologue_decl expression_statement expression ')' statement			{ printf(" LOOP }\n");}
+	| iteration_statement_prologue_expr expression_statement ')' statement						{ printf("//jmp forstartlabel0000\n}\n");}
+	| iteration_statement_prologue_expr expression_statement expression ')' statement			{ printf("//jmp forstartlabel0000\n}\n");}
+	| iteration_statement_prologue_decl expression_statement ')' statement						{ printf("//jmp forstartlabel0000\n}\n");}
+	| iteration_statement_prologue_decl expression_statement expression ')' statement			{ printf("//jmp forstartlabel0000\n}\n");}
 	;
 
 jump_statement
