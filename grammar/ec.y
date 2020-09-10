@@ -401,9 +401,9 @@ direct_declarator
 	| direct_declarator '[' type_qualifier_list '*' ']'											{ $$ = new SBaseASTNode("dd[t*]"); }
 	| direct_declarator '[' '*' ']'																{ $$ = new SBaseASTNode("dd[*]"); }
 	| direct_declarator '[' ']'																	{ $$ = new SBaseASTNode("dd[]"); }
-	| direct_declarator '(' parameter_type_list ')'												{ $$ = new SBaseASTNode("DEFFUNC(p) " + PopString()); printf("\n// function entry\n"); }
+	| direct_declarator '(' parameter_type_list ')'												{ $$ = new SBaseASTNode("DEFFUNC(p) " + PopString()); printf(" {\n"); }
 	| direct_declarator '(' identifier_list ')'													{ $$ = new SBaseASTNode("dd(i)"); }
-	| direct_declarator '(' ')'																	{ $$ = new SBaseASTNode("DEFFUNC() " + PopString()); printf("\n// function entry\n"); }
+	| direct_declarator '(' ')'																	{ $$ = new SBaseASTNode("DEFFUNC() " + PopString()); printf(" {\n"); }
 	;
 
 pointer
@@ -519,7 +519,7 @@ block_item_list
 
 block_item
 	: declaration															{ printf("//enddecl\n"); }
-	| statement																{ printf("//endstatement\n"); }
+	| statement																{ printf("\n"); } // Just to align visually
 	;
 
 expression_statement
@@ -538,19 +538,19 @@ iteration_statement_begin
 	;
 
 iteration_statement_prologue_expr
-	: iteration_statement_begin expression_statement											{ printf("//FOR loop body top\n");}
+	: iteration_statement_begin expression_statement											{ printf(" {\n");}
 	;
 iteration_statement_prologue_decl
-	: iteration_statement_begin declaration														{ printf("//FOR loop body top\n");}
+	: iteration_statement_begin declaration														{ printf(" {\n");}
 	;
 
 iteration_statement
 	: WHILE '(' expression ')' statement
 	| DO statement WHILE '(' expression ')' ';'
-	| iteration_statement_prologue_expr expression_statement ')' statement						{ printf("//FOR loop body bottom\n");}
-	| iteration_statement_prologue_expr expression_statement expression ')' statement			{ printf("//FOR loop body bottom\n");}
-	| iteration_statement_prologue_decl expression_statement ')' statement						{ printf("//FOR loop body bottom\n");}
-	| iteration_statement_prologue_decl expression_statement expression ')' statement			{ printf("//FOR loop body bottom\n");}
+	| iteration_statement_prologue_expr expression_statement ')' statement						{ printf(" }\n");}
+	| iteration_statement_prologue_expr expression_statement expression ')' statement			{ printf(" }\n");}
+	| iteration_statement_prologue_decl expression_statement ')' statement						{ printf(" }\n");}
+	| iteration_statement_prologue_decl expression_statement expression ')' statement			{ printf(" }\n");}
 	;
 
 jump_statement
@@ -567,8 +567,8 @@ translation_unit
 	;
 
 external_declaration
-	: function_definition																	{ printf("// end of function definition\n"); }
-	| declaration																			{ printf("// end of declaration\n"); }
+	: function_definition																	{ printf(" }\n"); }
+	| declaration																			{ printf(" ;\n"); }
 	;
 
 function_definition
