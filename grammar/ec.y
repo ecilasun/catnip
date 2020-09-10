@@ -35,43 +35,25 @@ uint32_t HashString(const char *_str)
 	return (uint32_t)(Val);
 }
 
+class SBaseASTNode
+{
+public:
+	SBaseASTNode() { m_Value = "."; }
+	SBaseASTNode(std::string str) { m_Value = str; /*printf("%s ", str.c_str());*/ }
+
+	std::string m_Value;
+	std::stack<SBaseASTNode*> m_SubNodes;
+};
+
 struct SParserContext
 {
 	SParserContext()
 	{
 	}
-	std::stack<std::string> m_StringStack;
+	std::stack<SBaseASTNode*> m_NodeStack;
 };
 
 SParserContext g_context;
-
-class SBaseASTNode
-{
-public:
-	SBaseASTNode() { m_Value = "."; }
-	SBaseASTNode(std::string str) { m_Value = str; printf("%s ", str.c_str()); }
-
-	std::string m_Value;
-};
-
-void PushString(const std::string &str)
-{
-	g_context.m_StringStack.push(str);
-}
-
-bool StringStackEmpty()
-{
-	return g_context.m_StringStack.size() == 0 ? true : false;
-}
-
-std::string PopString()
-{
-	if (StringStackEmpty())
-		printf("ERROR: string stack underflow\n");
-	std::string str = g_context.m_StringStack.top();
-	g_context.m_StringStack.pop();
-	return str;
-}
 
 %}
 
@@ -123,36 +105,72 @@ std::string PopString()
 %type <astnode> selection_statement_logic
 %type <astnode> selection_statement_logic_else
 %type <astnode> selection_statement
+%type <astnode> primary_expression
 
 %start translation_unit
 %%
 
 primary_expression
 	: IDENTIFIER																				{
-																									PushString($1);
+																									$$ = new SBaseASTNode($1);
+																									g_context.m_NodeStack.push($$);
 																								}
 	| CONSTANT																					{
 																									std::string tmp;
 																									tmp = std::to_string($1);
-																									PushString(tmp);
+																									$$ = new SBaseASTNode(tmp);
+																									g_context.m_NodeStack.push($$);
 																								}
 	| STRING_LITERAL																			{
-																									PushString($1);
+																									$$ = new SBaseASTNode($1);
+																									g_context.m_NodeStack.push($$);
 																								}
 	| '(' expression ')'
 	;
 
 postfix_expression
-	: primary_expression																		{ $$ = new SBaseASTNode(PopString()); }
-	| postfix_expression '[' expression ']'														{ $$ = new SBaseASTNode("OFFSET[]"); }
-	| postfix_expression '(' ')'																{ $$ = new SBaseASTNode("<-call"); }
-	| postfix_expression '(' argument_expression_list ')'										{ $$ = new SBaseASTNode("<-call(..)"); }
-	| postfix_expression '.' IDENTIFIER															{ $$ = new SBaseASTNode(); }
-	| postfix_expression PTR_OP IDENTIFIER														{ $$ = new SBaseASTNode(); }
-	| postfix_expression INC_OP																	{ $$ = new SBaseASTNode("++"); }
-	| postfix_expression DEC_OP																	{ $$ = new SBaseASTNode("--"); }
-	| '(' type_name ')' '{' initializer_list '}'												{ $$ = new SBaseASTNode(); }
-	| '(' type_name ')' '{' initializer_list ',' '}'											{ $$ = new SBaseASTNode(); }
+	: primary_expression																		{
+																									$$ = new SBaseASTNode("PriExp");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| postfix_expression '[' expression ']'														{
+																									$$ = new SBaseASTNode("OFFSET[]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| postfix_expression '(' ')'																{
+																									$$ = new SBaseASTNode("<-call");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| postfix_expression '(' argument_expression_list ')'										{
+																									$$ = new SBaseASTNode("<-call(..)");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| postfix_expression '.' IDENTIFIER															{
+																									$$ = new SBaseASTNode(".");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| postfix_expression PTR_OP IDENTIFIER														{
+																									$$ = new SBaseASTNode("PTROP");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| postfix_expression INC_OP																	{
+																									$$ = new SBaseASTNode("++");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| postfix_expression DEC_OP																	{
+																									$$ = new SBaseASTNode("--");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| '(' type_name ')' '{' initializer_list '}'												{
+																									$$ = new SBaseASTNode();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| '(' type_name ')' '{' initializer_list ',' '}'											{
+																									$$ = new SBaseASTNode();
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 argument_expression_list
@@ -162,20 +180,50 @@ argument_expression_list
 
 unary_expression
 	: postfix_expression
-	| INC_OP unary_expression																	{ $$ = new SBaseASTNode("++"); }
-	| DEC_OP unary_expression																	{ $$ = new SBaseASTNode("--"); }
+	| INC_OP unary_expression																	{
+																									$$ = new SBaseASTNode("++");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| DEC_OP unary_expression																	{
+																									$$ = new SBaseASTNode("--");
+																									g_context.m_NodeStack.push($$);
+																								}
 	| unary_operator cast_expression
-	| SIZEOF unary_expression																	{ $$ = new SBaseASTNode("sizeof(expr)"); }
-	| SIZEOF '(' type_name ')'																	{ $$ = new SBaseASTNode("sizeof(..)"); }
+	| SIZEOF unary_expression																	{
+																									$$ = new SBaseASTNode("sizeof(expr)");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| SIZEOF '(' type_name ')'																	{
+																									$$ = new SBaseASTNode("sizeof(..)");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 unary_operator
-	: '&'																						{ $$ = new SBaseASTNode("&"); }
-	| '*'																						{ $$ = new SBaseASTNode("*"); }
-	| '+'																						{ $$ = new SBaseASTNode("+"); }
-	| '-'																						{ $$ = new SBaseASTNode("-"); }
-	| '~'																						{ $$ = new SBaseASTNode("~"); }
-	| '!'																						{ $$ = new SBaseASTNode("!"); }
+	: '&'																						{
+																									$$ = new SBaseASTNode("&");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| '*'																						{
+																									$$ = new SBaseASTNode("*");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| '+'																						{
+																									$$ = new SBaseASTNode("+");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| '-'																						{
+																									$$ = new SBaseASTNode("-");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| '~'																						{
+																									$$ = new SBaseASTNode("~");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| '!'																						{
+																									$$ = new SBaseASTNode("!");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 cast_expression
@@ -186,72 +234,163 @@ cast_expression
 multiplicative_expression
 	: cast_expression																			{
 																									// Looks like here I can decide on final value of a variable, constant or function return value
-																									$$ = new SBaseASTNode("^");
+																									$$ = new SBaseASTNode("CAST");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
 																								}
-	| multiplicative_expression '*' cast_expression												{ $$ = new SBaseASTNode("MUL"); }
-	| multiplicative_expression '/' cast_expression												{ $$ = new SBaseASTNode("DIV"); }
-	| multiplicative_expression '%' cast_expression												{ $$ = new SBaseASTNode("MOD"); }
+	| multiplicative_expression '*' cast_expression												{
+																									$$ = new SBaseASTNode("MUL");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| multiplicative_expression '/' cast_expression												{
+																									$$ = new SBaseASTNode("DIV");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| multiplicative_expression '%' cast_expression												{
+																									$$ = new SBaseASTNode("MOD");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 additive_expression
 	: multiplicative_expression																	//{ $$ = new SBaseASTNode("MulExp"); }
-	| additive_expression '+' multiplicative_expression											{ $$ = new SBaseASTNode("ADD"); }
-	| additive_expression '-' multiplicative_expression											{ $$ = new SBaseASTNode("SUB"); }
+	| additive_expression '+' multiplicative_expression											{
+																									$$ = new SBaseASTNode("ADD");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| additive_expression '-' multiplicative_expression											{
+																									$$ = new SBaseASTNode("SUB");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 shift_expression
 	: additive_expression
-	| shift_expression LEFT_OP additive_expression												{ $$ = new SBaseASTNode("<<"); }
-	| shift_expression RIGHT_OP additive_expression												{ $$ = new SBaseASTNode(">>"); }
+	| shift_expression LEFT_OP additive_expression												{
+																									$$ = new SBaseASTNode("<<");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| shift_expression RIGHT_OP additive_expression												{
+																									$$ = new SBaseASTNode(">>");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 relational_expression
 	: shift_expression
-	| relational_expression LESS_OP shift_expression											{ $$ = new SBaseASTNode("<"); }
-	| relational_expression GREATER_OP shift_expression											{ $$ = new SBaseASTNode(">"); }
-	| relational_expression LE_OP shift_expression												{ $$ = new SBaseASTNode("<="); }
-	| relational_expression GE_OP shift_expression												{ $$ = new SBaseASTNode(">="); }
+	| relational_expression LESS_OP shift_expression											{
+																									$$ = new SBaseASTNode("<");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| relational_expression GREATER_OP shift_expression											{
+																									$$ = new SBaseASTNode(">");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| relational_expression LE_OP shift_expression												{
+																									$$ = new SBaseASTNode("<=");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| relational_expression GE_OP shift_expression												{
+																									$$ = new SBaseASTNode(">=");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 equality_expression
 	: relational_expression
-	| equality_expression EQ_OP relational_expression											{ $$ = new SBaseASTNode("=="); }
-	| equality_expression NE_OP relational_expression											{ $$ = new SBaseASTNode("!="); }
+	| equality_expression EQ_OP relational_expression											{
+																									$$ = new SBaseASTNode("==");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| equality_expression NE_OP relational_expression											{
+																									$$ = new SBaseASTNode("!=");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 and_expression
 	: equality_expression
-	| and_expression '&' equality_expression													{ $$ = new SBaseASTNode("AND"); }
+	| and_expression '&' equality_expression													{
+																									$$ = new SBaseASTNode("AND");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 exclusive_or_expression
 	: and_expression
-	| exclusive_or_expression '^' and_expression												{ $$ = new SBaseASTNode("XOR"); }
+	| exclusive_or_expression '^' and_expression												{
+																									$$ = new SBaseASTNode("XOR");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 inclusive_or_expression
 	: exclusive_or_expression
-	| inclusive_or_expression '|' exclusive_or_expression										{ $$ = new SBaseASTNode("OR"); }
+	| inclusive_or_expression '|' exclusive_or_expression										{
+																									$$ = new SBaseASTNode("OR");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 logical_and_expression
 	: inclusive_or_expression
-	| logical_and_expression AND_OP inclusive_or_expression										{ $$ = new SBaseASTNode("&&"); }
+	| logical_and_expression AND_OP inclusive_or_expression										{
+																									$$ = new SBaseASTNode("&&");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 logical_or_expression
 	: logical_and_expression
-	| logical_or_expression OR_OP logical_and_expression										{ $$ = new SBaseASTNode("||"); }
+	| logical_or_expression OR_OP logical_and_expression										{
+																									$$ = new SBaseASTNode("||");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 conditional_expression
 	: logical_or_expression
-	| logical_or_expression '?' expression ':' conditional_expression							{ $$ = new SBaseASTNode("?:"); }
+	| logical_or_expression '?' expression ':' conditional_expression							{
+																									$$ = new SBaseASTNode("?:");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 assignment_expression
 	: conditional_expression
-	| unary_expression assignment_operator assignment_expression								{ $$ = new SBaseASTNode("AsnExp"); }
+	| unary_expression assignment_operator assignment_expression								{
+																									$$ = new SBaseASTNode("AsnExp");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 assignment_operator
@@ -299,8 +438,20 @@ init_declarator_list
 	;
 
 init_declarator
-	: declarator																				{ $$ = new SBaseASTNode("DECL " + PopString()); }
-	| declarator '=' initializer																{ $$ = new SBaseASTNode("DECL= " + PopString()); }
+	: declarator																				{
+																									$$ = new SBaseASTNode("DECL");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| declarator '=' initializer																{
+																									$$ = new SBaseASTNode("DECL=");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 storage_class_specifier
@@ -393,26 +544,72 @@ function_specifier
 	;
 
 declarator
-	: pointer direct_declarator																	{ $$ = new SBaseASTNode("PTR"); }
+	: pointer direct_declarator																	{
+																									$$ = new SBaseASTNode("PTR");
+																									g_context.m_NodeStack.push($$);
+																								}
 	| direct_declarator
 	;
 
 direct_declarator
 	: IDENTIFIER																				{
-																									PushString($1);
+																									$$ = new SBaseASTNode($1);
+																									g_context.m_NodeStack.push($$);
 																								}
-	| '(' declarator ')'																		{ $$ = new SBaseASTNode("(d)"); }
-	| direct_declarator '[' type_qualifier_list assignment_expression ']'						{ $$ = new SBaseASTNode("dd[ta]"); }
-	| direct_declarator '[' type_qualifier_list ']'												{ $$ = new SBaseASTNode("dd[t]"); }
-	| direct_declarator '[' assignment_expression ']'											{ $$ = new SBaseASTNode("DIM"); }
-	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'				{ $$ = new SBaseASTNode("dd[sta]"); }
-	| direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'				{ $$ = new SBaseASTNode("dd[tsa]"); }
-	| direct_declarator '[' type_qualifier_list '*' ']'											{ $$ = new SBaseASTNode("dd[t*]"); }
-	| direct_declarator '[' '*' ']'																{ $$ = new SBaseASTNode("dd[*]"); }
-	| direct_declarator '[' ']'																	{ $$ = new SBaseASTNode("dd[]"); }
-	| direct_declarator '(' parameter_type_list ')'												{ $$ = new SBaseASTNode("DEFFUNC(p) " + PopString()); printf(" {\n"); }
-	| direct_declarator '(' identifier_list ')'													{ $$ = new SBaseASTNode("dd(i)"); }
-	| direct_declarator '(' ')'																	{ $$ = new SBaseASTNode("DEFFUNC() " + PopString()); printf(" {\n"); }
+	| '(' declarator ')'																		{
+																									$$ = new SBaseASTNode("(d)");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_declarator '[' type_qualifier_list assignment_expression ']'						{
+																									$$ = new SBaseASTNode("dd[ta]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_declarator '[' type_qualifier_list ']'												{
+																									$$ = new SBaseASTNode("dd[t]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_declarator '[' assignment_expression ']'											{
+																									$$ = new SBaseASTNode("DIM");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'				{
+																									$$ = new SBaseASTNode("dd[sta]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'				{
+																									$$ = new SBaseASTNode("dd[tsa]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_declarator '[' type_qualifier_list '*' ']'											{
+																									$$ = new SBaseASTNode("dd[t*]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_declarator '[' '*' ']'																{
+																									$$ = new SBaseASTNode("dd[*]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_declarator '[' ']'																	{
+																									$$ = new SBaseASTNode("dd[]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_declarator '(' parameter_type_list ')'												{
+																									$$ = new SBaseASTNode("DEFFUNC(p)");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																									//printf(" {\n");
+																								}
+	| direct_declarator '(' identifier_list ')'													{
+																									$$ = new SBaseASTNode("dd(i)");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_declarator '(' ')'																	{
+																									$$ = new SBaseASTNode("DEFFUNC()");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																									//printf(" {\n");
+																								}
 	;
 
 pointer
@@ -434,8 +631,18 @@ parameter_type_list
 	;
 
 parameter_list
-	: parameter_declaration																		{ $$ = new SBaseASTNode("PARAM " + PopString()); }
-	| parameter_list ',' parameter_declaration													{ $$ = new SBaseASTNode("PARAM " + PopString()); }
+	: parameter_declaration																		{
+																									$$ = new SBaseASTNode("PARAM");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| parameter_list ',' parameter_declaration													{
+																									$$ = new SBaseASTNode("PARAM");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 parameter_declaration
@@ -461,17 +668,50 @@ abstract_declarator
 	;
 
 direct_abstract_declarator
-	: '(' abstract_declarator ')'																{ $$ = new SBaseASTNode("(a)"); }
-	| '[' ']'																					{ $$ = new SBaseASTNode("[]"); }
-	| '[' assignment_expression ']'																{ $$ = new SBaseASTNode("[=]"); }
-	| direct_abstract_declarator '[' ']'														{ $$ = new SBaseASTNode("d[]"); }
-	| direct_abstract_declarator '[' assignment_expression ']'									{ $$ = new SBaseASTNode("[N]"); }
-	| '[' '*' ']'																				{ $$ = new SBaseASTNode("[*]"); }
-	| direct_abstract_declarator '[' '*' ']'													{ $$ = new SBaseASTNode("d[*]"); }
-	| '(' ')'																					{ $$ = new SBaseASTNode("()"); }
-	| '(' parameter_type_list ')'																{ $$ = new SBaseASTNode("(p)"); }
-	| direct_abstract_declarator '(' ')'														{ $$ = new SBaseASTNode("()"); }
-	| direct_abstract_declarator '(' parameter_type_list ')'									{ $$ = new SBaseASTNode("d(p)"); }
+	: '(' abstract_declarator ')'																{
+																									$$ = new SBaseASTNode("(a)");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| '[' ']'																					{
+																									$$ = new SBaseASTNode("[]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| '[' assignment_expression ']'																{
+																									$$ = new SBaseASTNode("[=]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_abstract_declarator '[' ']'														{
+																									$$ = new SBaseASTNode("d[]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_abstract_declarator '[' assignment_expression ']'									{
+																									$$ = new SBaseASTNode("[N]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| '[' '*' ']'																				{
+																									$$ = new SBaseASTNode("[*]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_abstract_declarator '[' '*' ']'													{
+																									$$ = new SBaseASTNode("d[*]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| '(' ')'																					{
+																									$$ = new SBaseASTNode("()");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| '(' parameter_type_list ')'																{
+																									$$ = new SBaseASTNode("(p)");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_abstract_declarator '(' ')'														{
+																									$$ = new SBaseASTNode("()");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| direct_abstract_declarator '(' parameter_type_list ')'									{
+																									$$ = new SBaseASTNode("d(p)");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 initializer
@@ -497,8 +737,14 @@ designator_list
 	;
 
 designator
-	: '[' constant_expression ']'																{ $$ = new SBaseASTNode("[dest]"); }
-	| '.' IDENTIFIER																			{ $$ = new SBaseASTNode(".dest"); }
+	: '[' constant_expression ']'																{
+																									$$ = new SBaseASTNode("[dest]");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| '.' IDENTIFIER																			{
+																									$$ = new SBaseASTNode(".dest");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 statement
@@ -527,13 +773,13 @@ block_item_list
 	;
 
 block_item
-	: declaration																				{ printf(";\n"); }
+	: declaration																				//{ printf(";\n"); }
 	| statement																					//{ printf(";\n"); }
 	;
 
 expression_statement
 	: ';'
-	| expression ';'																			{ printf(";\n"); }
+	| expression ';'																			//{ printf(";\n"); }
 	;
 
 selection_statement_prologue
@@ -543,9 +789,10 @@ selection_statement_prologue
 selection_statement_logic
 	: selection_statement_prologue expression ')'												{
 																									// Last expression result is used to either execute or skip this block to IF_FALSEBLOCK
-																									printf("//CMP\n");
-																									printf("//JZ @elselabel0000\n");
+																									//printf("//CMP\n");
+																									//printf("//JZ @elselabel0000\n");
 																									$$ = new SBaseASTNode("IF_TRUEBLOCK\n");
+																									g_context.m_NodeStack.push($$);
 																								}
 	;
 
@@ -553,25 +800,31 @@ selection_statement_logic_else
 	: selection_statement_logic statement ELSE													{
 																									// Start of the 'else' block
 																									// The IF_TRUEBLOCK should skip to the END_IF just before we hit this (i.e. JMP @endiflabel0000)
-																									printf("//JMP @endiflabel0000\n");
-																									printf("//elselabel0000:\n");
+																									//printf("//JMP @endiflabel0000\n");
+																									//printf("//elselabel0000:\n");
 																									$$ = new SBaseASTNode("IF_FALSEBLOCK\n");
+																									g_context.m_NodeStack.push($$);
 																								}
 	;
 
 selection_statement
 	: selection_statement_logic statement														{
 																									// End is also the else condition for simple if()
-																									printf("//elselabel0000:\n");
-																									printf("//endiflabel0000:\n");
-																									$$ = new SBaseASTNode("END_IF"); printf("\n");
+																									//printf("//elselabel0000:\n");
+																									//printf("//endiflabel0000:\n");
+																									$$ = new SBaseASTNode("END_IF");
+																									g_context.m_NodeStack.push($$);
+																									//printf("\n");
 																								}
 	| selection_statement_logic_else statement													{
-																									printf("//endiflabel0000:\n");
-																									$$ = new SBaseASTNode("END_IFELSE"); printf("\n");
+																									//printf("//endiflabel0000:\n");
+																									$$ = new SBaseASTNode("END_IFELSE");
+																									g_context.m_NodeStack.push($$);
+																									//printf("\n");
 																								}
 	| SWITCH '(' expression ')' statement														{
 																									$$ = new SBaseASTNode("switch");
+																									g_context.m_NodeStack.push($$);
 																								}
 	;
 
@@ -580,27 +833,42 @@ iteration_statement_begin
 	;
 
 iteration_statement_prologue_expr
-	: iteration_statement_begin expression_statement											{ printf(" {\n//forstartlabel0000:\n");}
+	: iteration_statement_begin expression_statement											//{ printf(" {\n//forstartlabel0000:\n");}
 	;
 iteration_statement_prologue_decl
-	: iteration_statement_begin declaration														{ printf(" {\n//forstartlabel0000:\n");}
+	: iteration_statement_begin declaration														//{ printf(" {\n//forstartlabel0000:\n");}
 	;
 
 iteration_statement
 	: WHILE '(' expression ')' statement
 	| DO statement WHILE '(' expression ')' ';'
-	| iteration_statement_prologue_expr expression_statement ')' statement						{ printf("//jmp forstartlabel0000\n}\n");}
-	| iteration_statement_prologue_expr expression_statement expression ')' statement			{ printf("//jmp forstartlabel0000\n}\n");}
-	| iteration_statement_prologue_decl expression_statement ')' statement						{ printf("//jmp forstartlabel0000\n}\n");}
-	| iteration_statement_prologue_decl expression_statement expression ')' statement			{ printf("//jmp forstartlabel0000\n}\n");}
+	| iteration_statement_prologue_expr expression_statement ')' statement						//{ printf("//jmp forstartlabel0000\n}\n");}
+	| iteration_statement_prologue_expr expression_statement expression ')' statement			//{ printf("//jmp forstartlabel0000\n}\n");}
+	| iteration_statement_prologue_decl expression_statement ')' statement						//{ printf("//jmp forstartlabel0000\n}\n");}
+	| iteration_statement_prologue_decl expression_statement expression ')' statement			//{ printf("//jmp forstartlabel0000\n}\n");}
 	;
 
 jump_statement
-	: GOTO IDENTIFIER ';'																		{ $$ = new SBaseASTNode("goto" + PopString()); }
-	| CONTINUE ';'																				{ $$ = new SBaseASTNode("continue"); }
-	| BREAK ';'																					{ $$ = new SBaseASTNode("break"); }
-	| RETURN ';'																				{ $$ = new SBaseASTNode("ret"); }
-	| RETURN expression ';'																		{ $$ = new SBaseASTNode("ret(expr)"); }
+	: GOTO IDENTIFIER ';'																		{
+																									$$ = new SBaseASTNode("goto");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| CONTINUE ';'																				{
+																									$$ = new SBaseASTNode("continue");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| BREAK ';'																					{
+																									$$ = new SBaseASTNode("break");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| RETURN ';'																				{
+																									$$ = new SBaseASTNode("ret");
+																									g_context.m_NodeStack.push($$);
+																								}
+	| RETURN expression ';'																		{
+																									$$ = new SBaseASTNode("ret(expr)");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 translation_unit
@@ -609,8 +877,8 @@ translation_unit
 	;
 
 external_declaration
-	: function_definition																		{ printf(" }\n"); }
-	| declaration																				{ printf(" ;\n"); }
+	: function_definition																		//{ printf(" }\n"); }
+	| declaration																				//{ printf(" ;\n"); }
 	;
 
 function_definition
@@ -624,6 +892,29 @@ declaration_list
 	| declaration_list declaration
 	;
 %%
+
+void DumpEntry(int nodelevel, SBaseASTNode *node)
+{
+	static const std::string nodetabs="                                                                                                              ";
+	printf("%s%s\n", nodetabs.substr(0,nodelevel).c_str(), node->m_Value.c_str());
+	size_t sz = node->m_SubNodes.size();
+	for(size_t i=0;i<sz;++i)
+	{
+		DumpEntry(nodelevel+1, node->m_SubNodes.top());
+		node->m_SubNodes.pop();
+	}
+}
+
+void dumpnodes()
+{
+	int nodelevel = 0;
+	size_t sz = g_context.m_NodeStack.size();
+	for(size_t i=0;i<sz;++i)
+	{
+		DumpEntry(nodelevel, g_context.m_NodeStack.top());
+		g_context.m_NodeStack.pop();
+	}
+}
 
 extern int yylineno;
 void yyerror(const char *s) {

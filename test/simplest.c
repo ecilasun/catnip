@@ -1,3 +1,6 @@
+int A=B-2*3;
+
+/*
 // Test init declaratiors
 int A=2+3*4-8%3, B=3-A/2;
 int C[2*4]; // Should contain 2*4 DWORDs of 0xCCCCCCCC
@@ -48,3 +51,4 @@ void meh()
 {
     return;
 }
+*/

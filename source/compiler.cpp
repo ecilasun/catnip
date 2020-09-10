@@ -6,6 +6,7 @@
 //#include "../grammar/nanoc.y.hpp"
 #else
 #include "../grammar/ec.y.hpp"
+extern void dumpnodes(void);
 #endif
 
 int CompileCode(char *_inputname, char * /*_outputname*/)
@@ -30,6 +31,8 @@ int CompileCode(char *_inputname, char * /*_outputname*/)
 
 	int result = yyparse();
 	fclose(yyin);
+
+	dumpnodes();
 
 	return -1;
 }
