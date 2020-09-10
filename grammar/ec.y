@@ -109,6 +109,7 @@ SParserContext g_context;
 %type <astnode> initializer
 %type <astnode> compound_statement
 %type <astnode> block_item_list
+%type <astnode> argument_expression_list
 
 %start translation_unit
 %%
@@ -148,8 +149,15 @@ postfix_expression
 																									g_context.m_NodeStack.push($$);
 																								}
 	| postfix_expression '(' argument_expression_list ')'										{
-																									$$ = new SBaseASTNode("call(..)");
-																									// TODO:pop N arguments
+																									$$ = new SBaseASTNode("CALL(..)");
+																									// Parameters
+																									do{
+																										$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																										g_context.m_NodeStack.pop();
+																									} while(g_context.m_NodeStack.top()->m_Value=="ARG");
+																									// Function name
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| postfix_expression '.' IDENTIFIER															{
@@ -191,8 +199,18 @@ postfix_expression
 	;
 
 argument_expression_list
-	: assignment_expression
-	| argument_expression_list ',' assignment_expression
+	: assignment_expression																		{
+																									$$ = new SBaseASTNode("ARG");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| argument_expression_list ',' assignment_expression										{
+																									$$ = new SBaseASTNode("ARG");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 unary_expression
