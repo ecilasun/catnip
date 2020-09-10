@@ -110,6 +110,8 @@ SParserContext g_context;
 %type <astnode> compound_statement
 %type <astnode> block_item_list
 %type <astnode> argument_expression_list
+%type <astnode> parameter_type_list
+%type <astnode> iteration_statement
 
 %start translation_unit
 %%
@@ -751,12 +753,16 @@ direct_declarator
 																								}
 	| direct_declarator '(' parameter_type_list ')'												{
 																									$$ = new SBaseASTNode("DEFFUNC");
+																									// Function name
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
+																									// PARAMS
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
+																									// Statement block
+																									//$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									//g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
-																									//printf(" {\n");
 																								}
 	| direct_declarator '(' identifier_list ')'													{
 																									$$ = new SBaseASTNode("dd(i)");
@@ -789,7 +795,14 @@ type_qualifier_list
 
 
 parameter_type_list
-	: parameter_list
+	: parameter_list																			{
+																									$$ = new SBaseASTNode("PARAMS");
+																									do{
+																										$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																										g_context.m_NodeStack.pop();
+																									} while(g_context.m_NodeStack.top()->m_Value=="PARAM");
+																									g_context.m_NodeStack.push($$);
+																								}
 	| parameter_list ',' ELLIPSIS
 	;
 
@@ -960,9 +973,12 @@ compound_statement
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '{' block_item_list '}'																	{
-																									$$ = new SBaseASTNode("{blk}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
+																									$$ = new SBaseASTNode("{compound_statement}");
+																									do {
+																										$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																										g_context.m_NodeStack.pop();
+																									} while(g_context.m_NodeStack.top()->m_Value=="{blockitem}" || g_context.m_NodeStack.top()->m_Value=="{blockitems}");
+																									// Do we belong to a function definition?
 																									if (g_context.m_NodeStack.top()->m_Value=="DEFFUNC")
 																										g_context.m_NodeStack.top()->m_SubNodes.push($$);
 																									else
@@ -971,13 +987,18 @@ compound_statement
 	;
 
 block_item_list
-	: block_item
+	: block_item																				{
+																									$$ = new SBaseASTNode("{blockitem}");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
 	| block_item_list block_item																{
-																									$$ = new SBaseASTNode("{blkitms}");
-																									do{
+																									$$ = new SBaseASTNode("{blockitems}");
+																									//do{
 																										$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																										g_context.m_NodeStack.pop();
-																									} while(g_context.m_NodeStack.top()->m_Value!="DEFFUNC");
+																									//} while(g_context.m_NodeStack.top()->m_Value!="DEFFUNC");
 																									g_context.m_NodeStack.push($$);
 																								}
 	;
@@ -992,45 +1013,30 @@ expression_statement
 	| expression ';'																			//{ printf(";\n"); }
 	;
 
-selection_statement_prologue
-	: IF '('
-	;
-
 selection_statement_logic
-	: selection_statement_prologue expression ')'												{
-																									// Last expression result is used to either execute or skip this block to IF_FALSEBLOCK
-																									//printf("//CMP\n");
-																									//printf("//JZ @elselabel0000\n");
-																									$$ = new SBaseASTNode("IF_TRUEBLOCK\n");
-																									g_context.m_NodeStack.push($$);
-																								}
-	;
-
-selection_statement_logic_else
-	: selection_statement_logic statement ELSE													{
-																									// Start of the 'else' block
-																									// The IF_TRUEBLOCK should skip to the END_IF just before we hit this (i.e. JMP @endiflabel0000)
-																									//printf("//JMP @endiflabel0000\n");
-																									//printf("//elselabel0000:\n");
-																									$$ = new SBaseASTNode("IF_FALSEBLOCK\n");
-																									g_context.m_NodeStack.push($$);
-																								}
+	: IF '(' expression ')'
 	;
 
 selection_statement
 	: selection_statement_logic statement														{
-																									// End is also the else condition for simple if()
-																									//printf("//elselabel0000:\n");
-																									//printf("//endiflabel0000:\n");
-																									$$ = new SBaseASTNode("END_IF");
+																									$$ = new SBaseASTNode("if");
+																									// If condition
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									// If statement or statement block
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
-																									//printf("\n");
 																								}
-	| selection_statement_logic_else statement													{
-																									//printf("//endiflabel0000:\n");
-																									$$ = new SBaseASTNode("END_IFELSE");
+	| selection_statement_logic statement ELSE	statement										{
+																									$$ = new SBaseASTNode("ifelse");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
-																									//printf("\n");
 																								}
 	| SWITCH '(' expression ')' statement														{
 																									$$ = new SBaseASTNode("switch");
@@ -1052,10 +1058,58 @@ iteration_statement_prologue_decl
 iteration_statement
 	: WHILE '(' expression ')' statement
 	| DO statement WHILE '(' expression ')' ';'
-	| iteration_statement_prologue_expr expression_statement ')' statement						//{ printf("//jmp forstartlabel0000\n}\n");}
-	| iteration_statement_prologue_expr expression_statement expression ')' statement			//{ printf("//jmp forstartlabel0000\n}\n");}
-	| iteration_statement_prologue_decl expression_statement ')' statement						//{ printf("//jmp forstartlabel0000\n}\n");}
-	| iteration_statement_prologue_decl expression_statement expression ')' statement			//{ printf("//jmp forstartlabel0000\n}\n");}
+	| iteration_statement_prologue_expr expression_statement ')' statement						{
+																									$$ = new SBaseASTNode("for0");
+																									// expression_statement
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									// statement
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| iteration_statement_prologue_expr expression_statement expression ')' statement			{
+																									$$ = new SBaseASTNode("for1");
+																									// expression_statement
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									// expression
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									// statement
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| iteration_statement_prologue_decl expression_statement ')' statement						{
+																									$$ = new SBaseASTNode("for2");
+																									// prologue_decl
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									// expression_statement
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									// statement
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| iteration_statement_prologue_decl expression_statement expression ')' statement			{
+																									$$ = new SBaseASTNode("for3");
+																									// prologue
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									// expression_statement
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									// Expression
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									// Statement
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 jump_statement

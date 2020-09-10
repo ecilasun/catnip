@@ -34,5 +34,5 @@ int CompileCode(char *_inputname, char * /*_outputname*/)
 
 	dumpnodes();
 
-	return -1;
+	return 0;
 }
