@@ -1,10 +1,10 @@
 // Test init declaratiors
-int A=2+3*4-8%3, B=3-A/2;
+/*int A=2+3*4-8%3, B=3-A/2;
 int C[2*4]; // Should contain 2*4 DWORDs of 0xCCCCCCCC
 int D[4] = {10, 20, 30, 40};
 
 // NOTE: Actual hardware VRAM starts at 0x80000000, here we cheat for simpler memory access
-int *VRAM = 0x10000;
+int *VRAM = 0x10000;*/
 
 int beta(int a)
 {

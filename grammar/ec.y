@@ -38,8 +38,8 @@ uint32_t HashString(const char *_str)
 class SBaseASTNode
 {
 public:
-	SBaseASTNode() { m_Value = "."; }
-	SBaseASTNode(std::string str) { m_Value = str; /*printf("%s ", str.c_str());*/ }
+	SBaseASTNode() { m_Value = "{n/a}"; }
+	SBaseASTNode(std::string str) { m_Value = str; }
 
 	std::string m_Value;
 	std::stack<SBaseASTNode*> m_SubNodes;
@@ -752,7 +752,7 @@ direct_declarator
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_declarator '(' parameter_type_list ')'												{
-																									$$ = new SBaseASTNode("{deffunc(..)}");
+																									$$ = new SBaseASTNode("{deffunc}");
 																									// Function name
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
@@ -774,8 +774,12 @@ direct_declarator
 																								}
 	| direct_declarator '(' ')'																	{
 																									$$ = new SBaseASTNode("{deffunc}");
+																									// Function name
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
+																									// Function body follows
+																									//$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									//g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																									//printf(" {\n");
 																								}
@@ -977,7 +981,11 @@ labeled_statement
 compound_statement
 	: '{' '}'																					{
 																									$$ = new SBaseASTNode("{emptyblk}");
-																									g_context.m_NodeStack.push($$);
+																									// Do we belong to a function definition?
+																									if (g_context.m_NodeStack.top()->m_Value=="{deffunc}")
+																										g_context.m_NodeStack.top()->m_SubNodes.push($$);
+																									else
+																										g_context.m_NodeStack.push($$);
 																								}
 	| '{' block_item_list '}'																	{
 																									$$ = new SBaseASTNode("{compound_statement}");
@@ -1174,10 +1182,10 @@ declaration_list
 
 void DumpEntry(int nodelevel, SBaseASTNode *node)
 {
-	static const std::string nodetabs="                                                                                                              ";
+	static const std::string nodespaces="..........................................................................";
 
 	// TODO: This is where we can somewhat start adding prologues / epilogues / labels and generate some code
-	printf("%s%s\n", nodetabs.substr(0,nodelevel).c_str(), node->m_Value.c_str());
+	printf("%s%s\n", nodespaces.substr(0,nodelevel).c_str(), node->m_Value.c_str());
 
 	size_t sz = node->m_SubNodes.size();
 	for(size_t i=0;i<sz;++i)
