@@ -1,6 +1,12 @@
 #include "compiler.h"
 
-#include "../grammar/nanoc.y.hpp"
+//#define OLD_COMPILER
+
+#if defined(OLD_COMPILER)
+//#include "../grammar/nanoc.y.hpp"
+#else
+#include "../grammar/ec.y.hpp"
+#endif
 
 int CompileCode(char *_inputname, char * /*_outputname*/)
 {
@@ -8,6 +14,7 @@ int CompileCode(char *_inputname, char * /*_outputname*/)
 	extern FILE *yyin;
 	yyin = fopen(_inputname, "r");
 
+#if defined(OLD_COMPILER)
 	// Prologue
 	printf("// Prologue\n");
 	printf("RESETSTACKCURSOR\n  // Set stack cursor to zero\n");
@@ -19,6 +26,7 @@ int CompileCode(char *_inputname, char * /*_outputname*/)
 	printf("// Global initialization\n");
 	printf("@FUNCTION\n");
 	printf("@NAME '__global_init'\n");
+#endif
 
 	int result = yyparse();
 	fclose(yyin);

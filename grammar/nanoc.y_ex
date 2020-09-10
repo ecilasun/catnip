@@ -18,10 +18,6 @@ extern char *yytext;
 extern FILE *fp;
 int err=0;
 
-bool stackempty();
-void push(const char *str);
-void pop(std::string &_str);
-
 enum EUnaryOp
 {
 	U_NONE,
@@ -111,6 +107,24 @@ uint32_t HashString(const char *_str)
 	}
 
 	return (uint32_t)(Val);
+}
+
+void PushString(const char *str)
+{
+	g_context.m_Stack.push(std::string(str));
+}
+
+bool StringStackEmpty()
+{
+	return g_context.m_Stack.size() == 0 ? true : false;
+}
+
+void PopString(std::string &_str)
+{
+	if (StringStackEmpty())
+		printf("ERROR: string stack underflow\n");
+	_str = g_context.m_Stack.top();
+	g_context.m_Stack.pop();
 }
 
 void PushForLoop(uint32_t forloopname)
@@ -278,7 +292,7 @@ primary_expression
 																									}
 
 																									if (!found)
-																										push($1); // Possibly function name for a function call then
+																										PushString($1); // Possibly function name for a function call then
 																								}
 
 																								g_context.m_IsConstant = 0;
@@ -295,7 +309,7 @@ primary_expression
 																							}
 	| STRING_LITERAL																		{
 																								// TODO: store address of pooled string in a register
-																								push($1);
+																								PushString($1);
 																							}
 	| '(' expression ')'
 	;
@@ -325,7 +339,7 @@ postfix_expression
 	| postfix_expression '(' ')'
 	| postfix_expression '(' argument_expression_list ')'									{
 																								std::string V;
-																								pop(V);
+																								PopString(V);
 																								printf("// Push parameters for %s\n", V.c_str());
 																								printf("SAVESTACKCURSOR\n");
 																								SFunction fun;
@@ -594,11 +608,11 @@ init_declarator_list
 
 init_declarator
 	: declarator																			{
-																								if (!stackempty())
+																								if (!StringStackEmpty())
 																								{
 																									// Just remove from stack and create the variable
 																									std::string V;
-																									pop(V);
+																									PopString(V);
 																									//g_context.m_DeclReg = PushRegister();
 																									uint32_t addrs0 = CreateVar((char*)V.c_str(), g_context.m_DeclDim);
 																									printf("// VARDECL %s%s[%d]\n", g_context.m_IsPointer ? "*":"", V.c_str(), g_context.m_DeclDim);
@@ -705,7 +719,7 @@ declarator
 	;
 
 direct_declarator
-	: IDENTIFIER																			{	push($1);			}
+	: IDENTIFIER																			{	PushString($1);			}
 	| '(' declarator ')'
 	| direct_declarator '[' type_qualifier_list assignment_expression ']'					{	printf("  -00A\n"); }
 	| direct_declarator '[' type_qualifier_list ']'											{	printf("  -009\n"); }
@@ -730,11 +744,11 @@ direct_declarator
 																								std::vector<std::string> parameters;
 																								std::string V;
 																								do{
-																									pop(V);
+																									PopString(V);
 																									parameters.push_back(V);
 																									printf("@PARAM %s\n", V.c_str());
 																								} while(g_context.m_Stack.size()>1);
-																								pop(V);
+																								PopString(V);
 																								printf("@NAME '%s'\n", V.c_str());
 																								uint32_t fun;
 																								CreateFunction((char*)V.c_str(), fun);
@@ -745,7 +759,7 @@ direct_declarator
 	| direct_declarator '(' identifier_list ')'												{
 																								printf("\n@FUNCTION\n");
 																								std::string V;
-																								pop(V);
+																								PopString(V);
 																								printf("@NAME(ilist) '%s'\n", V.c_str());
 																								uint32_t fun;
 																								CreateFunction((char*)V.c_str(), fun);
@@ -755,7 +769,7 @@ direct_declarator
 	| direct_declarator '(' ')'																{
 																								printf("\n@FUNCTION\n");
 																								std::string V;
-																								pop(V);
+																								PopString(V);
 																								printf("@NAME '%s'\n", V.c_str());
 																								uint32_t fun;
 																								CreateFunction((char*)V.c_str(), fun);
@@ -825,10 +839,10 @@ direct_abstract_declarator
 
 initializer
 	: assignment_expression														{
-																					if (!stackempty())
+																					if (!StringStackEmpty())
 																					{
 																						std::string V;
-																						pop(V);
+																						PopString(V);
 																						g_context.m_DeclReg = PushRegister();
 																						uint32_t addrs0 = CreateVar((char*)V.c_str(), g_context.m_DeclDim);
 																						printf("// VARDECL %s%s[%d]\n", V.c_str(), g_context.m_IsPointer ? "*":"", g_context.m_DeclDim);
@@ -970,34 +984,6 @@ declaration_list
 	| declaration_list declaration
 	;
 %%
-
-void push(const char *str)
-{
-	g_context.m_Stack.push(std::string(str));
-}
-
-bool stackempty()
-{
-	return g_context.m_Stack.size() == 0 ? true : false;
-}
-
-void pop(std::string &_str)
-{
-	if (stackempty())
-		printf("ERROR: string stack underflow\n");
-	_str = g_context.m_Stack.top();
-	g_context.m_Stack.pop();
-}
-
-int parseC90()
-{
-	if (!yyparse() && err==0)
-		printf("\nC90: no errors!\n");
-	else
-		printf("\nC90: parse error\n");
-
-	return 0;
-}
 
 extern int yylineno;
 void yyerror(const char *s) {
