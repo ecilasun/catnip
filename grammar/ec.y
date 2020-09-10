@@ -102,8 +102,6 @@ SParserContext g_context;
 %type <astnode> inclusive_or_expression
 %type <astnode> exclusive_or_expression
 %type <astnode> and_expression
-%type <astnode> selection_statement_logic
-%type <astnode> selection_statement_logic_else
 %type <astnode> selection_statement
 %type <astnode> primary_expression
 %type <astnode> initializer
@@ -131,13 +129,16 @@ primary_expression
 																									$$ = new SBaseASTNode($1);
 																									g_context.m_NodeStack.push($$);
 																								}
-	| '(' expression ')'
+	| '(' expression ')'																		{
+																									$$ = new SBaseASTNode("{expression}");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 postfix_expression
 	: primary_expression
 	| postfix_expression '[' expression ']'														{
-																									$$ = new SBaseASTNode("OFFSET[]");
+																									$$ = new SBaseASTNode("{offset[]}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -145,13 +146,13 @@ postfix_expression
 																									g_context.m_NodeStack.push($$);
 																								}
 	| postfix_expression '(' ')'																{
-																									$$ = new SBaseASTNode("CALL");
+																									$$ = new SBaseASTNode("{call}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| postfix_expression '(' argument_expression_list ')'										{
-																									$$ = new SBaseASTNode("CALL(..)");
+																									$$ = new SBaseASTNode("{call(..)}");
 																									// Parameters
 																									do{
 																										$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -163,27 +164,27 @@ postfix_expression
 																									g_context.m_NodeStack.push($$);
 																								}
 	| postfix_expression '.' IDENTIFIER															{
-																									$$ = new SBaseASTNode(".");
+																									$$ = new SBaseASTNode("{.}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| postfix_expression PTR_OP IDENTIFIER														{
-																									$$ = new SBaseASTNode("PTROP");
+																									$$ = new SBaseASTNode("{pointerop}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| postfix_expression INC_OP																	{
-																									$$ = new SBaseASTNode("++");
+																									$$ = new SBaseASTNode("{++}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| postfix_expression DEC_OP																	{
-																									$$ = new SBaseASTNode("--");
+																									$$ = new SBaseASTNode("{--}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '(' type_name ')' '{' initializer_list '}'												{
-																									$$ = new SBaseASTNode();
+																									$$ = new SBaseASTNode("{castinitlist}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -191,7 +192,7 @@ postfix_expression
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '(' type_name ')' '{' initializer_list ',' '}'											{
-																									$$ = new SBaseASTNode();
+																									$$ = new SBaseASTNode("{castinitlist,}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -202,13 +203,13 @@ postfix_expression
 
 argument_expression_list
 	: assignment_expression																		{
-																									$$ = new SBaseASTNode("ARG");
+																									$$ = new SBaseASTNode("{arg}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| argument_expression_list ',' assignment_expression										{
-																									$$ = new SBaseASTNode("ARG");
+																									$$ = new SBaseASTNode("{arg,}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
@@ -218,19 +219,19 @@ argument_expression_list
 unary_expression
 	: postfix_expression
 	| INC_OP unary_expression																	{
-																									$$ = new SBaseASTNode("++");
+																									$$ = new SBaseASTNode("{++}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| DEC_OP unary_expression																	{
-																									$$ = new SBaseASTNode("--");
+																									$$ = new SBaseASTNode("{--}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| unary_operator cast_expression															{
-																									$$ = new SBaseASTNode("CAST");
+																									$$ = new SBaseASTNode("{cast}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -239,13 +240,13 @@ unary_expression
 																								}
 
 	| SIZEOF unary_expression																	{
-																									$$ = new SBaseASTNode("sizeof(expr)");
+																									$$ = new SBaseASTNode("{sizeof(expr)}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| SIZEOF '(' type_name ')'																	{
-																									$$ = new SBaseASTNode("sizeof(..)");
+																									$$ = new SBaseASTNode("{sizeof(..)}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
@@ -254,27 +255,27 @@ unary_expression
 
 unary_operator
 	: '&'																						{
-																									$$ = new SBaseASTNode("&");
+																									$$ = new SBaseASTNode("{&}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '*'																						{
-																									$$ = new SBaseASTNode("*");
+																									$$ = new SBaseASTNode("{*}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '+'																						{
-																									$$ = new SBaseASTNode("+");
+																									$$ = new SBaseASTNode("{+}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '-'																						{
-																									$$ = new SBaseASTNode("-");
+																									$$ = new SBaseASTNode("{-}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '~'																						{
-																									$$ = new SBaseASTNode("~");
+																									$$ = new SBaseASTNode("{~}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '!'																						{
-																									$$ = new SBaseASTNode("!");
+																									$$ = new SBaseASTNode("{!}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	;
@@ -285,15 +286,14 @@ cast_expression
 	;
 
 multiplicative_expression
-	: cast_expression																			/*{
-																									// Looks like here I can decide on final value of a variable, constant or function return value
-																									$$ = new SBaseASTNode("CAST");
+	: cast_expression																			{
+																									$$ = new SBaseASTNode("{castexpr}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
-																								}*/
+																								}
 	| multiplicative_expression '*' cast_expression												{
-																									$$ = new SBaseASTNode("MUL");
+																									$$ = new SBaseASTNode("{mul}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -301,7 +301,7 @@ multiplicative_expression
 																									g_context.m_NodeStack.push($$);
 																								}
 	| multiplicative_expression '/' cast_expression												{
-																									$$ = new SBaseASTNode("DIV");
+																									$$ = new SBaseASTNode("{div}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -309,7 +309,7 @@ multiplicative_expression
 																									g_context.m_NodeStack.push($$);
 																								}
 	| multiplicative_expression '%' cast_expression												{
-																									$$ = new SBaseASTNode("MOD");
+																									$$ = new SBaseASTNode("{mod}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -321,7 +321,7 @@ multiplicative_expression
 additive_expression
 	: multiplicative_expression																	//{ $$ = new SBaseASTNode("MulExp"); }
 	| additive_expression '+' multiplicative_expression											{
-																									$$ = new SBaseASTNode("ADD");
+																									$$ = new SBaseASTNode("{add}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -329,7 +329,7 @@ additive_expression
 																									g_context.m_NodeStack.push($$);
 																								}
 	| additive_expression '-' multiplicative_expression											{
-																									$$ = new SBaseASTNode("SUB");
+																									$$ = new SBaseASTNode("{sub}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -341,7 +341,7 @@ additive_expression
 shift_expression
 	: additive_expression
 	| shift_expression LEFT_OP additive_expression												{
-																									$$ = new SBaseASTNode("<<");
+																									$$ = new SBaseASTNode("{<<}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -349,7 +349,7 @@ shift_expression
 																									g_context.m_NodeStack.push($$);
 																								}
 	| shift_expression RIGHT_OP additive_expression												{
-																									$$ = new SBaseASTNode(">>");
+																									$$ = new SBaseASTNode("{>>}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -361,7 +361,7 @@ shift_expression
 relational_expression
 	: shift_expression
 	| relational_expression LESS_OP shift_expression											{
-																									$$ = new SBaseASTNode("<");
+																									$$ = new SBaseASTNode("{<}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -369,7 +369,7 @@ relational_expression
 																									g_context.m_NodeStack.push($$);
 																								}
 	| relational_expression GREATER_OP shift_expression											{
-																									$$ = new SBaseASTNode(">");
+																									$$ = new SBaseASTNode("{>}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -377,7 +377,7 @@ relational_expression
 																									g_context.m_NodeStack.push($$);
 																								}
 	| relational_expression LE_OP shift_expression												{
-																									$$ = new SBaseASTNode("<=");
+																									$$ = new SBaseASTNode("{<=}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -385,7 +385,7 @@ relational_expression
 																									g_context.m_NodeStack.push($$);
 																								}
 	| relational_expression GE_OP shift_expression												{
-																									$$ = new SBaseASTNode(">=");
+																									$$ = new SBaseASTNode("{>=}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -397,7 +397,7 @@ relational_expression
 equality_expression
 	: relational_expression
 	| equality_expression EQ_OP relational_expression											{
-																									$$ = new SBaseASTNode("==");
+																									$$ = new SBaseASTNode("{==}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -405,7 +405,7 @@ equality_expression
 																									g_context.m_NodeStack.push($$);
 																								}
 	| equality_expression NE_OP relational_expression											{
-																									$$ = new SBaseASTNode("!=");
+																									$$ = new SBaseASTNode("{!=}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -417,7 +417,7 @@ equality_expression
 and_expression
 	: equality_expression
 	| and_expression '&' equality_expression													{
-																									$$ = new SBaseASTNode("AND");
+																									$$ = new SBaseASTNode("{and}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -429,7 +429,7 @@ and_expression
 exclusive_or_expression
 	: and_expression
 	| exclusive_or_expression '^' and_expression												{
-																									$$ = new SBaseASTNode("XOR");
+																									$$ = new SBaseASTNode("{xor}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -441,7 +441,7 @@ exclusive_or_expression
 inclusive_or_expression
 	: exclusive_or_expression
 	| inclusive_or_expression '|' exclusive_or_expression										{
-																									$$ = new SBaseASTNode("OR");
+																									$$ = new SBaseASTNode("{or}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -453,7 +453,7 @@ inclusive_or_expression
 logical_and_expression
 	: inclusive_or_expression
 	| logical_and_expression AND_OP inclusive_or_expression										{
-																									$$ = new SBaseASTNode("&&");
+																									$$ = new SBaseASTNode("{&&}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -465,7 +465,7 @@ logical_and_expression
 logical_or_expression
 	: logical_and_expression
 	| logical_or_expression OR_OP logical_and_expression										{
-																									$$ = new SBaseASTNode("||");
+																									$$ = new SBaseASTNode("{||}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -477,7 +477,7 @@ logical_or_expression
 conditional_expression
 	: logical_or_expression
 	| logical_or_expression '?' expression ':' conditional_expression							{
-																									$$ = new SBaseASTNode("?:");
+																									$$ = new SBaseASTNode("{?:}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -491,7 +491,7 @@ conditional_expression
 assignment_expression
 	: conditional_expression
 	| unary_expression assignment_operator assignment_expression								{
-																									$$ = new SBaseASTNode("AsnExp");
+																									$$ = new SBaseASTNode("{assignmentexpression}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -546,8 +546,8 @@ init_declarator_list
 
 init_declarator
 	: declarator																				{
-																									$$ = new SBaseASTNode("DECL");
-																									bool isDim = g_context.m_NodeStack.top()->m_Value == "DIM";
+																									$$ = new SBaseASTNode("{decl}");
+																									bool isDim = g_context.m_NodeStack.top()->m_Value == "{dim}";
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									if(isDim)
@@ -562,10 +562,10 @@ init_declarator
 																									g_context.m_NodeStack.push($$);
 																								}
 	| declarator '=' initializer																{
-																									$$ = new SBaseASTNode("DECL=");
+																									$$ = new SBaseASTNode("{decl=}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
-																									bool isDim = g_context.m_NodeStack.top()->m_Value == "DIM";
+																									bool isDim = g_context.m_NodeStack.top()->m_Value == "{dim}";
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									if(isDim)
@@ -668,7 +668,7 @@ function_specifier
 
 declarator
 	: pointer direct_declarator																	{
-																									$$ = new SBaseASTNode("PTR");
+																									$$ = new SBaseASTNode("{ptr}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
@@ -682,13 +682,13 @@ direct_declarator
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '(' declarator ')'																		{
-																									$$ = new SBaseASTNode("(d)");
+																									$$ = new SBaseASTNode("{(d)}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_declarator '[' type_qualifier_list assignment_expression ']'						{
-																									$$ = new SBaseASTNode("dd[ta]");
+																									$$ = new SBaseASTNode("{dd[ta]}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -698,7 +698,7 @@ direct_declarator
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_declarator '[' type_qualifier_list ']'												{
-																									$$ = new SBaseASTNode("dd[t]");
+																									$$ = new SBaseASTNode("{dd[t]}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -706,13 +706,13 @@ direct_declarator
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_declarator '[' assignment_expression ']'											{
-																									$$ = new SBaseASTNode("DIM");
+																									$$ = new SBaseASTNode("{dim}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'				{
-																									$$ = new SBaseASTNode("dd[sta]");
+																									$$ = new SBaseASTNode("{dd[sta]}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -722,7 +722,7 @@ direct_declarator
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'				{
-																									$$ = new SBaseASTNode("dd[tsa]");
+																									$$ = new SBaseASTNode("{dd[tsa]}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -732,7 +732,7 @@ direct_declarator
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_declarator '[' type_qualifier_list '*' ']'											{
-																									$$ = new SBaseASTNode("dd[t*]");
+																									$$ = new SBaseASTNode("{dd[t*]}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -740,19 +740,19 @@ direct_declarator
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_declarator '[' '*' ']'																{
-																									$$ = new SBaseASTNode("dd[*]");
+																									$$ = new SBaseASTNode("{dd[*]}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_declarator '[' ']'																	{
-																									$$ = new SBaseASTNode("dd[]");
+																									$$ = new SBaseASTNode("{dd[]}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_declarator '(' parameter_type_list ')'												{
-																									$$ = new SBaseASTNode("DEFFUNC");
+																									$$ = new SBaseASTNode("{deffunc(..)}");
 																									// Function name
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
@@ -765,7 +765,7 @@ direct_declarator
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_declarator '(' identifier_list ')'													{
-																									$$ = new SBaseASTNode("dd(i)");
+																									$$ = new SBaseASTNode("{dd(i)}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -773,7 +773,7 @@ direct_declarator
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_declarator '(' ')'																	{
-																									$$ = new SBaseASTNode("DEFFUNC");
+																									$$ = new SBaseASTNode("{deffunc}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
@@ -796,11 +796,11 @@ type_qualifier_list
 
 parameter_type_list
 	: parameter_list																			{
-																									$$ = new SBaseASTNode("PARAMS");
+																									$$ = new SBaseASTNode("{params}");
 																									do{
 																										$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																										g_context.m_NodeStack.pop();
-																									} while(g_context.m_NodeStack.top()->m_Value=="PARAM");
+																									} while(g_context.m_NodeStack.top()->m_Value=="{param}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| parameter_list ',' ELLIPSIS
@@ -808,13 +808,13 @@ parameter_type_list
 
 parameter_list
 	: parameter_declaration																		{
-																									$$ = new SBaseASTNode("PARAM");
+																									$$ = new SBaseASTNode("{param}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| parameter_list ',' parameter_declaration													{
-																									$$ = new SBaseASTNode("PARAM");
+																									$$ = new SBaseASTNode("{param}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
@@ -845,29 +845,29 @@ abstract_declarator
 
 direct_abstract_declarator
 	: '(' abstract_declarator ')'																{
-																									$$ = new SBaseASTNode("(a)");
+																									$$ = new SBaseASTNode("{(a)}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '[' ']'																					{
-																									$$ = new SBaseASTNode("[]");
+																									$$ = new SBaseASTNode("{[]}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '[' assignment_expression ']'																{
-																									$$ = new SBaseASTNode("[=]");
+																									$$ = new SBaseASTNode("{[=]}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_abstract_declarator '[' ']'														{
-																									$$ = new SBaseASTNode("d[]");
+																									$$ = new SBaseASTNode("{d[]}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_abstract_declarator '[' assignment_expression ']'									{
-																									$$ = new SBaseASTNode("[N]");
+																									$$ = new SBaseASTNode("{[N]}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -875,33 +875,33 @@ direct_abstract_declarator
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '[' '*' ']'																				{
-																									$$ = new SBaseASTNode("[*]");
+																									$$ = new SBaseASTNode("{[*]}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_abstract_declarator '[' '*' ']'													{
-																									$$ = new SBaseASTNode("d[*]");
+																									$$ = new SBaseASTNode("{d[*]}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '(' ')'																					{
-																									$$ = new SBaseASTNode("()");
+																									$$ = new SBaseASTNode("{()}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '(' parameter_type_list ')'																{
-																									$$ = new SBaseASTNode("(p)");
+																									$$ = new SBaseASTNode("{(p)}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_abstract_declarator '(' ')'														{
-																									$$ = new SBaseASTNode("()");
+																									$$ = new SBaseASTNode("{()}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| direct_abstract_declarator '(' parameter_type_list ')'									{
-																									$$ = new SBaseASTNode("d(p)");
+																									$$ = new SBaseASTNode("{d(p)}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -913,14 +913,21 @@ direct_abstract_declarator
 initializer
 	: assignment_expression
 	| '{' initializer_list '}'																	{
-																									$$ = new SBaseASTNode("{}");
+																									$$ = new SBaseASTNode("{initalizerlist}");
 																									do{
 																										$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																										g_context.m_NodeStack.pop();
-																									} while(g_context.m_NodeStack.top()->m_Value!="DIM");
+																									} while(g_context.m_NodeStack.top()->m_Value!="{dim}");
 																									g_context.m_NodeStack.push($$);
 																								}
-	| '{' initializer_list ',' '}'
+	| '{' initializer_list ',' '}'																{
+																									$$ = new SBaseASTNode("{initalizerlist,}");
+																									do{
+																										$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																										g_context.m_NodeStack.pop();
+																									} while(g_context.m_NodeStack.top()->m_Value!="{dim}");
+																									g_context.m_NodeStack.push($$);
+																								}
 	;
 
 initializer_list
@@ -941,13 +948,13 @@ designator_list
 
 designator
 	: '[' constant_expression ']'																{
-																									$$ = new SBaseASTNode("[dest]");
+																									$$ = new SBaseASTNode("{[dest]}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	| '.' IDENTIFIER																			{
-																									$$ = new SBaseASTNode(".dest");
+																									$$ = new SBaseASTNode("{.dest}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	;
@@ -979,7 +986,7 @@ compound_statement
 																										g_context.m_NodeStack.pop();
 																									} while(g_context.m_NodeStack.top()->m_Value=="{blockitem}" || g_context.m_NodeStack.top()->m_Value=="{blockitems}");
 																									// Do we belong to a function definition?
-																									if (g_context.m_NodeStack.top()->m_Value=="DEFFUNC")
+																									if (g_context.m_NodeStack.top()->m_Value=="{deffunc}")
 																										g_context.m_NodeStack.top()->m_SubNodes.push($$);
 																									else
 																										g_context.m_NodeStack.push($$);
@@ -995,10 +1002,8 @@ block_item_list
 																								}
 	| block_item_list block_item																{
 																									$$ = new SBaseASTNode("{blockitems}");
-																									//do{
-																										$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																										g_context.m_NodeStack.pop();
-																									//} while(g_context.m_NodeStack.top()->m_Value!="DEFFUNC");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
 	;
@@ -1019,7 +1024,7 @@ selection_statement_logic
 
 selection_statement
 	: selection_statement_logic statement														{
-																									$$ = new SBaseASTNode("if");
+																									$$ = new SBaseASTNode("{if}");
 																									// If condition
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
@@ -1029,7 +1034,7 @@ selection_statement
 																									g_context.m_NodeStack.push($$);
 																								}
 	| selection_statement_logic statement ELSE	statement										{
-																									$$ = new SBaseASTNode("ifelse");
+																									$$ = new SBaseASTNode("{ifelse}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -1039,7 +1044,7 @@ selection_statement
 																									g_context.m_NodeStack.push($$);
 																								}
 	| SWITCH '(' expression ')' statement														{
-																									$$ = new SBaseASTNode("switch");
+																									$$ = new SBaseASTNode("{switch}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	;
@@ -1056,10 +1061,18 @@ iteration_statement_prologue_decl
 	;
 
 iteration_statement
-	: WHILE '(' expression ')' statement
-	| DO statement WHILE '(' expression ')' ';'
+	: WHILE '(' expression ')' statement														{
+																									$$ = new SBaseASTNode("{while}");
+																									// TODO:
+																									g_context.m_NodeStack.push($$);
+																								}
+	| DO statement WHILE '(' expression ')' ';'													{
+																									$$ = new SBaseASTNode("{dowhile}");
+																									// TODO:
+																									g_context.m_NodeStack.push($$);
+																								}
 	| iteration_statement_prologue_expr expression_statement ')' statement						{
-																									$$ = new SBaseASTNode("for0");
+																									$$ = new SBaseASTNode("{for0}");
 																									// expression_statement
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
@@ -1069,7 +1082,7 @@ iteration_statement
 																									g_context.m_NodeStack.push($$);
 																								}
 	| iteration_statement_prologue_expr expression_statement expression ')' statement			{
-																									$$ = new SBaseASTNode("for1");
+																									$$ = new SBaseASTNode("{for1}");
 																									// expression_statement
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
@@ -1082,7 +1095,7 @@ iteration_statement
 																									g_context.m_NodeStack.push($$);
 																								}
 	| iteration_statement_prologue_decl expression_statement ')' statement						{
-																									$$ = new SBaseASTNode("for2");
+																									$$ = new SBaseASTNode("{for2}");
 																									// prologue_decl
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
@@ -1095,7 +1108,7 @@ iteration_statement
 																									g_context.m_NodeStack.push($$);
 																								}
 	| iteration_statement_prologue_decl expression_statement expression ')' statement			{
-																									$$ = new SBaseASTNode("for3");
+																									$$ = new SBaseASTNode("{for3}");
 																									// prologue
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
@@ -1114,23 +1127,23 @@ iteration_statement
 
 jump_statement
 	: GOTO IDENTIFIER ';'																		{
-																									$$ = new SBaseASTNode("goto");
+																									$$ = new SBaseASTNode("{goto}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| CONTINUE ';'																				{
-																									$$ = new SBaseASTNode("continue");
+																									$$ = new SBaseASTNode("{continue}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| BREAK ';'																					{
-																									$$ = new SBaseASTNode("break");
+																									$$ = new SBaseASTNode("{break}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| RETURN ';'																				{
-																									$$ = new SBaseASTNode("ret");
+																									$$ = new SBaseASTNode("{return}");
 																									g_context.m_NodeStack.push($$);
 																								}
 	| RETURN expression ';'																		{
-																									$$ = new SBaseASTNode("ret(...)");
+																									$$ = new SBaseASTNode("{return(...)}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
@@ -1162,7 +1175,10 @@ declaration_list
 void DumpEntry(int nodelevel, SBaseASTNode *node)
 {
 	static const std::string nodetabs="                                                                                                              ";
+
+	// TODO: This is where we can somewhat start adding prologues / epilogues / labels and generate some code
 	printf("%s%s\n", nodetabs.substr(0,nodelevel).c_str(), node->m_Value.c_str());
+
 	size_t sz = node->m_SubNodes.size();
 	for(size_t i=0;i<sz;++i)
 	{
