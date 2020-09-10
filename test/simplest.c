@@ -1,6 +1,3 @@
-int A=B-2*3;
-
-/*
 // Test init declaratiors
 int A=2+3*4-8%3, B=3-A/2;
 int C[2*4]; // Should contain 2*4 DWORDs of 0xCCCCCCCC
@@ -24,7 +21,7 @@ void test()
 
     A = beta(1) ? 3:5;
 
-    if (A<3 && A%2==0)
+    /*if (A<3 && A%2==0)
     {
         A++;
         E=A;
@@ -42,7 +39,7 @@ void test()
            int addrs = x + y*320; // For 320x240 framebuffer
            VRAM[addrs] = 0xFF;
         }
-    }
+    }*/
 
     return;
 }
@@ -51,4 +48,3 @@ void meh()
 {
     return;
 }
-*/
