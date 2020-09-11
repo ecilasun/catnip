@@ -43,8 +43,8 @@ void count();
 
 "for"						{ count();  return(FOR); }
 
-"begin"						{ count();  return(BEGINBLOCK); }
-"end"						{ count();  return(ENDBLOCK); }
+"{"							{ count();  return(BEGINBLOCK); }
+"}"							{ count();  return(ENDBLOCK); }
 
 "goto"						{ count();  return(GOTO); }
 "return"					{ count();  return(RETURN); }

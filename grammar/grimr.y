@@ -75,6 +75,7 @@ SParserContext g_context;
 
 %type <astnode> function_statement
 %type <astnode> using_statement
+%type <astnode> expression_statement
 
 %type <astnode> code_block_start
 %type <astnode> code_block_end
@@ -86,7 +87,7 @@ SParserContext g_context;
 %type <astnode> function_def
 
 %type <astnode> parameter_list
-%type <astnode> simple_identifier_list
+%type <astnode> expression_list
 
 %type <astnode> additive_expression
 %type <astnode> multiplicative_expression
@@ -326,12 +327,22 @@ assignment_expression
 	;
 
 expression
-	: assignment_expression
+	: assignment_expression																		
 	| expression ',' assignment_expression														{
-																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
+																									SBaseASTNode *currentexpr = g_context.m_NodeStack.top();
 																									g_context.m_NodeStack.pop();
-																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
-																									varnode->m_SubNodes.push(sinode);
+																									SBaseASTNode *prevexpr = g_context.m_NodeStack.top();
+																									prevexpr->m_SubNodes.push(currentexpr);
+																								}
+	;
+
+expression_statement
+	: expression ';'																			{
+																									$$ = new SBaseASTNode("{expstatement}");
+																									// Expression precedes, pop from stack
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
 																								}
 	;
 
@@ -352,7 +363,7 @@ variable_declaration
 																								}
 
 using_statement
-	: USING simple_identifier																	{
+	: USING simple_identifier 																	{
 																									$$ = new SBaseASTNode("{using}");
 																									// parameter name
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -368,20 +379,20 @@ using_statement
 																								}
 	;
 
-simple_identifier_list
-	: simple_identifier																			{
+expression_list
+	: expression																				{
 																									$$ = new SBaseASTNode("{identifier}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
-	| simple_identifier_list ',' simple_identifier												{
+	/*| expression_list ',' expression															{
 																									// Append identifier to primary {identifier} node
 																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
 																									g_context.m_NodeStack.pop();
 																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
 																									varnode->m_SubNodes.push(sinode);
-																								}
+																								}*/
 	;
 
 parameter_list
@@ -389,7 +400,7 @@ parameter_list
 																									$$ = new SBaseASTNode("{()}");
 																									g_context.m_NodeStack.push($$);
 																								}
-	| '(' simple_identifier_list ')'															{
+	| '(' expression_list ')'																	{
 																									$$ = new SBaseASTNode("{(...)}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
@@ -398,7 +409,7 @@ parameter_list
 	;
 
 function_statement
-	: simple_identifier parameter_list															{
+	: simple_identifier parameter_list ';'														{
 																									$$ = new SBaseASTNode("{call}");
 																									// Parameter list
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -445,14 +456,14 @@ code_block_body
 																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
 																									varnode->m_SubNodes.push(sinode);
 																								}
-	| expression																				{
+	| expression_statement																		{
 																									$$ = new SBaseASTNode("{expression}");
 																									// Pull the statement as subnode
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
-	| code_block_body expression																{
+	| code_block_body expression_statement														{
 																									// Append param statement to primary {statement} node
 																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
 																									g_context.m_NodeStack.pop();

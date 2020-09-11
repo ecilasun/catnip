@@ -1,11 +1,18 @@
+
 // GrimR language test file
 
 var cursorX, cursorY
 
 function DrawRect
-begin using width, height
-    area = width * height
-    using posX,posY
-    rightEdge = posX + width
-    bottomEdge = posY + height
-end
+{
+    using width, height
+    area = width * height;
+    using posX, posY
+    rightEdge = posX + width;
+    bottomEdge = posY + height;
+}
+
+function Main
+{
+    DrawRect(512,384,128,96);
+}
