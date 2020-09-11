@@ -2,6 +2,7 @@
 // GrimR language test file
 
 var cursorX, cursorY;
+var VRAM;
 
 function DrawRect
 {
@@ -15,7 +16,10 @@ function DrawRect
         spanX = posX;
         while (spanX<spanX+width)
         {
-            // TODO: plot pixel here at spanX,spanY
+            var address;
+            address = spanX + spanY;
+            // Plot pixel here at spanX,spanY
+            VRAM[address] = 0xFF;
             spanX = spanX+1;
         }
         spanY = spanY+1;
@@ -24,5 +28,6 @@ function DrawRect
 
 function Main
 {
+    VRAM = 0x80000;
     DrawRect(512, 384, 128, 96);
 }

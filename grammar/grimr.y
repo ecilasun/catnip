@@ -84,6 +84,8 @@ SParserContext g_context;
 %type <astnode> code_block_body
 
 %type <astnode> primary_expression
+%type <astnode> unary_expression
+%type <astnode> postfix_expression
 
 %type <astnode> variable_declaration
 %type <astnode> function_def
@@ -137,9 +139,37 @@ primary_expression
 	| simple_string
 	;
 
-multiplicative_expression
+postfix_expression
 	: primary_expression
-	| multiplicative_expression '*' primary_expression											{
+	| postfix_expression '[' expression ']'														{
+																									$$ = new SBaseASTNode("{[expr]}");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	;
+
+unary_expression
+	: postfix_expression
+	| '&' unary_expression																		{
+																									$$ = new SBaseASTNode("{&}");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| '*' unary_expression																		{
+																									$$ = new SBaseASTNode("{*}");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	;
+
+multiplicative_expression
+	: unary_expression
+	| multiplicative_expression '*' unary_expression											{
 																									$$ = new SBaseASTNode("{MUL}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
@@ -147,7 +177,7 @@ multiplicative_expression
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
-	| multiplicative_expression '/' primary_expression											{
+	| multiplicative_expression '/' unary_expression											{
 																									$$ = new SBaseASTNode("{DIV}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
@@ -155,7 +185,7 @@ multiplicative_expression
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
-	| multiplicative_expression '%' primary_expression											{
+	| multiplicative_expression '%' unary_expression											{
 																									$$ = new SBaseASTNode("{MOD}");
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
@@ -317,7 +347,7 @@ conditional_expression
 
 assignment_expression
 	: conditional_expression
-	| primary_expression '=' assignment_expression												{
+	| unary_expression '=' assignment_expression												{
 																									$$ = new SBaseASTNode("{=}");
 																									// assignment expression
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
