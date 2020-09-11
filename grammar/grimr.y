@@ -67,7 +67,7 @@ SParserContext g_context;
 %token <string> STRING_LITERAL
 
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
-%token VAR FUNCTION USING IF THEN ELSE FOR BEGINBLOCK ENDBLOCK GOTO RETURN
+%token VAR FUNCTION USING IF THEN ELSE WHILE BEGINBLOCK ENDBLOCK GOTO RETURN
 
 %type <astnode> simple_identifier
 %type <astnode> simple_constant
@@ -77,6 +77,7 @@ SParserContext g_context;
 %type <astnode> using_statement
 %type <astnode> expression_statement
 %type <astnode> variable_declaration_statement
+%type <astnode> while_statement
 
 %type <astnode> code_block_start
 %type <astnode> code_block_end
@@ -340,8 +341,55 @@ expression
 
 expression_statement
 	: expression ';'																			{
-																									$$ = new SBaseASTNode("{expstatement}");
+																									$$ = new SBaseASTNode("{expression}");
 																									// Expression precedes, pop from stack
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	;
+
+while_statement
+	: WHILE '(' expression ')' code_block_start code_block_body code_block_end					{
+																									$$ = new SBaseASTNode("{whilestatement}");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| WHILE '(' expression ')' function_statement												{
+																									$$ = new SBaseASTNode("{whilestatement}");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| WHILE '(' expression ')' expression_statement												{
+																									$$ = new SBaseASTNode("{whilestatement}");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| WHILE '(' expression ')' variable_declaration_statement									{
+																									$$ = new SBaseASTNode("{whilestatement}");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| WHILE '(' expression ')' using_statement													{
+																									$$ = new SBaseASTNode("{whilestatement}");
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
@@ -478,7 +526,7 @@ code_block_body
 																									varnode->m_SubNodes.push(sinode);
 																								}
 	| expression_statement																		{
-																									$$ = new SBaseASTNode("{expression}");
+																									$$ = new SBaseASTNode("{expressionstatement}");
 																									// Pull the statement as subnode
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
 																									g_context.m_NodeStack.pop();
@@ -486,6 +534,20 @@ code_block_body
 																								}
 	| code_block_body expression_statement														{
 																									// Append param statement to primary {statement} node
+																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
+																									g_context.m_NodeStack.pop();
+																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
+																									varnode->m_SubNodes.push(sinode);
+																								}
+	| while_statement																			{
+																									$$ = new SBaseASTNode("{while}");
+																									// Pull the statement as subnode
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| code_block_body while_statement															{
+																									// Append while statement to primary {while} node
 																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
 																									g_context.m_NodeStack.pop();
 																									SBaseASTNode *varnode = g_context.m_NodeStack.top();

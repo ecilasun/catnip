@@ -41,7 +41,7 @@ void count();
 "then"						{ count();  return(THEN); }
 "else"						{ count();  return(ELSE); }
 
-"for"						{ count();  return(FOR); }
+"while"						{ count();  return(WHILE); }
 
 "{"							{ count();  return(BEGINBLOCK); }
 "}"							{ count();  return(ENDBLOCK); }

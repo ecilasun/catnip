@@ -5,15 +5,24 @@ var cursorX, cursorY;
 
 function DrawRect
 {
-    using width, height;
-    var area;
-    area = width * height;
     using posX, posY;
-    rightEdge = posX + width;
-    bottomEdge = posY + height;
+    using width, height;
+    var spanX, spanY;
+
+    spanY = posY;
+    while (spanY<spanY+height)
+    {
+        spanX = posX;
+        while (spanX<spanX+width)
+        {
+            // TODO: plot pixel here at spanX,spanY
+            spanX = spanX+1;
+        }
+        spanY = spanY+1;
+    }
 }
 
 function Main
 {
-    DrawRect(512,384,128,96);
+    DrawRect(512, 384, 128, 96);
 }
