@@ -29,7 +29,8 @@ void count();
 %option noyywrap
 
 %%
-"#"[^\n]*					{ /* consume //-comment */ }
+"/*"			{ comment(); }
+"//"[^\n]*		{ /* consume //-comment */ }
 
 "var"						{ count();  return(VAR); }
 "function"					{ count();  return(FUNCTION); }

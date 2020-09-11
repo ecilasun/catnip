@@ -1,4 +1,4 @@
-# GrimR language test file
+// GrimR language test file
 
 var cursorX, cursorY
 
