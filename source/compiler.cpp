@@ -1,11 +1,16 @@
 #include "compiler.h"
 
-//#define OLD_COMPILER
+//#define OLD_COMPILER_ONE
+//#define OLD_COMPILER_TWO
 
-#if defined(OLD_COMPILER)
-//#include "../grammar/nanoc.y.hpp"
-#else
+#if defined(OLD_COMPILER_ONE)
+#include "../grammar/nanoc.y.hpp"
+#elif defined(OLD_COMPILER_TWO)
 #include "../grammar/ec.y.hpp"
+extern void dumpnodes(void);
+#else
+// GrimR - Person Wearing A Mask / Helmet / The Fierce One
+#include "../grammar/grimr.y.hpp"
 extern void dumpnodes(void);
 #endif
 
@@ -15,7 +20,7 @@ int CompileCode(char *_inputname, char * /*_outputname*/)
 	extern FILE *yyin;
 	yyin = fopen(_inputname, "r");
 
-#if defined(OLD_COMPILER)
+#if defined(OLD_COMPILER_ONE)
 	// Prologue
 	printf("// Prologue\n");
 	printf("RESETSTACKCURSOR\n  // Set stack cursor to zero\n");

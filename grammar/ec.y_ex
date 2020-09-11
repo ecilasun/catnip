@@ -78,7 +78,10 @@ SParserContext g_context;
 %token CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID
 %token STRUCT UNION ENUM ELLIPSIS
 
-%token CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
+%token CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN NO_ELSE
+
+%nonassoc NO_ELSE
+%nonassoc ELSE
 
 %type <astnode> postfix_expression
 %type <astnode> assignment_expression
@@ -1031,7 +1034,7 @@ selection_statement_logic
 	;
 
 selection_statement
-	: selection_statement_logic statement														{
+	: selection_statement_logic statement %prec NO_ELSE											{
 																									$$ = new SBaseASTNode("{if}");
 																									// If condition
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -1164,8 +1167,8 @@ translation_unit
 	;
 
 external_declaration
-	: function_definition																		//{ printf(" }\n"); }
-	| declaration																				//{ printf(" ;\n"); }
+	: function_definition
+	| declaration
 	;
 
 function_definition

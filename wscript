@@ -35,7 +35,7 @@ def configure(conf):
 
 class run_bison(Task):
     color = 'PINK'
-    run_str = ['${BISON} -d -o  ${TGT} ${SRC}']
+    run_str = ['${BISON} -d -rall -o ${TGT} ${SRC}']
 
 
 class run_flex(Task):
