@@ -3,7 +3,9 @@
 var cursorX, cursorY
 
 function DrawRect
-begin using posX,posY,width,height
+begin using width, height
     area = width * height
+    using posX,posY
     rightEdge = posX + width
+    bottomEdge = posY + height
 end
