@@ -4,10 +4,9 @@
 var cursorX, cursorY;
 var VRAM;
 
-function DrawRect
+def drawrect
 {
-    using posX, posY;
-    using width, height;
+    param posX, posY, width, height;
     var spanX, spanY;
 
     spanY = posY;
@@ -26,7 +25,7 @@ function DrawRect
     }
 }
 
-function Main
+def main
 {
     VRAM = 0x80000;
     DrawRect(512, 384, 128, 96);

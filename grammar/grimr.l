@@ -33,9 +33,9 @@ void count();
 "//"[^\n]*		{ /* consume //-comment */ }
 
 "var"						{ count();  return(VAR); }
-"function"					{ count();  return(FUNCTION); }
+"def"						{ count();  return(FUNCTION); }
 
-"using"						{ count();  return(USING); }
+"param"						{ count();  return(USING); }
 
 "if"						{ count();  return(IF); }
 "then"						{ count();  return(THEN); }
