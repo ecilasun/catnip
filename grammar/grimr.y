@@ -76,6 +76,7 @@ SParserContext g_context;
 %type <astnode> function_statement
 %type <astnode> using_statement
 %type <astnode> expression_statement
+%type <astnode> variable_declaration_statement
 
 %type <astnode> code_block_start
 %type <astnode> code_block_end
@@ -88,6 +89,7 @@ SParserContext g_context;
 
 %type <astnode> parameter_list
 %type <astnode> expression_list
+%type <astnode> using_list
 
 %type <astnode> additive_expression
 %type <astnode> multiplicative_expression
@@ -328,12 +330,12 @@ assignment_expression
 
 expression
 	: assignment_expression																		
-	| expression ',' assignment_expression														{
+	/*| expression ',' assignment_expression														{
 																									SBaseASTNode *currentexpr = g_context.m_NodeStack.top();
 																									g_context.m_NodeStack.pop();
 																									SBaseASTNode *prevexpr = g_context.m_NodeStack.top();
 																									prevexpr->m_SubNodes.push(currentexpr);
-																								}
+																								}*/ // NOTE: This is causing much grief and I don't think I need it at this point
 	;
 
 expression_statement
@@ -347,7 +349,7 @@ expression_statement
 	;
 
 variable_declaration
-	: VAR simple_identifier																		{
+	: VAR simple_identifier 																	{
 																									$$ = new SBaseASTNode("{var}");
 																									// Variable name precedes, pop from stack
 																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
@@ -362,7 +364,16 @@ variable_declaration
 																									varnode->m_SubNodes.push(sinode);
 																								}
 
-using_statement
+variable_declaration_statement
+	: variable_declaration ';'																	{
+																									$$ = new SBaseASTNode("{vardeclstatement}");
+																									// Variable name precedes, pop from stack
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+
+using_list
 	: USING simple_identifier 																	{
 																									$$ = new SBaseASTNode("{using}");
 																									// parameter name
@@ -370,12 +381,22 @@ using_statement
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
-	| using_statement ',' simple_identifier														{
+	| using_list ',' simple_identifier															{
 																									// Append rest of the list items to primary {using} node
 																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
 																									g_context.m_NodeStack.pop();
 																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
 																									varnode->m_SubNodes.push(sinode);
+																								}
+	;
+
+using_statement
+	: using_list ';'																			{
+																									$$ = new SBaseASTNode("{usingstatement}");
+																									// Variable name precedes, pop from stack
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
 																								}
 	;
 
@@ -386,13 +407,13 @@ expression_list
 																									g_context.m_NodeStack.pop();
 																									g_context.m_NodeStack.push($$);
 																								}
-	/*| expression_list ',' expression															{
+	| expression_list ',' expression															{
 																									// Append identifier to primary {identifier} node
 																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
 																									g_context.m_NodeStack.pop();
 																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
 																									varnode->m_SubNodes.push(sinode);
-																								}*/
+																								}
 	;
 
 parameter_list
@@ -470,6 +491,20 @@ code_block_body
 																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
 																									varnode->m_SubNodes.push(sinode);
 																								}
+	| variable_declaration_statement															{
+																									$$ = new SBaseASTNode("{statement:V}");
+																									// Pull the statement as subnode
+																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
+																									g_context.m_NodeStack.pop();
+																									g_context.m_NodeStack.push($$);
+																								}
+	| code_block_body variable_declaration_statement											{
+																									// Append param statement to primary {statement} node
+																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
+																									g_context.m_NodeStack.pop();
+																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
+																									varnode->m_SubNodes.push(sinode);
+																								}
 	| using_statement																			{
 																									$$ = new SBaseASTNode("{statement:P}");
 																									// Pull the statement as subnode
@@ -506,12 +541,12 @@ function_def
 	;
 
 translation_unit
-	: variable_declaration
+	: variable_declaration_statement
 	| function_statement
 	| translation_unit function_statement
 	| function_def
 	| translation_unit function_def
-	| translation_unit variable_declaration
+	| translation_unit variable_declaration_statement
 	;
 %%
 
