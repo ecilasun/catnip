@@ -4,9 +4,8 @@
 var cursorX, cursorY;
 var VRAM;
 
-def drawrect
+def drawrect(posX,posY,width,height)
 {
-    param posX, posY, width, height;
     var spanX, spanY;
 
     spanY = posY;
@@ -25,8 +24,9 @@ def drawrect
     }
 }
 
-def main
+def main()
 {
     VRAM = 0x80000;
+    banana = "stand";
     DrawRect(512, 384, 128, 96);
 }

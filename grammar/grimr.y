@@ -36,10 +36,11 @@ uint32_t HashString(const char *_str)
 class SBaseASTNode
 {
 public:
-	SBaseASTNode() { m_Value = "{n/a}"; }
-	SBaseASTNode(std::string str) { m_Value = str; }
+	SBaseASTNode() { m_Value = "{n/a}"; m_Code = ""; }
+	SBaseASTNode(std::string val, std::string code) { m_Value = val; m_Code = code; }
 
 	std::string m_Value;
+	std::string m_Code;
 	std::stack<SBaseASTNode*> m_SubNodes;
 };
 
@@ -48,7 +49,13 @@ struct SParserContext
 	SParserContext()
 	{
 	}
+
+	void PushNode(SBaseASTNode *node) { m_NodeStack.push(node); }
+	SBaseASTNode *TopNode() { return m_NodeStack.top(); }
+	SBaseASTNode *PopNode() { SBaseASTNode *node = m_NodeStack.top(); m_NodeStack.pop(); return node; }
+
 	std::stack<SBaseASTNode*> m_NodeStack;
+	//std::stack<uint32_t> m_RegisterStack;
 };
 
 SParserContext g_context;
@@ -112,8 +119,8 @@ SParserContext g_context;
 
 simple_identifier
 	: IDENTIFIER																				{
-																									$$ = new SBaseASTNode($1);
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode($1, " // LEA Ra, identifier");
+																									g_context.PushNode($$);
 																								}
 	;
 
@@ -121,15 +128,16 @@ simple_constant
 	: CONSTANT																					{
 																									std::string tmp;
 																									tmp = std::to_string($1);
-																									$$ = new SBaseASTNode(tmp);
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode(tmp, " // LD R?, constant");
+																									g_context.PushNode($$);
 																								}
 	;
 
 simple_string
 	: STRING_LITERAL																			{
-																									$$ = new SBaseASTNode($1);
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode($1, " // push string to conststring pool, R?=address");
+																									// TODO: Allocate string constant in string heap and convert this literal to its address
+																									g_context.PushNode($$);
 																								}
 	;
 
@@ -142,220 +150,218 @@ primary_expression
 postfix_expression
 	: primary_expression
 	| postfix_expression '[' expression ']'														{
-																									$$ = new SBaseASTNode("{[expr]}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{[]}", " // Offset current variable by expression's result");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	;
 
 unary_expression
 	: postfix_expression
 	| '&' unary_expression																		{
-																									$$ = new SBaseASTNode("{&}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{&}", "LD R?, variableaddress");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									g_context.PushNode($$);
 																								}
 	| '*' unary_expression																		{
-																									$$ = new SBaseASTNode("{*}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{*}", "LD Rn, [Rn]");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									g_context.PushNode($$);
 																								}
 	;
 
 multiplicative_expression
 	: unary_expression
 	| multiplicative_expression '*' unary_expression											{
-																									$$ = new SBaseASTNode("{MUL}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("MUL Ra, Rb", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	| multiplicative_expression '/' unary_expression											{
-																									$$ = new SBaseASTNode("{DIV}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("DIV Ra, Rb", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	| multiplicative_expression '%' unary_expression											{
-																									$$ = new SBaseASTNode("{MOD}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("MOD Ra, Rb", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	;
 
 additive_expression
 	: multiplicative_expression
 	| additive_expression '+' multiplicative_expression											{
-																									$$ = new SBaseASTNode("{ADD}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("ADD Ra, Rb", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	| additive_expression '-' multiplicative_expression											{
-																									$$ = new SBaseASTNode("{SUB}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("SUB Ra, Rb", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	;
 
 relational_expression
 	: additive_expression
 	| relational_expression LESS_OP additive_expression											{
-																									$$ = new SBaseASTNode("{<}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("CMP.L Ra, Rb", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	| relational_expression GREATER_OP additive_expression										{
-																									$$ = new SBaseASTNode("{>}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("CMP.G Ra, Rb", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	| relational_expression LESSEQUAL_OP additive_expression									{
-																									$$ = new SBaseASTNode("{<=}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("CMP.LE Ra, Rb", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	| relational_expression GREATEREQUAL_OP additive_expression									{
-																									$$ = new SBaseASTNode("{>=}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("CMP.GE Ra, Rb", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	;
     
 equality_expression
 	: relational_expression
 	| equality_expression EQUAL_OP relational_expression										{
-																									$$ = new SBaseASTNode("{==}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("CMP.EQ Ra, Rb", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	| equality_expression NOTEQUAL_OP relational_expression										{
-																									$$ = new SBaseASTNode("{!=}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("CMP.NE Ra, Rb", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	;
 
 and_expression
 	: equality_expression
 	| and_expression '&' equality_expression													{
-																									$$ = new SBaseASTNode("{AND}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("AND Ra, Rb", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	;
 
 exclusive_or_expression
 	: and_expression
 	| exclusive_or_expression '^' and_expression												{
-																									$$ = new SBaseASTNode("{XOR}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("XOR Ra, Rb", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	;
 
 inclusive_or_expression
 	: exclusive_or_expression
 	| inclusive_or_expression '|' exclusive_or_expression										{
-																									$$ = new SBaseASTNode("{OR}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("OR Ra, Rb", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	;
 
 logical_and_expression
 	: inclusive_or_expression
 	| logical_and_expression AND_OP inclusive_or_expression										{
-																									$$ = new SBaseASTNode("{&&}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{&&}", "// ???");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 	}
 	;
 
 logical_or_expression
 	: logical_and_expression
 	| logical_or_expression OR_OP logical_and_expression										{
-																									$$ = new SBaseASTNode("{||}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{||}", "// ???");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	;
 
 conditional_expression
 	: logical_or_expression
 	| logical_or_expression '?' expression ':' conditional_expression							{
-																									$$ = new SBaseASTNode("{?:}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{?:}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									SBaseASTNode *n2=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									$$->m_SubNodes.push(n2);
+																									g_context.PushNode($$);
 																								}
 	;
 
 assignment_expression
 	: conditional_expression
 	| unary_expression '=' assignment_expression												{
-																									$$ = new SBaseASTNode("{=}");
-																									// assignment expression
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									// primary expression
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("LEA Ra, target / LEA Rb, source / LD Rb, [Rb] / ST [Ra], Rb", " // assignment");
+																									SBaseASTNode *sourcenode=g_context.PopNode();
+																									SBaseASTNode *targetnode=g_context.PopNode();
+																									$$->m_SubNodes.push(sourcenode);
+																									$$->m_SubNodes.push(targetnode);
+																									g_context.PushNode($$);
 																								}
 	;
 
@@ -371,264 +377,247 @@ expression
 
 expression_statement
 	: expression ';'																			{
-																									$$ = new SBaseASTNode("{expression}");
-																									// Expression precedes, pop from stack
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{expression}", " // Result in register");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									g_context.PushNode($$);
 																								}
 	;
 
 while_statement
 	: WHILE '(' expression ')' code_block_start code_block_body code_block_end					{
-																									$$ = new SBaseASTNode("{whilestatement}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{whilestatement}", "");
+																									SBaseASTNode *endnode=g_context.PopNode();
+																									SBaseASTNode *codeblocknode=g_context.PopNode();
+																									SBaseASTNode *startnode=g_context.PopNode();
+																									SBaseASTNode *conditionnode=g_context.PopNode();
+																									$$->m_SubNodes.push(new SBaseASTNode("@LABEL: endofwhile?", ""));
+																									$$->m_SubNodes.push(endnode);
+																									$$->m_SubNodes.push(codeblocknode);
+																									$$->m_SubNodes.push(startnode);
+																									$$->m_SubNodes.push(new SBaseASTNode("JNZ endofwhile?", ""));
+																									$$->m_SubNodes.push(conditionnode);
+																									g_context.PushNode($$);
 																								}
 	| WHILE '(' expression ')' function_statement												{
-																									$$ = new SBaseASTNode("{whilestatement}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{whilestatement}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(new SBaseASTNode("@LABEL: endofwhile?", ""));
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(new SBaseASTNode("JNZ endofwhile?", ""));
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	| WHILE '(' expression ')' expression_statement												{
-																									$$ = new SBaseASTNode("{whilestatement}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{whilestatement}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(new SBaseASTNode("@LABEL: endofwhile?", ""));
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(new SBaseASTNode("JNZ endofwhile?", ""));
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	| WHILE '(' expression ')' variable_declaration_statement									{
-																									$$ = new SBaseASTNode("{whilestatement}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{whilestatement}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(new SBaseASTNode("@LABEL: endofwhile?", ""));
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(new SBaseASTNode("JNZ endofwhile?", ""));
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	| WHILE '(' expression ')' using_statement													{
-																									$$ = new SBaseASTNode("{whilestatement}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{whilestatement}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(new SBaseASTNode("@LABEL: endofwhile?", ""));
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(new SBaseASTNode("{whileprologue}", "JNZ endofwhile?"));
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	;
 
 variable_declaration
 	: VAR simple_identifier 																	{
-																									$$ = new SBaseASTNode("{var}");
-																									// Variable name precedes, pop from stack
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{var}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									g_context.PushNode($$);
 																								}
 	| variable_declaration ',' simple_identifier												{
 																									// Append rest of the list items to primary {var} node
-																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
-																									g_context.m_NodeStack.pop();
+																									SBaseASTNode *n0=g_context.PopNode();
 																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
-																									varnode->m_SubNodes.push(sinode);
+																									varnode->m_SubNodes.push(n0);
 																								}
 
 variable_declaration_statement
 	: variable_declaration ';'																	{
-																									$$ = new SBaseASTNode("{vardeclstatement}");
-																									// Variable name precedes, pop from stack
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{vardeclstatement}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									g_context.PushNode($$);
 																								}
 
 using_list
 	: USING simple_identifier 																	{
-																									$$ = new SBaseASTNode("{using}");
-																									// parameter name
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{param}", "POP R?");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									g_context.PushNode($$);
 																								}
 	| using_list ',' simple_identifier															{
-																									// Append rest of the list items to primary {using} node
-																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
-																									g_context.m_NodeStack.pop();
+																									// Append rest of the list items to primary {param} node
+																									SBaseASTNode *n0=g_context.PopNode();
 																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
-																									varnode->m_SubNodes.push(sinode);
+																									varnode->m_SubNodes.push(n0);
 																								}
 	;
 
 using_statement
 	: using_list ';'																			{
-																									$$ = new SBaseASTNode("{usingstatement}");
-																									// Variable name precedes, pop from stack
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{usingstatement}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									g_context.PushNode($$);
 																								}
 	;
 
 expression_list
 	: expression																				{
-																									$$ = new SBaseASTNode("{identifier}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{expressionlist}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									g_context.PushNode($$);
 																								}
 	| expression_list ',' expression															{
 																									// Append identifier to primary {identifier} node
-																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
-																									g_context.m_NodeStack.pop();
+																									SBaseASTNode *n0=g_context.PopNode();
 																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
-																									varnode->m_SubNodes.push(sinode);
+																									varnode->m_SubNodes.push(n0);
 																								}
 	;
 
 parameter_list
 	: '(' ')'																					{
-																									$$ = new SBaseASTNode("{()}");
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{()}", "");
+																									g_context.PushNode($$);
 																								}
 	| '(' expression_list ')'																	{
-																									$$ = new SBaseASTNode("{(...)}");
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{(...)}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									g_context.PushNode($$);
 																								}
 	;
 
 function_statement
 	: simple_identifier parameter_list ';'														{
-																									$$ = new SBaseASTNode("{call}");
-																									// Parameter list
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									// Function name
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{call}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									g_context.PushNode($$);
 																								}
 	;
 
 code_block_start
 	: BEGINBLOCK																				{
-																									$$ = new SBaseASTNode("{beginblock}");
+																									$$ = new SBaseASTNode("{codeblockbegin}", " // NOTE: push a new scope here");
 																									// This is a prologue section for a code block
-																									g_context.m_NodeStack.push($$);
+																									g_context.PushNode($$);
 																								}
 	;
 
 code_block_end
 	: ENDBLOCK																					{
-																									$$ = new SBaseASTNode("{endblock}");
+																									$$ = new SBaseASTNode("{codeblockend}", " // NOTE: pop the current scope here (taking down variables within scope)");
 																									// This is an epilogue section for a code block
-																									g_context.m_NodeStack.push($$);
+																									g_context.PushNode($$);
 																								}
 	;
 
 code_block_body
 	:																							{
-																									$$ = new SBaseASTNode("{statement:null}");
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{statement:null}", "");
+																									g_context.PushNode($$);
 																								}
 	| function_statement																		{
-																									$$ = new SBaseASTNode("{statement:F}");
-																									// Pull the statement as subnode
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{statement:F}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									g_context.PushNode($$);
 																								}
 	| code_block_body function_statement														{
-																									// Append statement to primary {statement} node
-																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
-																									g_context.m_NodeStack.pop();
+																									SBaseASTNode *n0=g_context.PopNode();
 																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
-																									varnode->m_SubNodes.push(sinode);
+																									varnode->m_SubNodes.push(n0);
 																								}
 	| expression_statement																		{
-																									$$ = new SBaseASTNode("{expressionstatement}");
-																									// Pull the statement as subnode
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{expressionstatement}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									g_context.PushNode($$);
 																								}
 	| code_block_body expression_statement														{
-																									// Append param statement to primary {statement} node
-																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
-																									g_context.m_NodeStack.pop();
+																									SBaseASTNode *n0=g_context.PopNode();
 																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
-																									varnode->m_SubNodes.push(sinode);
+																									varnode->m_SubNodes.push(n0);
 																								}
 	| while_statement																			{
-																									$$ = new SBaseASTNode("{while}");
-																									// Pull the statement as subnode
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{while}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									g_context.PushNode($$);
 																								}
 	| code_block_body while_statement															{
-																									// Append while statement to primary {while} node
-																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
-																									g_context.m_NodeStack.pop();
+																									SBaseASTNode *n0=g_context.PopNode();
 																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
-																									varnode->m_SubNodes.push(sinode);
+																									varnode->m_SubNodes.push(n0);
 																								}
 	| variable_declaration_statement															{
-																									$$ = new SBaseASTNode("{statement:V}");
-																									// Pull the statement as subnode
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{statement:V}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									g_context.PushNode($$);
 																								}
 	| code_block_body variable_declaration_statement											{
-																									// Append param statement to primary {statement} node
-																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
-																									g_context.m_NodeStack.pop();
+																									SBaseASTNode *n0=g_context.PopNode();
 																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
-																									varnode->m_SubNodes.push(sinode);
+																									varnode->m_SubNodes.push(n0);
 																								}
 	| using_statement																			{
-																									$$ = new SBaseASTNode("{statement:P}");
-																									// Pull the statement as subnode
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+																									$$ = new SBaseASTNode("{statement:P}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									g_context.PushNode($$);
 																								}
 	| code_block_body using_statement															{
-																									// Append param statement to primary {statement} node
-																									SBaseASTNode *sinode = g_context.m_NodeStack.top();
-																									g_context.m_NodeStack.pop();
+																									SBaseASTNode *n0=g_context.PopNode();
 																									SBaseASTNode *varnode = g_context.m_NodeStack.top();
-																									varnode->m_SubNodes.push(sinode);
+																									varnode->m_SubNodes.push(n0);
 																								}
 	;
 
 function_def
-	: FUNCTION simple_identifier code_block_start code_block_body code_block_end				{
-																									$$ = new SBaseASTNode("{func}");
-																									// endblock
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									// body
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									// beginblock
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									// function name
-																									$$->m_SubNodes.push(g_context.m_NodeStack.top());
-																									g_context.m_NodeStack.pop();
-																									g_context.m_NodeStack.push($$);
+	: FUNCTION simple_identifier parameter_list code_block_start code_block_body code_block_end	{
+																									$$ = new SBaseASTNode("{func}", "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *n1=g_context.PopNode();
+																									SBaseASTNode *n2=g_context.PopNode();
+																									SBaseASTNode *n3=g_context.PopNode();
+																									SBaseASTNode *n4=g_context.PopNode();
+																									$$->m_SubNodes.push(n0);
+																									$$->m_SubNodes.push(n1);
+																									$$->m_SubNodes.push(n2);
+																									$$->m_SubNodes.push(n3);
+																									$$->m_SubNodes.push(n4);
+																									g_context.PushNode($$);
 																								}
 	;
 
@@ -644,15 +633,22 @@ translation_unit
 
 void DumpEntry(int nodelevel, SBaseASTNode *node)
 {
-	static const std::string nodespaces="..........................................................................";
+	static const std::string nodespaces="                                                                                        ";
+	size_t sz = node->m_SubNodes.size();
+
+	bool isvardecl = false;
+	if (node->m_Value == "{var}")
+		isvardecl = true;
 
 	// TODO: This is where we can somewhat start adding prologues / epilogues / labels and generate some code
-	printf("%s%s\n", nodespaces.substr(0,nodelevel).c_str(), node->m_Value.c_str());
+	printf("%s%s\t%s\n", nodespaces.substr(0,nodelevel).c_str(), node->m_Value.c_str(), node->m_Code.c_str());
 
-	size_t sz = node->m_SubNodes.size();
 	for(size_t i=0;i<sz;++i)
 	{
-		DumpEntry(nodelevel+1, node->m_SubNodes.top());
+		SBaseASTNode *sub = node->m_SubNodes.top();
+		DumpEntry(nodelevel+1, sub);
+		if (isvardecl)
+			printf("// DEFVAR %s\n", sub->m_Value.c_str());
 		node->m_SubNodes.pop();
 	}
 }
