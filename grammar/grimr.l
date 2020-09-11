@@ -32,9 +32,9 @@ void count();
 "#"[^\n]*					{ /* consume //-comment */ }
 
 "var"						{ count();  return(VAR); }
-"func"						{ count();  return(FUNCTION); }
+"function"					{ count();  return(FUNCTION); }
 
-"param"						{ count();  return(PARAM); }
+"using"						{ count();  return(USING); }
 
 "if"						{ count();  return(IF); }
 "then"						{ count();  return(THEN); }
@@ -69,12 +69,15 @@ void count();
 "^"							{ count();  return('^'); }
 "|"							{ count();  return('|'); }
 "?"							{ count();  return('?'); }
+"="							{ count();  return('='); }
 "<="						{ count();  return(LESSEQUAL_OP); }
 "<"							{ count();  return(LESS_OP); }
 ">"							{ count();  return(GREATER_OP); }
 ">="						{ count();  return(GREATEREQUAL_OP); }
 "=="						{ count();  return(EQUAL_OP); }
 "!="						{ count();  return(NOTEQUAL_OP); }
+"&&"						{ count();  return(AND_OP); }
+"||"						{ count();  return(OR_OP); }
 
 {L}({L}|{D})*				{ count();  sscanf(yytext, "%s", yylval.string); return(IDENTIFIER); }
 

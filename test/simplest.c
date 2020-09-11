@@ -2,7 +2,8 @@
 
 var best, rest, detest
 
-func DrawRect begin
-    param a,b
-    hoba(a,b)
+function DrawRect
+begin using posX,posY,width,height
+    area = width * height
+    right = posX + width
 end
