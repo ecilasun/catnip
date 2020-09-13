@@ -3,6 +3,7 @@
 
 var cursorX, cursorY;
 var VRAM;
+var banana;
 
 def drawrect(posX,posY,width,height)
 {

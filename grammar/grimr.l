@@ -35,8 +35,6 @@ void count();
 "var"						{ count();  return(VAR); }
 "def"						{ count();  return(FUNCTION); }
 
-"param"						{ count();  return(USING); }
-
 "if"						{ count();  return(IF); }
 "then"						{ count();  return(THEN); }
 "else"						{ count();  return(ELSE); }
