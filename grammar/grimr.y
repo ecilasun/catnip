@@ -77,8 +77,8 @@ enum EASTNodeType
 	EN_InputParamList,
 	EN_InputParam,
 	EN_CallParam,
-	EN_FunctionPrologue,
-	EN_FunctionEpilogue,
+	EN_Prologue,
+	EN_Epilogue,
 	EN_Statement,
 	EN_EndOfProgram,
 };
@@ -126,8 +126,8 @@ const char* NodeTypes[]=
 	"EN_InputParamList            ",
 	"EN_InputParam                ",
 	"EN_CallParam                 ",
-	"EN_FunctionPrologue          ",
-	"EN_FunctionEpilogue          ",
+	"EN_Prologue                  ",
+	"EN_Epilogue                  ",
 	"EN_Statement                 ",
 	"EN_EndOfProgram              ",
 };
@@ -189,6 +189,7 @@ struct SVariable
 	std::string m_Name;
 	uint32_t m_Hash;
 	uint32_t m_InitializedValue{0};
+	int m_ScopeDepth{0};
 };
 
 struct SFunction
@@ -759,7 +760,7 @@ function_statement
 
 code_block_start
 	: BEGINBLOCK																				{
-																									$$ = new SBaseASTNode(EN_FunctionPrologue, "", " // code block prologue");
+																									$$ = new SBaseASTNode(EN_Prologue, "", " // code block prologue");
 																									// This is a prologue section for a code block
 																									g_context.PushNode($$);
 																								}
@@ -767,7 +768,7 @@ code_block_start
 
 code_block_end
 	: ENDBLOCK																					{
-																									$$ = new SBaseASTNode(EN_FunctionEpilogue, "", "// code block epilogue");
+																									$$ = new SBaseASTNode(EN_Epilogue, "", "// code block epilogue");
 																									// This is an epilogue section for a code block
 																									g_context.PushNode($$);
 																								}
@@ -952,11 +953,12 @@ void AddSymbols(CCompilerContext *cctx, SASTNode *node)
 
 	if (node->m_Type == EN_Identifier)
 	{
-		//printf("Adding variable '%s:%s'\n", node->m_ScopeDepth==1 ? "global":"local", node->m_Value.c_str());
+		printf("Adding variable '%s:%s' @%d\n", cctx->m_CurrentFunctionName.c_str(), node->m_Value.c_str(), cctx->m_ScopeDepth);
 
 		SVariable *newvariable = new SVariable();
-		newvariable->m_Name = node->m_Value;
-		newvariable->m_Hash = HashString(node->m_Value.c_str());
+		newvariable->m_Name = cctx->m_CurrentFunctionName + ":" + node->m_Value;
+		newvariable->m_Hash = HashString(newvariable->m_Name.c_str());
+		newvariable->m_ScopeDepth = cctx->m_ScopeDepth;
 		//newvariable->m_InitializedValue = ?; Result of assingment declaration's expression node (RHS)
 
 		cctx->m_Variables.push_back(newvariable);
@@ -970,11 +972,12 @@ void AddInputParameters(CCompilerContext *cctx, SASTNode *node)
 
 	if (node->m_Type == EN_InputParam)
 	{
-		//printf("Adding input parameter '%s:%s'\n", cctx->m_CurrentFunctionName.c_str(), node->m_Value.c_str());
+		printf("Adding input parameter '%s:%s' @%d\n", cctx->m_CurrentFunctionName.c_str(), node->m_Value.c_str(), cctx->m_ScopeDepth);
 
 		SVariable *newvariable = new SVariable();
 		newvariable->m_Name = cctx->m_CurrentFunctionName + ":" + node->m_Value;
 		newvariable->m_Hash = HashString(newvariable->m_Name.c_str());
+		newvariable->m_ScopeDepth = cctx->m_ScopeDepth;
 		//newvariable->m_InitializedValue = ?; Result of assingment declaration's expression node (RHS)
 
 		cctx->m_Variables.push_back(newvariable);
@@ -1010,6 +1013,7 @@ void GatherEntry(CCompilerContext *cctx, SASTNode *node)
 		case EN_FunctionName:
 			cctx->m_CurrentFunctionName = node->m_Value;
 		break;
+
 		case EN_InputParamList:
 			AddInputParameters(cctx, node);
 		break;
@@ -1049,23 +1053,24 @@ bool ScanEntry(CCompilerContext *cctx, SASTNode *node)
 	if (node->m_Type == EN_Identifier)
 	{
 		// Scan function local scope first
-		std::string localname = cctx->m_CurrentFunctionName + ":" + node->m_Value.c_str();
+		std::string localname = cctx->m_CurrentFunctionName + ":" + node->m_Value;
 		uint32_t localhash = HashString(localname.c_str());
 		SVariable *localvar = cctx->FindSymbolInSymbolTable(localhash);
 		if (localvar==nullptr)
 		{
 			// Scan global scope next
-			uint32_t globalhash = HashString(node->m_Value.c_str());
+			std::string globalname = ":" + node->m_Value;
+			uint32_t globalhash = HashString(globalname.c_str());
 			SVariable *globalvar = cctx->FindSymbolInSymbolTable(globalhash);
 			if (globalvar==nullptr)
 			{
 				printf("local or global variable '%s' not found (might be input parameter)\n", node->m_Value.c_str());
 				return false;
 			}
-			/*else
+			/*else // TODO: We have access to global SVariable at this point
 				printf("global variable '%s' found\n", node->m_Value.c_str());*/
 		}
-		/*else
+		/*else // TODO: We have access to local SVariable (input parameter) at this point
 			printf("input parameter '%s' found\n", localvar->m_Name.c_str());*/
 	}
 
