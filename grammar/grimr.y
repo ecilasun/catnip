@@ -651,42 +651,50 @@ while_statement
 																									SBaseASTNode *codeblocknode=g_context.PopNode();
 																									SBaseASTNode *startnode=g_context.PopNode();
 																									SBaseASTNode *expression=g_context.PopNode();
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":topofwhile"));
 																									$$->PushSubNode(expression);
-																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JNZ endofwhile?"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JNZ endofwhile"));
 																									$$->PushSubNode(startnode);
 																									$$->PushSubNode(codeblocknode);
 																									$$->PushSubNode(endnode);
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, "@LABEL: endofwhile?"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JMP topofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":endofwhile"));
 																									g_context.PushNode($$);
 																								}
 	| WHILE '(' expression ')' function_statement												{
 																									$$ = new SBaseASTNode(EN_While, "");
 																									SBaseASTNode *funcstatement=g_context.PopNode();
 																									SBaseASTNode *expression=g_context.PopNode();
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":topofwhile"));
 																									$$->PushSubNode(expression);
-																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JNZ endofwhile?"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JNZ endofwhile"));
 																									$$->PushSubNode(funcstatement);
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, "@LABEL: endofwhile?"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JMP topofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":endofwhile"));
 																									g_context.PushNode($$);
 																								}
 	| WHILE '(' expression ')' expression_statement												{
 																									$$ = new SBaseASTNode(EN_While, "");
 																									SBaseASTNode *funcstatement=g_context.PopNode();
 																									SBaseASTNode *expression=g_context.PopNode();
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":topofwhile"));
 																									$$->PushSubNode(expression);
-																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JNZ endofwhile?"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JNZ endofwhile"));
 																									$$->PushSubNode(funcstatement);
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, "@LABEL: endofwhile?"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JMP topofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":endofwhile"));
 																									g_context.PushNode($$);
 																								}
 	| WHILE '(' expression ')' variable_declaration_statement									{
 																									$$ = new SBaseASTNode(EN_While, "");
 																									SBaseASTNode *funcstatement=g_context.PopNode();
 																									SBaseASTNode *expression=g_context.PopNode();
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":topofwhile"));
 																									$$->PushSubNode(expression);
-																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JNZ endofwhile?"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JNZ endofwhile"));
 																									$$->PushSubNode(funcstatement);
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, "@LABEL: endofwhile?"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JMP topofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":endofwhile"));
 																									g_context.PushNode($$);
 																								}
 	;
@@ -1020,7 +1028,7 @@ void GatherEntry(CCompilerContext *cctx, SASTNode *node)
 {
 	node->m_ScopeDepth = cctx->m_ScopeDepth++;
 
-	//printf("%s(%d):%s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
+	//printf("%s(%d) %s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
 
 	for (auto &subnode : node->m_ASTNodes)
 		GatherEntry(cctx, subnode);
@@ -1192,14 +1200,14 @@ void CompilePrePass()
 
 void DebugDumpCodeBlock(CCompilerContext *cctx, SASTNode *node)
 {
-	printf("\t%s(%d):%s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
+	printf("\t%s(%d) %s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
 	for (auto &subnode : node->m_ASTNodes)
 		DebugDumpCodeBlock(cctx, subnode);
 }
 
 void DebugDumpNode(CCompilerContext *cctx, SASTNode *node)
 {
-	printf("%s(%d):%s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
+	printf("%s(%d) %s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
 
 	if (node->m_Type == EN_FuncDecl)
 	{
