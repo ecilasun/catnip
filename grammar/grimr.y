@@ -195,8 +195,12 @@ struct SVariable
 struct SFunction
 {
 	std::string m_Name;
+	uint32_t m_Hash;
+	int m_ScopeDepth{0};
 	std::vector<SASTNode*> m_InputParameters;
-	std::vector<SASTNode*> m_Body;
+	std::vector<SASTNode*> m_PrologueBlock;
+	std::vector<SASTNode*> m_CodeBlock;
+	std::vector<SASTNode*> m_EpilogueBlock;
 };
 
 class CCompilerContext
@@ -207,6 +211,14 @@ public:
 	SVariable *FindSymbolInSymbolTable(uint32_t hash)
 	{
 		for(auto &var : m_Variables)
+			if (var->m_Hash == hash)
+				return var;
+		return nullptr;
+	}
+
+	SFunction *FindFunctionInFunctionTable(uint32_t hash)
+	{
+		for(auto &var : m_Functions)
 			if (var->m_Hash == hash)
 				return var;
 		return nullptr;
@@ -872,11 +884,10 @@ program
 
 void ConvertEntry(int nodelevel, SBaseASTNode *node, SASTNode *astnode)
 {
-	static const std::string nodespaces="_______________________________________________________________________________________________________";
-	size_t sz = node->m_SubNodes.size();
-
+	//static const std::string nodespaces="_______________________________________________________________________________________________________";
 	//printf("%s|%s%s %s\n", NodeTypes[node->m_Type], nodespaces.substr(0,nodelevel).c_str(), node->m_Comment.c_str(), node->m_Value.c_str());
 
+	size_t sz = node->m_SubNodes.size();
 	for(size_t i=0;i<sz;++i)
 	{
 		SBaseASTNode *sub = node->m_SubNodes.back();
@@ -925,27 +936,6 @@ void ConvertNodes()
 	}
 }
 
-/*void CompileEntry(CCompilerContext &cctx, SASTNode *node)
-{
-	//printf("%s(%d):%s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
-
-	for (auto &subnode : node->m_ASTNodes)
-		CompileEntry(cctx, subnode);
-
-	// Code gen
-}
-
-void CompileNodes()
-{
-	printf("Compiling vector based nodes\n");
-
-	CCompilerContext cctx;
-
-	cctx.m_ScopeDepth = 0;
-	for (auto &node : g_context.m_ASTNodes)
-		CompileEntry(cctx, node);
-}*/
-
 void AddSymbols(CCompilerContext *cctx, SASTNode *node)
 {
 	for (auto &subnode : node->m_ASTNodes)
@@ -984,17 +974,47 @@ void AddInputParameters(CCompilerContext *cctx, SASTNode *node)
 	}
 }
 
+void GatherParamBlock(CCompilerContext *cctx, SFunction *function, SASTNode *codenode)
+{
+	function->m_CodeBlock.push_back(codenode);
+}
+
+void GatherCodeBlock(CCompilerContext *cctx, SFunction *function, SASTNode *codenode)
+{
+	function->m_CodeBlock.push_back(codenode);
+}
+
 void AddFunction(CCompilerContext *cctx, SASTNode *node)
 {
 	SASTNode *namenode = node->m_ASTNodes[0];
-	//printf("Adding function '%s:%d:%s'\n", node->m_ScopeDepth==0 ? "global":"local", node->m_ScopeDepth, namenode->m_Value.c_str());
+	SASTNode *paramsnode = node->m_ASTNodes[1];
+	//SASTNode *prologuenode = node->m_ASTNodes[2];
+	SASTNode *codenode = node->m_ASTNodes[3];
+	//SASTNode *epiloguenode = node->m_ASTNodes[4];
+
+	//printf("Adding function '%s'\n", namenode->m_Value.c_str());
 
 	SFunction *newfunction = new SFunction();
-	newfunction->m_Name = node->m_Value;
-	//newfunction->m_InputParameters.push_back(...);
-	//newfunction->m_Body.push_back(...);
+	newfunction->m_Name = namenode->m_Value;
+	newfunction->m_Hash = HashString(newfunction->m_Name.c_str());
+
+	GatherParamBlock(cctx, newfunction, paramsnode);
+	//GatherPrologue(cctx, newfunction, prologuenode);
+	GatherCodeBlock(cctx, newfunction, codenode);
+	//GatherEpilogue(cctx, newfunction, epiloguenode);
 
 	cctx->m_Functions.push_back(newfunction);
+
+	// Remove the epilogue
+	node->m_ASTNodes.erase(node->m_ASTNodes.begin()+4);
+	// Remove the code block
+	node->m_ASTNodes.erase(node->m_ASTNodes.begin()+3);
+	// Remove the prologue
+	node->m_ASTNodes.erase(node->m_ASTNodes.begin()+2);
+	// Remove the parameter block
+	node->m_ASTNodes.erase(node->m_ASTNodes.begin()+1);
+	// Remove the name block
+	node->m_ASTNodes.erase(node->m_ASTNodes.begin());
 }
 
 void GatherEntry(CCompilerContext *cctx, SASTNode *node)
@@ -1126,6 +1146,50 @@ void ScanSymbolAccessErrors()
 		if (!found)
 			break;
 	}
+}
+
+void CompileCode(CCompilerContext *cctx, SASTNode *node)
+{
+	printf("%s:%s\n", NodeTypes[node->m_Type], node->m_Value.c_str());
+
+	for (auto &subnode : node->m_ASTNodes)
+		CompileCode(cctx, subnode);
+	
+	// TODO: codegen
+}
+
+void CompileEntry(CCompilerContext *cctx, SASTNode *node)
+{
+	if (node->m_Type == EN_FuncDecl)
+	{
+		SASTNode *funcname = node->m_ASTNodes[0];
+		uint32_t funchash = HashString(funcname->m_Value.c_str());
+		SFunction *func = cctx->FindFunctionInFunctionTable(funchash);
+		if (func == nullptr)
+			printf("ERROR: cannot find function %s\n", funcname->m_Value.c_str());
+		else
+		{
+			printf("%s:%s (deferred compile until first use)\n", NodeTypes[node->m_Type], funcname->m_Value.c_str());
+			/*for (auto &subnode : func->m_CodeBlock)
+				CompileCode(cctx, subnode);*/
+		}
+	}
+	else
+	{
+		printf("%s:%s\n", NodeTypes[node->m_Type], node->m_Value.c_str());
+		for (auto &subnode : node->m_ASTNodes)
+			CompileEntry(cctx, subnode);
+	}
+}
+
+void CompileNodes()
+{
+	printf("Generating code\n");
+
+	CCompilerContext* globalContext = g_context.m_CompilerContextList[0];
+
+	for (auto &node : g_context.m_ASTNodes)
+		CompileEntry(globalContext, node);
 }
 
 extern int yylineno;
