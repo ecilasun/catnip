@@ -4,7 +4,7 @@ var cursorX, cursorY;
 var VRAM;
 var banana;
 
-def drawrect(posX,posY,width,height)
+def DrawRect(posX, posY, width, height)
 {
     var spanX, spanY;
 
@@ -16,7 +16,9 @@ def drawrect(posX,posY,width,height)
         {
             var address;
             address = spanX + spanY;
-            // Plot pixel here at spanX,spanY
+            // Array operator can alias a variable
+            // as a pointer at that address if used
+            // on a non-array integer.
             VRAM[address] = 0xFF;
             spanX = spanX+1;
         }

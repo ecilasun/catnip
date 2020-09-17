@@ -889,7 +889,7 @@ void CompileEntry(SCompilerContext &cctx, SASTNode *node)
 	switch (node->m_Type)
 	{
 		case EN_Decl:
-			printf("// process variable declaration at scope depth %d (%s)\n", node->m_ScopeDepth, node->m_ScopeDepth==0?"global":"local");
+			printf("// process %d variable declaration(s) at scope depth %d (%s)\n", uint32_t(node->m_ASTNodes.size()), node->m_ScopeDepth, node->m_ScopeDepth==0?"global":"local");
 		break;
 
 		case EN_FuncDecl:
@@ -897,7 +897,7 @@ void CompileEntry(SCompilerContext &cctx, SASTNode *node)
 		break;
 
 		case EN_InputParam:
-			printf("// pop function parameters at scope depth %d\n", node->m_ScopeDepth);
+			printf("// pop %d function parameter(s) at scope depth %d\n", uint32_t(node->m_ASTNodes.size()), node->m_ScopeDepth);
 		break;
 
 		default:
