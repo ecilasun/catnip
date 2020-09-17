@@ -1186,9 +1186,47 @@ void CompilePrePass()
 	printf("Compile prepass: Gather function definitions for deferred compilation\n");
 
 	CCompilerContext* globalContext = g_context.m_CompilerContextList[0];
-
 	for (auto &node : g_context.m_ASTNodes)
 		CompilePrePassNode(globalContext, node);
+}
+
+void DebugDumpCodeBlock(CCompilerContext *cctx, SASTNode *node)
+{
+	printf("\t%s(%d):%s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
+	for (auto &subnode : node->m_ASTNodes)
+		DebugDumpCodeBlock(cctx, subnode);
+}
+
+void DebugDumpNode(CCompilerContext *cctx, SASTNode *node)
+{
+	printf("%s(%d):%s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
+
+	if (node->m_Type == EN_FuncDecl)
+	{
+		SASTNode *funcname = node->m_ASTNodes[0];
+		uint32_t funchash = HashString(funcname->m_Value.c_str());
+		SFunction *func = cctx->FindFunctionInFunctionTable(funchash);
+		if (func != nullptr)
+		{
+			//printf("%s:%s (deferred compile until first use)\n", NodeTypes[node->m_Type], funcname->m_Value.c_str());
+			for (auto &subnode : func->m_CodeBlock)
+				DebugDumpCodeBlock(cctx, subnode);
+		}
+	}
+	else
+	{
+		for (auto &subnode : node->m_ASTNodes)
+			DebugDumpNode(cctx, subnode);
+	}
+}
+
+void DebugDump()
+{
+	printf("Debug dump\n");
+
+	CCompilerContext* globalContext = g_context.m_CompilerContextList[0];
+	for (auto &node : g_context.m_ASTNodes)
+		DebugDumpNode(globalContext, node);
 }
 
 extern int yylineno;
