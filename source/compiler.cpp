@@ -2,8 +2,8 @@
 
 // GrimR : Person Wearing A Mask / Helmet / The Fierce One
 #include "../grammar/grimr.y.hpp"
-extern void dumpnodes(void);
-extern void generatecode(void);
+extern void ConvertNodes(void);
+extern void CompileNodes(void);
 
 int CompileCode(char *_inputname, char * /*_outputname*/)
 {
@@ -14,9 +14,8 @@ int CompileCode(char *_inputname, char * /*_outputname*/)
 	int result = yyparse();
 	fclose(yyin);
 
-	dumpnodes();
-
-	generatecode();
+	ConvertNodes();
+	CompileNodes();
 
 	return 0;
 }

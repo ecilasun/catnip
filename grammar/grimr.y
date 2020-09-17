@@ -72,11 +72,13 @@ enum EASTNodeType
 	EN_Call,
 	EN_StackOp,
 	EN_Decl,
+	EN_FuncDecl,
 	EN_InputParam,
 	EN_CallParam,
 	EN_FunctionPrologue,
 	EN_FunctionEpilogue,
-	EN_Statement
+	EN_Statement,
+	EN_EndOfProgram,
 };
 
 const char* NodeTypes[]=
@@ -117,11 +119,13 @@ const char* NodeTypes[]=
 	"EN_Call                      ",
 	"EN_StackOp                   ",
 	"EN_Decl                      ",
+	"EN_FuncDecl                  ",
 	"EN_InputParam                ",
 	"EN_CallParam                 ",
 	"EN_FunctionPrologue          ",
 	"EN_FunctionEpilogue          ",
 	"EN_Statement                 ",
+	"EN_EndOfProgram              ",
 };
 
 enum ENodeSide
@@ -160,10 +164,25 @@ public:
 	}
 
 	EASTNodeType m_Type{EN_Default};
+	ENodeSide m_Side{RIGHT_HAND_SIDE};
 	std::string m_Value;
 	std::string m_Comment;
 	std::deque<SBaseASTNode*> m_SubNodes;
+};
+
+class SASTNode
+{
+public:
+	EASTNodeType m_Type{EN_Default};
 	ENodeSide m_Side{RIGHT_HAND_SIDE};
+	int m_ScopeDepth{0};
+	std::string m_Value;
+	std::vector<SASTNode*> m_ASTNodes;
+};
+
+struct SCompilerContext
+{
+	int m_ScopeDepth{0};
 };
 
 struct SSymbol
@@ -219,6 +238,7 @@ struct SParserContext
 	SBaseASTNode *PopNode() { SBaseASTNode *node = m_NodeStack.back(); m_NodeStack.pop_back(); return node; }
 
 	std::deque<SBaseASTNode*> m_NodeStack;
+	std::vector<SASTNode*> m_ASTNodes;
 	std::map<uint32_t, SSymbol> m_SymbolTable;
 };
 
@@ -276,7 +296,10 @@ SParserContext g_context;
 %type <astnode> assignment_expression
 %type <astnode> expression
 
-%start translation_unit
+%type <astnode> translation_unit
+%type <astnode> program
+
+%start program
 %%
 
 simple_identifier
@@ -757,12 +780,15 @@ code_block_body
 
 function_def
 	: FUNCTION simple_identifier parameter_list code_block_start code_block_body code_block_end	{
-																									$$ = new SBaseASTNode(EN_Decl, "", "DEFUNC");
+																									$$ = new SBaseASTNode(EN_FuncDecl, "", "DEFUNC");
 																									SBaseASTNode *blockend=g_context.PopNode();
 																									SBaseASTNode *codeblock=g_context.PopNode();
 																									SBaseASTNode *blockbegin=g_context.PopNode();
 																									SBaseASTNode *paramlist=g_context.PopNode();
 																									SBaseASTNode *funcnamenode=g_context.PopNode();
+
+																									// Promote parameter list to input parameter
+																									paramlist->m_Type = EN_InputParam;
 
 																									// Add this symbol to the list of known symbols
 																									SSymbol &sym = g_context.DeclareSymbol(funcnamenode->m_Value);
@@ -784,27 +810,45 @@ translation_unit
 	| translation_unit function_def
 	| translation_unit variable_declaration_statement
 	;
+
+program
+	: translation_unit																			{
+																									$$ = new SBaseASTNode(EN_EndOfProgram, "", "");
+																									g_context.PushNode($$);
+																								}
+	;
 %%
 
-void DumpEntry(int nodelevel, SBaseASTNode *node)
+void ConvertEntry(int nodelevel, SBaseASTNode *node, SASTNode *astnode)
 {
 	static const std::string nodespaces="_______________________________________________________________________________________________________";
 	size_t sz = node->m_SubNodes.size();
 
-	printf("%s|%s%s %s\n", NodeTypes[node->m_Type], nodespaces.substr(0,nodelevel).c_str(), node->m_Comment.c_str(), node->m_Value.c_str());
+	//printf("%s|%s%s %s\n", NodeTypes[node->m_Type], nodespaces.substr(0,nodelevel).c_str(), node->m_Comment.c_str(), node->m_Value.c_str());
 
 	for(size_t i=0;i<sz;++i)
 	{
 		SBaseASTNode *sub = node->m_SubNodes.back();
-		DumpEntry(nodelevel+1, sub);
+
+		// Push sub node
+		SASTNode *newnode = new SASTNode();
+		newnode->m_Type = sub->m_Type;
+		newnode->m_Value = sub->m_Value;
+		newnode->m_Side = sub->m_Side;
+		astnode->m_ASTNodes.push_back(newnode);
+
+		ConvertEntry(nodelevel+1, sub, newnode);
 		node->m_SubNodes.pop_back();
 	}
 }
 
-void dumpnodes()
+void ConvertNodes()
 {
+	printf("Converting stack based nodes to vector based nodes\n");
+
 	int nodelevel = 0;
 	size_t sz = g_context.m_NodeStack.size();
+
 	//Need to reverse the root stack first
 	std::deque<SBaseASTNode*> reversestack;
 	for(size_t i=0;i<sz;++i)
@@ -812,15 +856,64 @@ void dumpnodes()
 		reversestack.push_back(g_context.m_NodeStack.back());
 		g_context.m_NodeStack.pop_back();
 	}
+
+	// Begin conversion
 	for(size_t i=0;i<sz;++i)
 	{
-		DumpEntry(nodelevel, reversestack.back());
+		auto node = reversestack.back();
+
+		// Push root node
+		SASTNode *newnode = new SASTNode();
+		newnode->m_Type = node->m_Type;
+		newnode->m_Value = node->m_Value;
+		newnode->m_Side = node->m_Side;
+		g_context.m_ASTNodes.push_back(newnode);
+
+		ConvertEntry(nodelevel, node, newnode);
 		reversestack.pop_back();
 	}
 }
 
-void generatecode()
+void CompileEntry(SCompilerContext &cctx, SASTNode *node)
 {
+	node->m_ScopeDepth = cctx.m_ScopeDepth++;
+
+	printf("%s(%d):%s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
+
+	for (auto &subnode : node->m_ASTNodes)
+		CompileEntry(cctx, subnode);
+	
+	--cctx.m_ScopeDepth;
+
+	// Code gen
+	switch (node->m_Type)
+	{
+		case EN_Decl:
+			printf("// process variable declaration at scope depth %d (%s)\n", node->m_ScopeDepth, node->m_ScopeDepth==0?"global":"local");
+		break;
+
+		case EN_FuncDecl:
+			printf("// process function declaration at scope depth %d\n", node->m_ScopeDepth);
+		break;
+
+		case EN_InputParam:
+			printf("// pop function parameters at scope depth %d\n", node->m_ScopeDepth);
+		break;
+
+		default:
+		break;
+	}
+}
+
+void CompileNodes()
+{
+	printf("Compiling vector based nodes\n");
+
+	SCompilerContext cctx;
+
+	cctx.m_ScopeDepth = 0;
+	for (auto &node : g_context.m_ASTNodes)
+		CompileEntry(cctx, node);
 }
 
 extern int yylineno;
