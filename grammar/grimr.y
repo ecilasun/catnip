@@ -953,7 +953,7 @@ void AddSymbols(CCompilerContext *cctx, SASTNode *node)
 
 	if (node->m_Type == EN_Identifier)
 	{
-		printf("Adding variable '%s:%s' @%d\n", cctx->m_CurrentFunctionName.c_str(), node->m_Value.c_str(), cctx->m_ScopeDepth);
+		//printf("Adding variable '%s:%s' @%d\n", cctx->m_CurrentFunctionName.c_str(), node->m_Value.c_str(), cctx->m_ScopeDepth);
 
 		SVariable *newvariable = new SVariable();
 		newvariable->m_Name = cctx->m_CurrentFunctionName + ":" + node->m_Value;
@@ -972,7 +972,7 @@ void AddInputParameters(CCompilerContext *cctx, SASTNode *node)
 
 	if (node->m_Type == EN_InputParam)
 	{
-		printf("Adding input parameter '%s:%s' @%d\n", cctx->m_CurrentFunctionName.c_str(), node->m_Value.c_str(), cctx->m_ScopeDepth);
+		//printf("Adding input parameter '%s:%s' @%d\n", cctx->m_CurrentFunctionName.c_str(), node->m_Value.c_str(), cctx->m_ScopeDepth);
 
 		SVariable *newvariable = new SVariable();
 		newvariable->m_Name = cctx->m_CurrentFunctionName + ":" + node->m_Value;
