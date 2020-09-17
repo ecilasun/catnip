@@ -1010,6 +1010,24 @@ void GatherEntry(CCompilerContext *cctx, SASTNode *node)
 
 	switch (node->m_Type)
 	{
+		/* case EN_Epilogue:
+		{
+			// Remove variables generated within this scopedepth
+			auto beg = cctx->m_Variables.begin();
+			while (beg != cctx->m_Variables.end())
+			{
+				SVariable *var = *beg;
+				if (var->m_ScopeDepth == node->m_ScopeDepth+1)
+				{
+					printf("going out of scope: %s\n", var->m_Name.c_str());
+					beg = cctx->m_Variables.erase(beg);
+				}
+				else
+					++beg;
+			}
+		}
+		break; */
+
 		case EN_FunctionName:
 			cctx->m_CurrentFunctionName = node->m_Value;
 		break;
@@ -1048,7 +1066,7 @@ void GatherSymbols()
 		GatherEntry(globalContext, node);
 }
 
-bool ScanEntry(CCompilerContext *cctx, SASTNode *node)
+bool ScanSymbolAccessEntry(CCompilerContext *cctx, SASTNode *node)
 {
 	if (node->m_Type == EN_Identifier)
 	{
@@ -1076,7 +1094,7 @@ bool ScanEntry(CCompilerContext *cctx, SASTNode *node)
 
 	for (auto &subnode : node->m_ASTNodes)
 	{
-		bool found = ScanEntry(cctx, subnode);
+		bool found = ScanSymbolAccessEntry(cctx, subnode);
 		if (!found)
 			return false;
 	}
@@ -1104,7 +1122,7 @@ void ScanSymbolAccessErrors()
 
 	for (auto &node : g_context.m_ASTNodes)
 	{
-		bool found = ScanEntry(globalContext, node);
+		bool found = ScanSymbolAccessEntry(globalContext, node);
 		if (!found)
 			break;
 	}
