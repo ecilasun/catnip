@@ -3,7 +3,9 @@
 // GrimR : Person Wearing A Mask / Helmet / The Fierce One
 #include "../grammar/grimr.y.hpp"
 extern void ConvertNodes(void);
-extern void CompileNodes(void);
+extern void GatherSymbols(void);
+extern void ScanSymbolAccessErrors(void);
+//extern void CompileNodes(void);
 
 int CompileCode(char *_inputname, char * /*_outputname*/)
 {
@@ -15,7 +17,9 @@ int CompileCode(char *_inputname, char * /*_outputname*/)
 	fclose(yyin);
 
 	ConvertNodes();
-	CompileNodes();
+	GatherSymbols();
+	ScanSymbolAccessErrors();
+	//CompileNodes();
 
 	return 0;
 }

@@ -39,6 +39,7 @@ enum EASTNodeType
 	EN_Default,
 	EN_Symbol,
 	EN_Identifier,
+	EN_FunctionName,
 	EN_Constant,
 	EN_String,
 	EN_Postfix,
@@ -73,6 +74,7 @@ enum EASTNodeType
 	EN_StackOp,
 	EN_Decl,
 	EN_FuncDecl,
+	EN_InputParamList,
 	EN_InputParam,
 	EN_CallParam,
 	EN_FunctionPrologue,
@@ -86,6 +88,7 @@ const char* NodeTypes[]=
 	"EN_Default                   ",
 	"EN_Symbol                    ",
 	"EN_Identifier                ",
+	"EN_FunctionName              ",
 	"EN_Constant                  ",
 	"EN_String                    ",
 	"EN_Postfix                   ",
@@ -120,6 +123,7 @@ const char* NodeTypes[]=
 	"EN_StackOp                   ",
 	"EN_Decl                      ",
 	"EN_FuncDecl                  ",
+	"EN_InputParamList            ",
 	"EN_InputParam                ",
 	"EN_CallParam                 ",
 	"EN_FunctionPrologue          ",
@@ -180,9 +184,36 @@ public:
 	std::vector<SASTNode*> m_ASTNodes;
 };
 
-struct SCompilerContext
+struct SVariable
 {
+	std::string m_Name;
+	uint32_t m_Hash;
+	uint32_t m_InitializedValue{0};
+};
+
+struct SFunction
+{
+	std::string m_Name;
+	std::vector<SASTNode*> m_InputParameters;
+	std::vector<SASTNode*> m_Body;
+};
+
+class CCompilerContext
+{
+public:
 	int m_ScopeDepth{0};
+
+	SVariable *FindSymbolInSymbolTable(uint32_t hash)
+	{
+		for(auto &var : m_Variables)
+			if (var->m_Hash == hash)
+				return var;
+		return nullptr;
+	}
+
+	std::string m_CurrentFunctionName;
+	std::vector<SVariable*> m_Variables;
+	std::vector<SFunction*> m_Functions;
 };
 
 struct SSymbol
@@ -240,7 +271,21 @@ struct SParserContext
 	std::deque<SBaseASTNode*> m_NodeStack;
 	std::vector<SASTNode*> m_ASTNodes;
 	std::map<uint32_t, SSymbol> m_SymbolTable;
+	std::vector<CCompilerContext*> m_CompilerContextList;
 };
+
+void ConvertInputParams(SBaseASTNode *paramlistnode)
+{
+	size_t sz = paramlistnode->m_SubNodes.size();
+	for (size_t i=0;i<sz;++i)
+	{
+		SBaseASTNode *idnode = paramlistnode->m_SubNodes.back();
+		paramlistnode->m_SubNodes.pop_back();
+		SBaseASTNode *param = idnode->m_SubNodes.back();
+		param->m_Type = EN_InputParam;
+		paramlistnode->m_SubNodes.push_front(idnode);
+	}
+}
 
 SParserContext g_context;
 
@@ -641,7 +686,7 @@ variable_declaration
 																									// Add this symbol to the list of known symbols
 																									SSymbol &sym = g_context.DeclareSymbol(symbolnode->m_Value);
 
-																									$$ = new SBaseASTNode(EN_Decl, "", "DEFVAR");
+																									$$ = new SBaseASTNode(EN_Decl, "", "");
 																									$$->PushSubNode(symbolnode);
 																									g_context.PushNode($$);
 																								}
@@ -700,6 +745,7 @@ function_statement
 																									SBaseASTNode *functionparams=g_context.PopNode();
 																									// Grab the function name
 																									SBaseASTNode *functionname=g_context.PopNode();
+																									functionname->m_Type = EN_FunctionName;
 
 																									// Generate a CALL instruction with parameters as subnodes
 																									$$ = new SBaseASTNode(EN_Call, functionname->m_Value, "");
@@ -788,7 +834,11 @@ function_def
 																									SBaseASTNode *funcnamenode=g_context.PopNode();
 
 																									// Promote parameter list to input parameter
-																									paramlist->m_Type = EN_InputParam;
+																									paramlist->m_Type = EN_InputParamList;
+																									// Scan and promote all identifiers to inputparam
+																									ConvertInputParams(paramlist);
+																									// Promote function name identifier to functionname
+																									funcnamenode->m_Type = EN_FunctionName;
 
 																									// Add this symbol to the list of known symbols
 																									SSymbol &sym = g_context.DeclareSymbol(funcnamenode->m_Value);
@@ -874,30 +924,102 @@ void ConvertNodes()
 	}
 }
 
-void CompileEntry(SCompilerContext &cctx, SASTNode *node)
+/*void CompileEntry(CCompilerContext &cctx, SASTNode *node)
 {
-	node->m_ScopeDepth = cctx.m_ScopeDepth++;
-
-	printf("%s(%d):%s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
+	//printf("%s(%d):%s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
 
 	for (auto &subnode : node->m_ASTNodes)
 		CompileEntry(cctx, subnode);
-	
-	--cctx.m_ScopeDepth;
 
 	// Code gen
+}
+
+void CompileNodes()
+{
+	printf("Compiling vector based nodes\n");
+
+	CCompilerContext cctx;
+
+	cctx.m_ScopeDepth = 0;
+	for (auto &node : g_context.m_ASTNodes)
+		CompileEntry(cctx, node);
+}*/
+
+void AddSymbols(CCompilerContext *cctx, SASTNode *node)
+{
+	for (auto &subnode : node->m_ASTNodes)
+		AddSymbols(cctx, subnode);
+
+	if (node->m_Type == EN_Identifier)
+	{
+		//printf("Adding variable '%s:%s'\n", node->m_ScopeDepth==1 ? "global":"local", node->m_Value.c_str());
+
+		SVariable *newvariable = new SVariable();
+		newvariable->m_Name = node->m_Value;
+		newvariable->m_Hash = HashString(node->m_Value.c_str());
+		//newvariable->m_InitializedValue = ?; Result of assingment declaration's expression node (RHS)
+
+		cctx->m_Variables.push_back(newvariable);
+	}
+}
+
+void AddInputParameters(CCompilerContext *cctx, SASTNode *node)
+{
+	for (auto &subnode : node->m_ASTNodes)
+		AddInputParameters(cctx, subnode);
+
+	if (node->m_Type == EN_InputParam)
+	{
+		//printf("Adding input parameter '%s:%s'\n", cctx->m_CurrentFunctionName.c_str(), node->m_Value.c_str());
+
+		SVariable *newvariable = new SVariable();
+		newvariable->m_Name = cctx->m_CurrentFunctionName + ":" + node->m_Value;
+		newvariable->m_Hash = HashString(newvariable->m_Name.c_str());
+		//newvariable->m_InitializedValue = ?; Result of assingment declaration's expression node (RHS)
+
+		cctx->m_Variables.push_back(newvariable);
+	}
+}
+
+void AddFunction(CCompilerContext *cctx, SASTNode *node)
+{
+	SASTNode *namenode = node->m_ASTNodes[0];
+	//printf("Adding function '%s:%d:%s'\n", node->m_ScopeDepth==0 ? "global":"local", node->m_ScopeDepth, namenode->m_Value.c_str());
+
+	SFunction *newfunction = new SFunction();
+	newfunction->m_Name = node->m_Value;
+	//newfunction->m_InputParameters.push_back(...);
+	//newfunction->m_Body.push_back(...);
+
+	cctx->m_Functions.push_back(newfunction);
+}
+
+void GatherEntry(CCompilerContext *cctx, SASTNode *node)
+{
+	node->m_ScopeDepth = cctx->m_ScopeDepth++;
+
+	//printf("%s(%d):%s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
+
+	for (auto &subnode : node->m_ASTNodes)
+		GatherEntry(cctx, subnode);
+	
+	--cctx->m_ScopeDepth;
+
 	switch (node->m_Type)
 	{
+		case EN_FunctionName:
+			cctx->m_CurrentFunctionName = node->m_Value;
+		break;
+		case EN_InputParamList:
+			AddInputParameters(cctx, node);
+		break;
+
 		case EN_Decl:
-			printf("// process %d variable declaration(s) at scope depth %d (%s)\n", uint32_t(node->m_ASTNodes.size()), node->m_ScopeDepth, node->m_ScopeDepth==0?"global":"local");
+			AddSymbols(cctx, node);
 		break;
 
 		case EN_FuncDecl:
-			printf("// process function declaration at scope depth %d\n", node->m_ScopeDepth);
-		break;
-
-		case EN_InputParam:
-			printf("// pop %d function parameter(s) at scope depth %d\n", uint32_t(node->m_ASTNodes.size()), node->m_ScopeDepth);
+			AddFunction(cctx, node);
 		break;
 
 		default:
@@ -905,15 +1027,82 @@ void CompileEntry(SCompilerContext &cctx, SASTNode *node)
 	}
 }
 
-void CompileNodes()
+
+void GatherSymbols()
 {
-	printf("Compiling vector based nodes\n");
+	printf("Building symbol table\n");
 
-	SCompilerContext cctx;
+	// Create global context
+	// Compile function should:
+	// -create and push a new compilercontext every time we hit a prologue
+	// -pop compiler context stack and destroy the current compilercontext every time we hit an epilogue
+	CCompilerContext* globalContext = new CCompilerContext();
+	globalContext->m_ScopeDepth = 0;
+	g_context.m_CompilerContextList.push_back(globalContext);
 
-	cctx.m_ScopeDepth = 0;
 	for (auto &node : g_context.m_ASTNodes)
-		CompileEntry(cctx, node);
+		GatherEntry(globalContext, node);
+}
+
+bool ScanEntry(CCompilerContext *cctx, SASTNode *node)
+{
+	if (node->m_Type == EN_Identifier)
+	{
+		// Scan function local scope first
+		std::string localname = cctx->m_CurrentFunctionName + ":" + node->m_Value.c_str();
+		uint32_t localhash = HashString(localname.c_str());
+		SVariable *localvar = cctx->FindSymbolInSymbolTable(localhash);
+		if (localvar==nullptr)
+		{
+			// Scan global scope next
+			uint32_t globalhash = HashString(node->m_Value.c_str());
+			SVariable *globalvar = cctx->FindSymbolInSymbolTable(globalhash);
+			if (globalvar==nullptr)
+			{
+				printf("local or global variable '%s' not found (might be input parameter)\n", node->m_Value.c_str());
+				return false;
+			}
+			/*else
+				printf("global variable '%s' found\n", node->m_Value.c_str());*/
+		}
+		/*else
+			printf("input parameter '%s' found\n", localvar->m_Name.c_str());*/
+	}
+
+	for (auto &subnode : node->m_ASTNodes)
+	{
+		bool found = ScanEntry(cctx, subnode);
+		if (!found)
+			return false;
+	}
+
+	switch (node->m_Type)
+	{
+		case EN_FunctionName:
+			cctx->m_CurrentFunctionName = node->m_Value;
+		break;
+		default:
+		break;
+	}
+
+	return true;
+}
+
+void ScanSymbolAccessErrors()
+{
+	printf("Checking for undeclared symbol access\n");
+
+	// Fetch global context
+	// TODO: scan local context of a function first, then the global one
+	CCompilerContext* globalContext = g_context.m_CompilerContextList[0];
+	globalContext->m_CurrentFunctionName = "global";
+
+	for (auto &node : g_context.m_ASTNodes)
+	{
+		bool found = ScanEntry(globalContext, node);
+		if (!found)
+			break;
+	}
 }
 
 extern int yylineno;
