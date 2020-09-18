@@ -197,6 +197,7 @@ struct SFunction
 	std::string m_Name;
 	uint32_t m_Hash;
 	int m_ScopeDepth{0};
+	int m_RefCount{0};
 	std::vector<SASTNode*> m_InputParameters;
 	std::vector<SASTNode*> m_PrologueBlock;
 	std::vector<SASTNode*> m_CodeBlock;
@@ -218,9 +219,9 @@ public:
 
 	SFunction *FindFunctionInFunctionTable(uint32_t hash)
 	{
-		for(auto &var : m_Functions)
-			if (var->m_Hash == hash)
-				return var;
+		for(auto &fun : m_Functions)
+			if (fun->m_Hash == hash)
+				return fun;
 		return nullptr;
 	}
 
@@ -889,11 +890,8 @@ program
 	;
 %%
 
-void ConvertEntry(int nodelevel, SBaseASTNode *node, SASTNode *astnode)
+void ConvertEntry(SBaseASTNode *node, SASTNode *astnode)
 {
-	//static const std::string nodespaces="_______________________________________________________________________________________________________";
-	//printf("%s|%s %s\n", NodeTypes[node->m_Type], nodespaces.substr(0,nodelevel).c_str(), node->m_Value.c_str());
-
 	size_t sz = node->m_SubNodes.size();
 	for(size_t i=0;i<sz;++i)
 	{
@@ -906,7 +904,7 @@ void ConvertEntry(int nodelevel, SBaseASTNode *node, SASTNode *astnode)
 		newnode->m_Side = sub->m_Side;
 		astnode->m_ASTNodes.push_back(newnode);
 
-		ConvertEntry(nodelevel+1, sub, newnode);
+		ConvertEntry(sub, newnode);
 		node->m_SubNodes.pop_back();
 	}
 }
@@ -915,7 +913,6 @@ void ConvertNodes()
 {
 	printf("Converting stack based nodes to vector based nodes\n");
 
-	int nodelevel = 0;
 	size_t sz = g_context.m_NodeStack.size();
 
 	//Need to reverse the root stack first
@@ -938,7 +935,7 @@ void ConvertNodes()
 		newnode->m_Side = node->m_Side;
 		g_context.m_ASTNodes.push_back(newnode);
 
-		ConvertEntry(nodelevel, node, newnode);
+		ConvertEntry(node, newnode);
 		reversestack.pop_back();
 	}
 }
@@ -1005,6 +1002,10 @@ void AddFunction(CCompilerContext *cctx, SASTNode *node)
 	newfunction->m_Name = namenode->m_Value;
 	newfunction->m_Hash = HashString(newfunction->m_Name.c_str());
 
+	// 'main' function automatically gets a 1 refcount so that it can end up in the final compiled code
+	static uint32_t main_hash = HashString("main");
+	newfunction->m_RefCount = newfunction->m_Hash == main_hash ? 1 : 0;
+
 	GatherParamBlock(cctx, newfunction, paramsnode);
 	//GatherPrologue(cctx, newfunction, prologuenode);
 	GatherCodeBlock(cctx, newfunction, codenode);
@@ -1055,6 +1056,17 @@ void GatherEntry(CCompilerContext *cctx, SASTNode *node)
 		}
 		break; */
 
+		case EN_Call:
+		{
+			uint32_t nodehash = HashString(node->m_Value.c_str());
+			SFunction *fun = cctx->FindFunctionInFunctionTable(nodehash);
+			if (fun==nullptr)
+				printf("ERROR: Function call before function body appears in code\n");
+			else
+				fun->m_RefCount++;
+		}
+		break;
+
 		case EN_FunctionName:
 			cctx->m_CurrentFunctionName = node->m_Value;
 		break;
@@ -1075,7 +1087,6 @@ void GatherEntry(CCompilerContext *cctx, SASTNode *node)
 		break;
 	}
 }
-
 
 void GatherSymbols()
 {
@@ -1157,15 +1168,14 @@ void ScanSymbolAccessErrors()
 
 void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 {
-	printf("CODEGEN: %s:%s\n", NodeTypes[node->m_Type], node->m_Value.c_str());
+	// TODO: Code gen
+	printf("%s:%s\n", NodeTypes[node->m_Type], node->m_Value.c_str());
 
 	for (auto &subnode : node->m_ASTNodes)
 		CompileCodeBlock(cctx, subnode);
-	
-	// TODO: codegen
 }
 
-void CompilePrePassNode(CCompilerContext *cctx, SASTNode *node)
+void CompilePassNode(CCompilerContext *cctx, SASTNode *node)
 {
 	if (node->m_Type == EN_FuncDecl)
 	{
@@ -1176,26 +1186,38 @@ void CompilePrePassNode(CCompilerContext *cctx, SASTNode *node)
 			printf("ERROR: Can not find function %s\n", funcname->m_Value.c_str());
 		else
 		{
-			//printf("%s:%s (deferred compile until first use)\n", NodeTypes[node->m_Type], funcname->m_Value.c_str());
-			/*for (auto &subnode : func->m_CodeBlock)
-				CompileCodeBlock(cctx, subnode);*/
+			// OPTIMIZATION: Only compile functions referred to
+			if (func->m_RefCount != 0)
+			{
+				for (auto &subnode : func->m_CodeBlock)
+					CompileCodeBlock(cctx, subnode);
+			}
 		}
 	}
-	else
+	else	// Non-function blocks
 	{
-		//printf("%s:%s\n", NodeTypes[node->m_Type], node->m_Value.c_str());
+		// TODO: Code gen
+		printf("%s:%s\n", NodeTypes[node->m_Type], node->m_Value.c_str());
+
 		for (auto &subnode : node->m_ASTNodes)
-			CompilePrePassNode(cctx, subnode);
+			CompileCodeBlock(cctx, subnode);
 	}
 }
 
-void CompilePrePass()
+void CompilePass()
 {
-	printf("Compile prepass: Gather function definitions for deferred compilation\n");
+	printf("Compile pass: Code generation\n");
+
+	/*printf("jmp globalinit\n");
+	printf("jmp main\n");
+	printf("halt\n");
+
+	printf(":globalinit\n");
+	printf("ret\n");*/
 
 	CCompilerContext* globalContext = g_context.m_CompilerContextList[0];
 	for (auto &node : g_context.m_ASTNodes)
-		CompilePrePassNode(globalContext, node);
+		CompilePassNode(globalContext, node);
 }
 
 void DebugDumpCodeBlock(CCompilerContext *cctx, SASTNode *node)

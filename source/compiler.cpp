@@ -7,6 +7,7 @@ extern void GatherSymbols(void);
 extern void ScanSymbolAccessErrors(void);
 extern void CompilePrePass(void);
 extern void DebugDump(void);
+extern void CompilePass(void);
 
 int CompileCode(char *_inputname, char * /*_outputname*/)
 {
@@ -20,9 +21,9 @@ int CompileCode(char *_inputname, char * /*_outputname*/)
 	ConvertNodes();
 	GatherSymbols();
 	ScanSymbolAccessErrors();
-	CompilePrePass();
+	CompilePass();
 
-	DebugDump();
+	//DebugDump();
 
 	return 0;
 }
