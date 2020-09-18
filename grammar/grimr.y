@@ -68,7 +68,8 @@ enum EASTNodeType
 	EN_ExpressionList,
 	EN_While,
 	EN_Label,
-	EN_Flow,	 
+	EN_Flow,
+	EN_FlowNZ,
 	EN_Call,
 	EN_StackOp,
 	EN_Decl,
@@ -117,6 +118,7 @@ const char* NodeTypes[]=
 	"EN_While                     ",
 	"EN_Label                     ",
 	"EN_Flow                      ",
+	"EN_FlowNZ                    ",
 	"EN_Call                      ",
 	"EN_StackOp                   ",
 	"EN_Decl                      ",
@@ -249,6 +251,9 @@ enum EOpcode
 	OP_GE,
 	OP_EQ,
 	OP_NEQ,
+	OP_LABEL,
+	OP_JUMP,
+	OP_JUMPNZ,
 };
 
 const char *Opcodes[]={
@@ -265,6 +270,9 @@ const char *Opcodes[]={
 	"cmp.ge   ",
 	"cmp.e    ",
 	"cmp.ne   ",
+	"@label   ",
+	"jmp      ",
+	"jmp.nz   ",
 };
 
 struct SCodeNode
@@ -694,7 +702,7 @@ while_statement
 																									SBaseASTNode *expression=g_context.PopNode();
 																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":topofwhile"));
 																									$$->PushSubNode(expression);
-																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JNZ endofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, "JNZ endofwhile"));
 																									$$->PushSubNode(startnode);
 																									$$->PushSubNode(codeblocknode);
 																									$$->PushSubNode(endnode);
@@ -708,7 +716,7 @@ while_statement
 																									SBaseASTNode *expression=g_context.PopNode();
 																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":topofwhile"));
 																									$$->PushSubNode(expression);
-																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JNZ endofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, "JNZ endofwhile"));
 																									$$->PushSubNode(funcstatement);
 																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JMP topofwhile"));
 																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":endofwhile"));
@@ -720,7 +728,7 @@ while_statement
 																									SBaseASTNode *expression=g_context.PopNode();
 																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":topofwhile"));
 																									$$->PushSubNode(expression);
-																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JNZ endofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, "JNZ endofwhile"));
 																									$$->PushSubNode(funcstatement);
 																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JMP topofwhile"));
 																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":endofwhile"));
@@ -732,7 +740,7 @@ while_statement
 																									SBaseASTNode *expression=g_context.PopNode();
 																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":topofwhile"));
 																									$$->PushSubNode(expression);
-																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JNZ endofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, "JNZ endofwhile"));
 																									$$->PushSubNode(funcstatement);
 																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JMP topofwhile"));
 																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":endofwhile"));
@@ -1277,6 +1285,36 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		}
 		break;
 
+		case EN_Label:
+		{
+			SCodeNode *newop = new SCodeNode();
+			newop->m_Op = OP_LABEL;
+			newop->m_ValueOut = node->m_Value;
+			newop->m_InputCount = 0;
+			g_context.m_CodeNodes.push_back(newop);
+		}
+		break;
+
+		case EN_Flow:
+		{
+			SCodeNode *newop = new SCodeNode();
+			newop->m_Op = OP_JUMP;
+			newop->m_ValueOut = node->m_Value;
+			newop->m_InputCount = 0;
+			g_context.m_CodeNodes.push_back(newop);
+		}
+		break;
+
+		case EN_FlowNZ:
+		{
+			SCodeNode *newop = new SCodeNode();
+			newop->m_Op = OP_JUMPNZ;
+			newop->m_ValueOut = node->m_Value;
+			newop->m_InputCount = 0;
+			g_context.m_CodeNodes.push_back(newop);
+		}
+		break;
+
 		case EN_LessThan:
 		case EN_GreaterThan:
 		case EN_LessEqual:
@@ -1294,9 +1332,6 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		}
 		break;
 
-//		case EN_Flow:
-//		break;
-
 		case EN_AssignmentExpression:
 		{
 			bool arrayassignment = node->m_ASTNodes[0]->m_Type == EN_PostfixArrayExpression ? true:false;
@@ -1310,9 +1345,14 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		}
 		break;
 
+		case EN_InputParam:
+			// TODO: POP?
+		break;
+
 		case EN_Constant:
 		case EN_Identifier:
 		case EN_PrimaryExpression:
+		case EN_PostfixArrayExpression:
 		case EN_Decl:
 			// Nothing to emit
 		break;
