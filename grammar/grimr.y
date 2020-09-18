@@ -245,6 +245,7 @@ enum EOpcode
 	OP_ADD,
 	OP_SUB,
 	OP_STORE,
+	OP_LOAD,
 	OP_LESS,
 	OP_GREATER,
 	OP_LE,
@@ -264,13 +265,14 @@ const char *Opcodes[]={
 	"add      ",
 	"sub      ",
 	"st       ",
+	"ld       ",
 	"cmp.l    ",
 	"cmp.g    ",
 	"cmp.le   ",
 	"cmp.ge   ",
 	"cmp.e    ",
 	"cmp.ne   ",
-	"@label   ",
+	"",
 	"jmp      ",
 	"jmp.nz   ",
 };
@@ -280,6 +282,7 @@ struct SCodeNode
 	EOpcode m_Op{OP_NOOP};
 	std::string m_ValueOut;
 	std::string m_ValueIn[2];
+	int m_OutputCount{1};
 	int m_InputCount{0};
 };
 
@@ -335,6 +338,27 @@ struct SParserContext
 	std::vector<CCompilerContext*> m_CompilerContextList;
 	std::vector<SCodeNode*> m_CodeNodes;
 };
+
+static int g_currentregister = 0;
+static int g_currentautolabel = 0;
+
+std::string PushRegister()
+{
+	uint32_t r = g_currentregister++;
+	return std::string("r"+std::to_string(r));
+}
+
+std::string PopRegister()
+{
+	uint32_t r = --g_currentregister;
+	return std::string("r"+std::to_string(r));
+}
+
+std::string PushLabel()
+{
+	uint32_t r = g_currentautolabel++;
+	return std::string("label#"+std::to_string(r));
+}
 
 void ConvertInputParams(SBaseASTNode *paramlistnode)
 {
@@ -700,50 +724,58 @@ while_statement
 																									SBaseASTNode *codeblocknode=g_context.PopNode();
 																									SBaseASTNode *startnode=g_context.PopNode();
 																									SBaseASTNode *expression=g_context.PopNode();
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":topofwhile"));
+																									std::string toplabel = PushLabel();
+																									std::string endlabel = PushLabel();
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+toplabel));
 																									$$->PushSubNode(expression);
-																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, "JNZ endofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, endlabel));
 																									$$->PushSubNode(startnode);
 																									$$->PushSubNode(codeblocknode);
 																									$$->PushSubNode(endnode);
-																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JMP topofwhile"));
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":endofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Flow, toplabel));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+endlabel));
 																									g_context.PushNode($$);
 																								}
 	| WHILE '(' expression ')' function_statement												{
 																									$$ = new SBaseASTNode(EN_While, "");
 																									SBaseASTNode *funcstatement=g_context.PopNode();
 																									SBaseASTNode *expression=g_context.PopNode();
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":topofwhile"));
+																									std::string toplabel = PushLabel();
+																									std::string endlabel = PushLabel();
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+toplabel));
 																									$$->PushSubNode(expression);
-																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, "JNZ endofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, endlabel));
 																									$$->PushSubNode(funcstatement);
-																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JMP topofwhile"));
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":endofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Flow, toplabel));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+endlabel));
 																									g_context.PushNode($$);
 																								}
 	| WHILE '(' expression ')' expression_statement												{
 																									$$ = new SBaseASTNode(EN_While, "");
 																									SBaseASTNode *funcstatement=g_context.PopNode();
 																									SBaseASTNode *expression=g_context.PopNode();
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":topofwhile"));
+																									std::string toplabel = PushLabel();
+																									std::string endlabel = PushLabel();
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+toplabel));
 																									$$->PushSubNode(expression);
-																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, "JNZ endofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, endlabel));
 																									$$->PushSubNode(funcstatement);
-																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JMP topofwhile"));
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":endofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Flow, toplabel));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+endlabel));
 																									g_context.PushNode($$);
 																								}
 	| WHILE '(' expression ')' variable_declaration_statement									{
 																									$$ = new SBaseASTNode(EN_While, "");
 																									SBaseASTNode *funcstatement=g_context.PopNode();
 																									SBaseASTNode *expression=g_context.PopNode();
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":topofwhile"));
+																									std::string toplabel = PushLabel();
+																									std::string endlabel = PushLabel();
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+toplabel));
 																									$$->PushSubNode(expression);
-																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, "JNZ endofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, endlabel));
 																									$$->PushSubNode(funcstatement);
-																									$$->PushSubNode(new SBaseASTNode(EN_Flow, "JMP topofwhile"));
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, ":endofwhile"));
+																									$$->PushSubNode(new SBaseASTNode(EN_Flow, toplabel));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+endlabel));
 																									g_context.PushNode($$);
 																								}
 	;
@@ -1214,6 +1246,12 @@ void ScanSymbolAccessErrors()
 	}
 }
 
+std::string PopLabel()
+{
+	uint32_t r = --g_currentautolabel;
+	return std::string("label#"+std::to_string(r));
+}
+
 void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 {
 	// TODO: Code gen
@@ -1232,11 +1270,25 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		case EN_Add:
 		case EN_Sub:
 		{
+			SCodeNode *leftop = new SCodeNode();
+			leftop->m_Op = OP_LOAD;
+			leftop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : PopRegister();
+			leftop->m_ValueOut = PushRegister();
+			leftop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(leftop);
+
+			SCodeNode *rightop = new SCodeNode();
+			rightop->m_Op = OP_LOAD;
+			rightop->m_ValueIn[0] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : PopRegister();
+			rightop->m_ValueOut = PushRegister();
+			rightop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(rightop);
+
 			SCodeNode *newop = new SCodeNode();
 			newop->m_Op = EOpcode(int(OP_MUL) + (node->m_Type-EN_Mul));
-			newop->m_ValueOut = "R";
-			newop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : "R";
-			newop->m_ValueIn[1] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_ValueIn[0] = PopRegister();
+			newop->m_ValueIn[1] = PopRegister();
+			newop->m_ValueOut = PushRegister();
 			newop->m_InputCount = 2;
 			g_context.m_CodeNodes.push_back(newop);
 		}
@@ -1279,11 +1331,25 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		case EN_Equal:
 		case EN_NotEqual:
 		{
+			SCodeNode *leftop = new SCodeNode();
+			leftop->m_Op = OP_LOAD;
+			leftop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : PopRegister();
+			leftop->m_ValueOut = PushRegister();
+			leftop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(leftop);
+
+			SCodeNode *rightop = new SCodeNode();
+			rightop->m_Op = OP_LOAD;
+			rightop->m_ValueIn[0] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : PopRegister();
+			rightop->m_ValueOut = PushRegister();
+			rightop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(rightop);
+
 			SCodeNode *newop = new SCodeNode();
 			newop->m_Op = EOpcode(int(OP_LESS) + (node->m_Type-EN_LessThan));
-			newop->m_ValueOut = "R";
-			newop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : "R";
-			newop->m_ValueIn[1] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_ValueIn[0] = PopRegister();
+			newop->m_ValueIn[1] = PopRegister();
+			newop->m_OutputCount = 0;
 			newop->m_InputCount = 2;
 			g_context.m_CodeNodes.push_back(newop);
 		}
@@ -1293,10 +1359,18 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		{
 			bool arrayassignment = node->m_ASTNodes[0]->m_Type == EN_PostfixArrayExpression ? true:false;
 			std::string target = arrayassignment ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_ASTNodes[0]->m_Value + "+" + node->m_ASTNodes[0]->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value;
+
+			SCodeNode *addrop = new SCodeNode();
+			addrop->m_Op = OP_LOAD;
+			addrop->m_ValueIn[0] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[") + node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value + std::string("]") : (/*node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_String ? "string#?" :*/ node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value)) : PopRegister();
+			addrop->m_ValueOut = PushRegister();
+			addrop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(addrop);
+
 			SCodeNode *newop = new SCodeNode();
 			newop->m_Op = OP_STORE;
 			newop->m_ValueOut = std::string("[") + target + std::string("]");
-			newop->m_ValueIn[0] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[") + node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value + std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_ValueIn[0] = PopRegister();
 			newop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(newop);
 		}
@@ -1311,13 +1385,16 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		case EN_PrimaryExpression:
 		case EN_PostfixArrayExpression:
 		case EN_Decl:
+		case EN_Prologue:
+		case EN_Epilogue:
+		case EN_Statement:
 			// Nothing to emit
 		break;
 
 		default:
 			SCodeNode *newop = new SCodeNode();
 			newop->m_Op = OP_NOOP;
-			newop->m_ValueOut = NodeTypes[node->m_Type];
+			newop->m_ValueOut = std::string("// ") + NodeTypes[node->m_Type];
 			newop->m_InputCount = 0;
 			g_context.m_CodeNodes.push_back(newop);
 		break;
@@ -1407,9 +1484,17 @@ void DebugDumpNode(CCompilerContext *cctx, SASTNode *node)
 void DebugDumpCodeNode(CCompilerContext *cctx, SCodeNode *codenode)
 {
 	//printf("%s %s,%s,%s\n", Opcodes[codenode->m_Op], codenode->m_ValueOut.c_str(), codenode->m_ValueIn1.c_str(), codenode->m_ValueIn2.c_str());
-	printf("%s %s", Opcodes[codenode->m_Op], codenode->m_ValueOut.c_str());
+	if (codenode->m_OutputCount)
+		printf("%s %s", Opcodes[codenode->m_Op], codenode->m_ValueOut.c_str());
+	else
+		printf("%s ", Opcodes[codenode->m_Op]);
 	for (int i=0;i<codenode->m_InputCount;++i)
-		printf(", %s", codenode->m_ValueIn[i].c_str());
+	{
+		if (codenode->m_OutputCount==0 && i==0)
+			printf("%s", codenode->m_ValueIn[i].c_str());
+		else
+			printf(", %s", codenode->m_ValueIn[i].c_str());
+	}
 	printf("\n");
 
 	//for (auto &subnode : node->m_CodeNodes)
