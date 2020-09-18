@@ -1169,7 +1169,7 @@ void ScanSymbolAccessErrors()
 void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 {
 	// TODO: Code gen
-	printf("%s:%s\n", NodeTypes[node->m_Type], node->m_Value.c_str());
+	printf("\t%s:%s\n", NodeTypes[node->m_Type], node->m_Value.c_str());
 
 	for (auto &subnode : node->m_ASTNodes)
 		CompileCodeBlock(cctx, subnode);
@@ -1186,9 +1186,14 @@ void CompilePassNode(CCompilerContext *cctx, SASTNode *node)
 			printf("ERROR: Can not find function %s\n", funcname->m_Value.c_str());
 		else
 		{
+			// TODO: Code gen
+			printf("%s (ref==%d):\n", func->m_Name.c_str(), func->m_RefCount);
+
 			// OPTIMIZATION: Only compile functions referred to
 			if (func->m_RefCount != 0)
 			{
+				for (auto &subnode : func->m_InputParameters)
+					CompileCodeBlock(cctx, subnode);
 				for (auto &subnode : func->m_CodeBlock)
 					CompileCodeBlock(cctx, subnode);
 			}
