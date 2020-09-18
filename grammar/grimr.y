@@ -1408,12 +1408,32 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 			// TODO: push parameters into stack
 			for (auto &param : node->m_ASTNodes)
 			{
-				SCodeNode *callparamop = new SCodeNode();
-				callparamop->m_Op = OP_PUSH;
-				callparamop->m_ValueIn[0] = param->m_ASTNodes[0]->m_Value;
-				callparamop->m_OutputCount = 0;
-				callparamop->m_InputCount = 1;
-				g_context.m_CodeNodes.push_back(callparamop);
+				if (param->m_Type == EN_PrimaryExpression)
+				{
+					SCodeNode *regop = new SCodeNode();
+					regop->m_Op = OP_LOAD;
+					regop->m_ValueOut = PushRegister();
+					regop->m_ValueIn[0] = param->m_ASTNodes[0]->m_Value;
+					regop->m_OutputCount = 1;
+					regop->m_InputCount = 1;
+					g_context.m_CodeNodes.push_back(regop);
+
+					SCodeNode *callparamop = new SCodeNode();
+					callparamop->m_Op = OP_PUSH;
+					callparamop->m_ValueIn[0] = PopRegister();
+					callparamop->m_OutputCount = 0;
+					callparamop->m_InputCount = 1;
+					g_context.m_CodeNodes.push_back(callparamop);
+				}
+				else
+				{
+					SCodeNode *callparamop = new SCodeNode();
+					callparamop->m_Op = OP_PUSH;
+					callparamop->m_ValueIn[0] = PopRegister();
+					callparamop->m_OutputCount = 0;
+					callparamop->m_InputCount = 1;
+					g_context.m_CodeNodes.push_back(callparamop);
+				}
 			}
 
 			// Call the function
