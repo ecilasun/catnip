@@ -239,11 +239,11 @@ struct SSymbol
 enum EOpcode
 {
 	OP_NOOP,
-	OP_ADD,
-	OP_SUB,
 	OP_MUL,
 	OP_DIV,
 	OP_MOD,
+	OP_ADD,
+	OP_SUB,
 	OP_STORE,
 	OP_LESS,
 	OP_GREATER,
@@ -258,11 +258,11 @@ enum EOpcode
 
 const char *Opcodes[]={
 	"nop      ",
-	"add      ",
-	"sub      ",
 	"mul      ",
 	"div      ",
 	"mod      ",
+	"add      ",
+	"sub      ",
 	"st       ",
 	"cmp.l    ",
 	"cmp.g    ",
@@ -1226,57 +1226,14 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 
 	switch (node->m_Type)
 	{
+		case EN_Mul:
+		case EN_Div:
+		case EN_Mod:
 		case EN_Add:
-		{
-			SCodeNode *newop = new SCodeNode();
-			newop->m_Op = OP_ADD;
-			newop->m_ValueOut = "R";
-			newop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : "R";
-			newop->m_ValueIn[1] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : "R";
-			newop->m_InputCount = 2;
-			g_context.m_CodeNodes.push_back(newop);
-		}
-		break;
-
 		case EN_Sub:
 		{
 			SCodeNode *newop = new SCodeNode();
-			newop->m_Op = OP_SUB;
-			newop->m_ValueOut = "R";
-			newop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : "R";
-			newop->m_ValueIn[1] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : "R";
-			newop->m_InputCount = 2;
-			g_context.m_CodeNodes.push_back(newop);
-		}
-
-		case EN_Mul:
-		{
-			SCodeNode *newop = new SCodeNode();
-			newop->m_Op = OP_MUL;
-			newop->m_ValueOut = "R";
-			newop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : "R";
-			newop->m_ValueIn[1] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : "R";
-			newop->m_InputCount = 2;
-			g_context.m_CodeNodes.push_back(newop);
-		}
-		break;
-
-		case EN_Div:
-		{
-			SCodeNode *newop = new SCodeNode();
-			newop->m_Op = OP_DIV;
-			newop->m_ValueOut = "R";
-			newop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : "R";
-			newop->m_ValueIn[1] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : "R";
-			newop->m_InputCount = 2;
-			g_context.m_CodeNodes.push_back(newop);
-		}
-		break;
-
-		case EN_Mod:
-		{
-			SCodeNode *newop = new SCodeNode();
-			newop->m_Op = OP_MOD;
+			newop->m_Op = EOpcode(int(OP_MUL) + (node->m_Type-EN_Mul));
 			newop->m_ValueOut = "R";
 			newop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : "R";
 			newop->m_ValueIn[1] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : "R";
@@ -1450,9 +1407,9 @@ void DebugDumpNode(CCompilerContext *cctx, SASTNode *node)
 void DebugDumpCodeNode(CCompilerContext *cctx, SCodeNode *codenode)
 {
 	//printf("%s %s,%s,%s\n", Opcodes[codenode->m_Op], codenode->m_ValueOut.c_str(), codenode->m_ValueIn1.c_str(), codenode->m_ValueIn2.c_str());
-	printf("%s %s ", Opcodes[codenode->m_Op], codenode->m_ValueOut.c_str());
+	printf("%s %s", Opcodes[codenode->m_Op], codenode->m_ValueOut.c_str());
 	for (int i=0;i<codenode->m_InputCount;++i)
-		printf(",%s ", codenode->m_ValueIn[i].c_str());
+		printf(", %s", codenode->m_ValueIn[i].c_str());
 	printf("\n");
 
 	//for (auto &subnode : node->m_CodeNodes)
