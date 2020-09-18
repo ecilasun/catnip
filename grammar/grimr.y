@@ -71,6 +71,7 @@ enum EASTNodeType
 	EN_Flow,
 	EN_FlowNZ,
 	EN_Call,
+	EN_Return,
 	EN_StackOp,
 	EN_Decl,
 	EN_FuncDecl,
@@ -120,6 +121,7 @@ const char* NodeTypes[]=
 	"EN_Flow                      ",
 	"EN_FlowNZ                    ",
 	"EN_Call                      ",
+	"EN_Return                    ",
 	"EN_StackOp                   ",
 	"EN_Decl                      ",
 	"EN_FuncDecl                  ",
@@ -255,6 +257,8 @@ enum EOpcode
 	OP_LABEL,
 	OP_JUMP,
 	OP_JUMPNZ,
+	OP_CALL,
+	OP_RETURN,
 };
 
 const char *Opcodes[]={
@@ -275,6 +279,8 @@ const char *Opcodes[]={
 	"",
 	"jmp      ",
 	"jmp.nz   ",
+	"call     ",
+	"ret      ",
 };
 
 struct SCodeNode
@@ -944,10 +950,13 @@ function_def
 																									// Add this symbol to the list of known symbols
 																									SSymbol &sym = g_context.DeclareSymbol(funcnamenode->m_Value);
 
+																									SBaseASTNode *returnblock = new SBaseASTNode(EN_Return, "");
+
 																									$$->PushSubNode(funcnamenode);
 																									$$->PushSubNode(paramlist);
 																									$$->PushSubNode(blockbegin);
 																									$$->PushSubNode(codeblock);
+																									$$->PushSubNode(returnblock);
 																									$$->PushSubNode(blockend);
 																									g_context.PushNode($$);
 																								}
@@ -1074,7 +1083,8 @@ void AddFunction(CCompilerContext *cctx, SASTNode *node)
 	SASTNode *paramsnode = node->m_ASTNodes[1];
 	//SASTNode *prologuenode = node->m_ASTNodes[2];
 	SASTNode *codenode = node->m_ASTNodes[3];
-	//SASTNode *epiloguenode = node->m_ASTNodes[4];
+	SASTNode *returnnode = node->m_ASTNodes[4];
+	//SASTNode *epiloguenode = node->m_ASTNodes[5];
 
 	//printf("Adding function '%s'\n", namenode->m_Value.c_str());
 
@@ -1089,11 +1099,14 @@ void AddFunction(CCompilerContext *cctx, SASTNode *node)
 	GatherParamBlock(cctx, newfunction, paramsnode);
 	//GatherPrologue(cctx, newfunction, prologuenode);
 	GatherCodeBlock(cctx, newfunction, codenode);
+	GatherCodeBlock(cctx, newfunction, returnnode);
 	//GatherEpilogue(cctx, newfunction, epiloguenode);
 
 	cctx->m_Functions.push_back(newfunction);
 
 	// Remove the epilogue
+	node->m_ASTNodes.erase(node->m_ASTNodes.begin()+5);
+	// Remove return block
 	node->m_ASTNodes.erase(node->m_ASTNodes.begin()+4);
 	// Remove the code block
 	node->m_ASTNodes.erase(node->m_ASTNodes.begin()+3);
@@ -1376,8 +1389,32 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		}
 		break;
 
+		case EN_Return:
+		{
+			SCodeNode *retop = new SCodeNode();
+			retop->m_Op = OP_RETURN;
+			retop->m_OutputCount = 0;
+			retop->m_InputCount = 0;
+			g_context.m_CodeNodes.push_back(retop);
+		}
+		break;
+
+		case EN_Call:
+		{
+			// TODO: push parameters into stack
+
+			// Call the function
+			SCodeNode *addrop = new SCodeNode();
+			addrop->m_Op = OP_CALL;
+			addrop->m_ValueIn[0] = node->m_Value;
+			addrop->m_OutputCount = 0;
+			addrop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(addrop);
+		}
+		break;
+
 		case EN_InputParam:
-			// TODO: POP?
+			// TODO: pop input parameters from stack into local variables
 		break;
 
 		case EN_Constant:
@@ -1418,6 +1455,14 @@ void CompilePassNode(CCompilerContext *cctx, SASTNode *node)
 			// OPTIMIZATION: Only compile functions referred to
 			if (func->m_RefCount != 0)
 			{
+				// Insert label for function
+				SCodeNode *labelop = new SCodeNode();
+				labelop->m_Op = OP_LABEL;
+				labelop->m_ValueOut = std::string(":")+funcname->m_Value;
+				labelop->m_InputCount = 0;
+				g_context.m_CodeNodes.push_back(labelop);
+
+				// Compile the code
 				for (auto &subnode : func->m_InputParameters)
 					CompileCodeBlock(cctx, subnode);
 				for (auto &subnode : func->m_CodeBlock)
