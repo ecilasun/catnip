@@ -23,7 +23,7 @@ int CompileCode(char *_inputname, char * /*_outputname*/)
 	ScanSymbolAccessErrors();
 	CompilePass();
 
-	//DebugDump();
+	DebugDump();
 
 	return 0;
 }

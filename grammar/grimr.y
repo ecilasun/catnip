@@ -37,7 +37,6 @@ uint32_t HashString(const char *_str)
 enum EASTNodeType
 {
 	EN_Default,
-	EN_Symbol,
 	EN_Identifier,
 	EN_FunctionName,
 	EN_Constant,
@@ -86,7 +85,6 @@ enum EASTNodeType
 const char* NodeTypes[]=
 {
 	"EN_Default                   ",
-	"EN_Symbol                    ",
 	"EN_Identifier                ",
 	"EN_FunctionName              ",
 	"EN_Constant                  ",
@@ -236,6 +234,47 @@ struct SSymbol
 	uint32_t m_Address{0};
 };
 
+enum EOpcode
+{
+	OP_NOOP,
+	OP_ADD,
+	OP_SUB,
+	OP_MUL,
+	OP_DIV,
+	OP_MOD,
+	OP_STORE,
+	OP_LESS,
+	OP_GREATER,
+	OP_LE,
+	OP_GE,
+	OP_EQ,
+	OP_NEQ,
+};
+
+const char *Opcodes[]={
+	"nop      ",
+	"add      ",
+	"sub      ",
+	"mul      ",
+	"div      ",
+	"mod      ",
+	"st       ",
+	"cmp.l    ",
+	"cmp.g    ",
+	"cmp.le   ",
+	"cmp.ge   ",
+	"cmp.e    ",
+	"cmp.ne   ",
+};
+
+struct SCodeNode
+{
+	EOpcode m_Op{OP_NOOP};
+	std::string m_ValueOut;
+	std::string m_ValueIn[2];
+	int m_InputCount{0};
+};
+
 struct SParserContext
 {
 	SParserContext()
@@ -286,6 +325,7 @@ struct SParserContext
 	std::vector<SASTNode*> m_ASTNodes;
 	std::map<uint32_t, SSymbol> m_SymbolTable;
 	std::vector<CCompilerContext*> m_CompilerContextList;
+	std::vector<SCodeNode*> m_CodeNodes;
 };
 
 void ConvertInputParams(SBaseASTNode *paramlistnode)
@@ -1169,10 +1209,122 @@ void ScanSymbolAccessErrors()
 void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 {
 	// TODO: Code gen
-	printf("\t%s:%s\n", NodeTypes[node->m_Type], node->m_Value.c_str());
+	//printf("\t%s:%s\n", NodeTypes[node->m_Type], node->m_Value.c_str());
 
 	for (auto &subnode : node->m_ASTNodes)
 		CompileCodeBlock(cctx, subnode);
+
+	// Do this after child node iteration to ensure deepest node gets pulled first
+
+	switch (node->m_Type)
+	{
+		case EN_Add:
+		{
+			SCodeNode *newop = new SCodeNode();
+			newop->m_Op = OP_ADD;
+			newop->m_ValueOut = "R";
+			newop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_ValueIn[1] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_InputCount = 2;
+			g_context.m_CodeNodes.push_back(newop);
+		}
+		break;
+
+		case EN_Sub:
+		{
+			SCodeNode *newop = new SCodeNode();
+			newop->m_Op = OP_SUB;
+			newop->m_ValueOut = "R";
+			newop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_ValueIn[1] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_InputCount = 2;
+			g_context.m_CodeNodes.push_back(newop);
+		}
+
+		case EN_Mul:
+		{
+			SCodeNode *newop = new SCodeNode();
+			newop->m_Op = OP_MUL;
+			newop->m_ValueOut = "R";
+			newop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_ValueIn[1] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_InputCount = 2;
+			g_context.m_CodeNodes.push_back(newop);
+		}
+		break;
+
+		case EN_Div:
+		{
+			SCodeNode *newop = new SCodeNode();
+			newop->m_Op = OP_DIV;
+			newop->m_ValueOut = "R";
+			newop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_ValueIn[1] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_InputCount = 2;
+			g_context.m_CodeNodes.push_back(newop);
+		}
+		break;
+
+		case EN_Mod:
+		{
+			SCodeNode *newop = new SCodeNode();
+			newop->m_Op = OP_MOD;
+			newop->m_ValueOut = "R";
+			newop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_ValueIn[1] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_InputCount = 2;
+			g_context.m_CodeNodes.push_back(newop);
+		}
+		break;
+
+		case EN_LessThan:
+		case EN_GreaterThan:
+		case EN_LessEqual:
+		case EN_GreaterEqual:
+		case EN_Equal:
+		case EN_NotEqual:
+		{
+			SCodeNode *newop = new SCodeNode();
+			newop->m_Op = EOpcode(int(OP_LESS) + (node->m_Type-EN_LessThan));
+			newop->m_ValueOut = "R";
+			newop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_ValueIn[1] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : "R";
+			newop->m_InputCount = 2;
+			g_context.m_CodeNodes.push_back(newop);
+		}
+		break;
+
+//		case EN_Flow:
+//		break;
+
+		case EN_AssignmentExpression:
+		{
+			bool arrayassignment = node->m_ASTNodes[0]->m_Type == EN_PostfixArrayExpression ? true:false;
+			std::string target = arrayassignment ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_ASTNodes[0]->m_Value + "+" + node->m_ASTNodes[0]->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value;
+			SCodeNode *newop = new SCodeNode();
+			newop->m_Op = OP_STORE;
+			newop->m_ValueOut = std::string("[") + target + std::string("]");
+			newop->m_ValueIn[0] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? std::string("[") + node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value + std::string("]") : "R";
+			newop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(newop);
+		}
+		break;
+
+		case EN_Constant:
+		case EN_Identifier:
+		case EN_PrimaryExpression:
+		case EN_Decl:
+			// Nothing to emit
+		break;
+
+		default:
+			SCodeNode *newop = new SCodeNode();
+			newop->m_Op = OP_NOOP;
+			newop->m_ValueOut = NodeTypes[node->m_Type];
+			newop->m_InputCount = 0;
+			g_context.m_CodeNodes.push_back(newop);
+		break;
+	}
 }
 
 void CompilePassNode(CCompilerContext *cctx, SASTNode *node)
@@ -1187,7 +1339,7 @@ void CompilePassNode(CCompilerContext *cctx, SASTNode *node)
 		else
 		{
 			// TODO: Code gen
-			printf("%s (ref==%d):\n", func->m_Name.c_str(), func->m_RefCount);
+			//printf("%s (ref==%d):\n", func->m_Name.c_str(), func->m_RefCount);
 
 			// OPTIMIZATION: Only compile functions referred to
 			if (func->m_RefCount != 0)
@@ -1202,7 +1354,7 @@ void CompilePassNode(CCompilerContext *cctx, SASTNode *node)
 	else	// Non-function blocks
 	{
 		// TODO: Code gen
-		printf("%s:%s\n", NodeTypes[node->m_Type], node->m_Value.c_str());
+		//printf("%s:%s\n", NodeTypes[node->m_Type], node->m_Value.c_str());
 
 		for (auto &subnode : node->m_ASTNodes)
 			CompileCodeBlock(cctx, subnode);
@@ -1255,13 +1407,28 @@ void DebugDumpNode(CCompilerContext *cctx, SASTNode *node)
 	}
 }
 
+void DebugDumpCodeNode(CCompilerContext *cctx, SCodeNode *codenode)
+{
+	//printf("%s %s,%s,%s\n", Opcodes[codenode->m_Op], codenode->m_ValueOut.c_str(), codenode->m_ValueIn1.c_str(), codenode->m_ValueIn2.c_str());
+	printf("%s %s ", Opcodes[codenode->m_Op], codenode->m_ValueOut.c_str());
+	for (int i=0;i<codenode->m_InputCount;++i)
+		printf(",%s ", codenode->m_ValueIn[i].c_str());
+	printf("\n");
+
+	//for (auto &subnode : node->m_CodeNodes)
+	//	DebugDumpCodeNode(cctx, subnode);
+}
+
 void DebugDump()
 {
 	printf("Debug dump\n");
 
 	CCompilerContext* globalContext = g_context.m_CompilerContextList[0];
-	for (auto &node : g_context.m_ASTNodes)
-		DebugDumpNode(globalContext, node);
+	//for (auto &node : g_context.m_ASTNodes)
+	//	DebugDumpNode(globalContext, node);
+
+	for (auto &codenode : g_context.m_CodeNodes)
+		DebugDumpCodeNode(globalContext, codenode);
 }
 
 extern int yylineno;

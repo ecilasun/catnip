@@ -9,13 +9,13 @@ def DrawRect(posX, posY, width, height)
     var spanX, spanY;
 
     spanY = posY;
-    while (spanY<spanY+height)
+    while (spanY<posY+height)
     {
         spanX = posX;
-        while (spanX<spanX+width)
+        while (spanX<posX+width)
         {
             var address;
-            address = spanX + spanY;
+            address = spanX + spanY*320;
             // Array operator can alias a variable
             // as a pointer at that address if used
             // on a non-array integer.
