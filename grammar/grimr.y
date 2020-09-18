@@ -1339,7 +1339,7 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 			SCodeNode *newop = new SCodeNode();
 			newop->m_Op = OP_STORE;
 			newop->m_ValueOut = std::string("[") + target + std::string("]");
-			newop->m_ValueIn[0] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? std::string("[") + node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value + std::string("]") : "R";
+			newop->m_ValueIn[0] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Constant ? node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value : (std::string("[") + node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value + std::string("]"))) : "R";
 			newop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(newop);
 		}
