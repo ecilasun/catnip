@@ -259,6 +259,8 @@ enum EOpcode
 	OP_JUMPNZ,
 	OP_CALL,
 	OP_RETURN,
+	OP_PUSH,
+	OP_POP,
 };
 
 const char *Opcodes[]={
@@ -281,6 +283,8 @@ const char *Opcodes[]={
 	"jmp.nz   ",
 	"call     ",
 	"ret      ",
+	"push     ",
+	"pop      ",
 };
 
 struct SCodeNode
@@ -1402,6 +1406,15 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		case EN_Call:
 		{
 			// TODO: push parameters into stack
+			for (auto &param : node->m_ASTNodes)
+			{
+				SCodeNode *callparamop = new SCodeNode();
+				callparamop->m_Op = OP_PUSH;
+				callparamop->m_ValueIn[0] = param->m_ASTNodes[0]->m_Value;
+				callparamop->m_OutputCount = 0;
+				callparamop->m_InputCount = 1;
+				g_context.m_CodeNodes.push_back(callparamop);
+			}
 
 			// Call the function
 			SCodeNode *addrop = new SCodeNode();
@@ -1414,9 +1427,19 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		break;
 
 		case EN_InputParam:
+		{
 			// TODO: pop input parameters from stack into local variables
+
+			SCodeNode *paramop = new SCodeNode();
+			paramop->m_Op = OP_POP;
+			paramop->m_ValueIn[0] = node->m_Value;
+			paramop->m_OutputCount = 0;
+			paramop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(paramop);
+		}
 		break;
 
+		case EN_InputParamList:
 		case EN_Constant:
 		case EN_Identifier:
 		case EN_PrimaryExpression:
