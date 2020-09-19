@@ -76,6 +76,8 @@ enum EASTNodeType
 	EN_Return,
 	EN_StackOp,
 	EN_Decl,
+	EN_DeclArray,
+	EN_ArrayJunction,
 	EN_FuncDecl,
 	EN_InputParamList,
 	EN_InputParam,
@@ -126,6 +128,8 @@ const char* NodeTypes[]=
 	"EN_Return                    ",
 	"EN_StackOp                   ",
 	"EN_Decl                      ",
+	"EN_DeclArray                 ",
+	"EN_ArrayJunction             ",
 	"EN_FuncDecl                  ",
 	"EN_InputParamList            ",
 	"EN_InputParam                ",
@@ -191,7 +195,8 @@ public:
 struct SVariable
 {
 	std::string m_Name;
-	uint32_t m_Hash;
+	uint32_t m_Hash{0};
+	uint32_t m_Dimension{1};
 	uint32_t m_InitializedValue{0};
 	int m_ScopeDepth{0};
 };
@@ -806,6 +811,22 @@ variable_declaration
 																									$$->PushSubNode(symbolnode);
 																									g_context.PushNode($$);
 																								}
+	| VAR simple_identifier '[' expression ']'													{
+																									SBaseASTNode *expressionnode=g_context.PopNode();
+																									SBaseASTNode *symbolnode=g_context.PopNode();
+
+																									// Add this symbol to the list of known symbols
+																									SSymbol &sym = g_context.DeclareSymbol(symbolnode->m_Value);
+
+																									// Make a junction of variable name and expression node (array dimension)
+																									SBaseASTNode *junc = new SBaseASTNode(EN_ArrayJunction, "");
+																									junc->PushSubNode(symbolnode);
+																									junc->PushSubNode(expressionnode);
+
+																									$$ = new SBaseASTNode(EN_DeclArray, "");
+																									$$->PushSubNode(junc);
+																									g_context.PushNode($$);
+																								}
 	| variable_declaration ',' simple_identifier												{
 																									// Append rest of the list items to primary {var} node
 																									SBaseASTNode *symbolnode=g_context.PopNode();
@@ -816,14 +837,11 @@ variable_declaration
 																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
 																									varnode->PushSubNode(symbolnode);
 																								}
+	;
 
 variable_declaration_statement
-	: variable_declaration ';'																	/*{
-																									$$ = new SBaseASTNode(EN_Decl, "");
-																									SBaseASTNode *n0=g_context.PopNode();
-																									$$->PushSubNode(n0);
-																									g_context.PushNode($$);
-																								}*/
+	: variable_declaration ';'																	/*{}*/
+	;
 
 expression_list
 	: expression																				{
@@ -1057,6 +1075,27 @@ void AddSymbols(CCompilerContext *cctx, SASTNode *node)
 	}
 }
 
+void AddArraySymbols(CCompilerContext *cctx, SASTNode *node)
+{
+	for (auto &subnode : node->m_ASTNodes)
+		AddArraySymbols(cctx, subnode);
+
+	if (node->m_Type == EN_ArrayJunction)
+	{
+		//printf("Adding array variable '%s:%s[%d]' @%d\n", cctx->m_CurrentFunctionName.c_str(), node->m_ASTNodes[0]->m_Value.c_str(), dim, cctx->m_ScopeDepth);
+
+		int dim = std::stoi(node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value, 0, 16);
+		SVariable *newvariable = new SVariable();
+		newvariable->m_Name = cctx->m_CurrentFunctionName + ":" + node->m_ASTNodes[0]->m_Value;
+		newvariable->m_Hash = HashString(newvariable->m_Name.c_str());
+		newvariable->m_ScopeDepth = cctx->m_ScopeDepth;
+		newvariable->m_Dimension = dim;
+		//newvariable->m_InitializedValue = ?; Result of assingment declaration's expression node (RHS)
+
+		cctx->m_Variables.push_back(newvariable);
+	}
+}
+
 void AddInputParameters(CCompilerContext *cctx, SASTNode *node)
 {
 	for (auto &subnode : node->m_ASTNodes)
@@ -1179,6 +1218,10 @@ void GatherEntry(CCompilerContext *cctx, SASTNode *node)
 
 		case EN_Decl:
 			AddSymbols(cctx, node);
+		break;
+
+		case EN_DeclArray:
+			AddArraySymbols(cctx, node);
 		break;
 
 		case EN_FuncDecl:
@@ -1471,6 +1514,7 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		case EN_PrimaryExpression:
 		case EN_PostfixArrayExpression:
 		case EN_Decl:
+		case EN_DeclArray:
 		case EN_Prologue:
 		case EN_Epilogue:
 		case EN_Statement:
@@ -1571,8 +1615,9 @@ void DumpSymbolTable(FILE *fp, CCompilerContext *cctx)
 	fprintf(fp, "---------------------------\n\n");
 	for (auto &var : cctx->m_Variables)
 	{
-		fprintf(fp, "@LABEL %s\n", var->m_Name.c_str());
-		fprintf(fp, "@DW 0x0000 0x0000\n");
+		fprintf(fp, "@LABEL %s\n", var->m_Name.c_str());\
+		for (int i=0;i<var->m_Dimension;++i)
+			fprintf(fp, "@DW 0x0000 0x0000\n");
 	}
 }
 

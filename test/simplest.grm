@@ -2,7 +2,7 @@
 
 var cursorX, cursorY;
 var VRAM;
-var banana;
+var banana[16];
 
 def DrawRect(posX, posY, width, height)
 {
