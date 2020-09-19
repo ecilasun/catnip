@@ -1629,6 +1629,7 @@ void DumpSymbolTable(FILE *fp, CCompilerContext *cctx)
 	fprintf(fp, "\n---------------------------\n");
 	fprintf(fp, "        Symbols            \n");
 	fprintf(fp, "---------------------------\n\n");
+
 	for (auto &var : cctx->m_Variables)
 	{
 		fprintf(fp, "@LABEL %s\n", var->m_Name.c_str());\
