@@ -29,7 +29,7 @@ def DrawRect(posX, posY, width, height)
 def main()
 {
     VRAM = 0x80000000;
-    VRAM[4] = banana[4/2];
-    //DrawRect(512, 384, 128, 96);
-    //DrawRect(1, 2, 3, 4);
+
+    DrawRect(512, 384, 128, 96);
+    DrawRect(1, 2, 3, 4);
 }
