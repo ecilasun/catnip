@@ -8,8 +8,9 @@ extern void ScanSymbolAccessErrors(void);
 extern void CompilePrePass(void);
 extern void DebugDump(void);
 extern void CompilePass(void);
+extern void SaveAsm(const char *filename);
 
-int CompileCode(char *_inputname, char * /*_outputname*/)
+int CompileCode(char *_inputname, char *_outputname)
 {
 	// Test Flex/Bison code
 	extern FILE *yyin;
@@ -22,6 +23,8 @@ int CompileCode(char *_inputname, char * /*_outputname*/)
 	GatherSymbols();
 	ScanSymbolAccessErrors();
 	CompilePass();
+
+	SaveAsm(_outputname);
 
 	DebugDump();
 

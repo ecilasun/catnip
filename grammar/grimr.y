@@ -242,6 +242,7 @@ struct SSymbol
 
 enum EOpcode
 {
+	OP_EMPTY,
 	OP_NOOP,
 	OP_MUL,
 	OP_DIV,
@@ -266,6 +267,7 @@ enum EOpcode
 };
 
 const char *Opcodes[]={
+	"",
 	"nop   ",
 	"mul   ",
 	"div   ",
@@ -366,16 +368,10 @@ std::string PopRegister()
 	return std::string("r"+std::to_string(r));
 }
 
-std::string PushLabel()
+std::string PushLabel(std::string labelname)
 {
 	uint32_t r = g_currentautolabel++;
-	return std::string("label#"+std::to_string(r));
-}
-
-std::string PopLabel()
-{
-	uint32_t r = --g_currentautolabel;
-	return std::string("label#"+std::to_string(r));
+	return std::string(labelname+std::to_string(r));
 }
 
 void ConvertInputParams(SBaseASTNode *paramlistnode)
@@ -743,8 +739,8 @@ while_statement
 																									SBaseASTNode *codeblocknode=g_context.PopNode();
 																									SBaseASTNode *startnode=g_context.PopNode();
 																									SBaseASTNode *expression=g_context.PopNode();
-																									std::string toplabel = PushLabel();
-																									std::string endlabel = PushLabel();
+																									std::string toplabel = PushLabel("while");
+																									std::string endlabel = PushLabel("endwhile");
 																									$$->PushSubNode(new SBaseASTNode(EN_Label, toplabel));
 																									$$->PushSubNode(expression);
 																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, endlabel));
@@ -759,8 +755,8 @@ while_statement
 																									$$ = new SBaseASTNode(EN_While, "");
 																									SBaseASTNode *funcstatement=g_context.PopNode();
 																									SBaseASTNode *expression=g_context.PopNode();
-																									std::string toplabel = PushLabel();
-																									std::string endlabel = PushLabel();
+																									std::string toplabel = PushLabel("while");
+																									std::string endlabel = PushLabel("endwhile");
 																									$$->PushSubNode(new SBaseASTNode(EN_Label, toplabel));
 																									$$->PushSubNode(expression);
 																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, endlabel));
@@ -773,8 +769,8 @@ while_statement
 																									$$ = new SBaseASTNode(EN_While, "");
 																									SBaseASTNode *funcstatement=g_context.PopNode();
 																									SBaseASTNode *expression=g_context.PopNode();
-																									std::string toplabel = PushLabel();
-																									std::string endlabel = PushLabel();
+																									std::string toplabel = PushLabel("while");
+																									std::string endlabel = PushLabel("endwhile");
 																									$$->PushSubNode(new SBaseASTNode(EN_Label, toplabel));
 																									$$->PushSubNode(expression);
 																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, endlabel));
@@ -787,8 +783,8 @@ while_statement
 																									$$ = new SBaseASTNode(EN_While, "");
 																									SBaseASTNode *funcstatement=g_context.PopNode();
 																									SBaseASTNode *expression=g_context.PopNode();
-																									std::string toplabel = PushLabel();
-																									std::string endlabel = PushLabel();
+																									std::string toplabel = PushLabel("while");
+																									std::string endlabel = PushLabel("endwhile");
 																									$$->PushSubNode(new SBaseASTNode(EN_Label, toplabel));
 																									$$->PushSubNode(expression);
 																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, endlabel));
@@ -1316,6 +1312,12 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 
 		case EN_Label:
 		{
+			SCodeNode *emptyop = new SCodeNode();
+			emptyop->m_Op = OP_EMPTY;
+			emptyop->m_InputCount = 0;
+			emptyop->m_OutputCount = 0;
+			g_context.m_CodeNodes.push_back(emptyop);
+
 			SCodeNode *newop = new SCodeNode();
 			newop->m_Op = OP_LABEL;
 			newop->m_ValueOut = node->m_Value;
@@ -1543,6 +1545,57 @@ void CompilePass()
 		CompilePassNode(globalContext, node);
 }
 
+void DumpCodeNode(FILE *fp, CCompilerContext *cctx, SCodeNode *codenode)
+{
+	if (codenode->m_OutputCount)
+		fprintf(fp, "%s %s", Opcodes[codenode->m_Op], codenode->m_ValueOut.c_str());
+	else
+		fprintf(fp, "%s ", Opcodes[codenode->m_Op]);
+	for (int i=0;i<codenode->m_InputCount;++i)
+	{
+		if (codenode->m_OutputCount==0 && i==0)
+			fprintf(fp, "%s", codenode->m_ValueIn[i].c_str());
+		else
+			fprintf(fp, ", %s", codenode->m_ValueIn[i].c_str());
+	}
+	fprintf(fp, "\n");
+
+	//for (auto &subnode : node->m_CodeNodes)
+	//	DumpCodeNode(fp, cctx, subnode);
+}
+
+void DumpSymbolTable(FILE *fp, CCompilerContext *cctx)
+{
+	fprintf(fp, "\n---------------------------\n");
+	fprintf(fp, "        Symbols            \n");
+	fprintf(fp, "---------------------------\n\n");
+	for (auto &var : cctx->m_Variables)
+	{
+		fprintf(fp, "@LABEL %s\n", var->m_Name.c_str());
+		fprintf(fp, "@DW 0x0000 0x0000\n");
+	}
+}
+
+void SaveAsm(const char *filename)
+{
+	printf("Writing output file\n");
+
+	FILE *fp = fopen(filename, "w");
+
+	fprintf(fp, "\n---------------------------\n");
+	fprintf(fp, "     Compiled by GrimR     \n");
+	fprintf(fp, "GrimR (c)2020 Engin Cilasun\n");
+	fprintf(fp, "---------------------------\n\n");
+
+	CCompilerContext* globalContext = g_context.m_CompilerContextList[0];
+	for (auto &codenode : g_context.m_CodeNodes)
+		DumpCodeNode(fp, globalContext, codenode);
+	
+	DumpSymbolTable(fp, globalContext);
+	
+	fclose(fp);
+}
+
 void DebugDumpCodeBlock(CCompilerContext *cctx, SASTNode *node)
 {
 	printf("\t%s(%d) %s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
@@ -1573,36 +1626,13 @@ void DebugDumpNode(CCompilerContext *cctx, SASTNode *node)
 	}
 }
 
-void DebugDumpCodeNode(CCompilerContext *cctx, SCodeNode *codenode)
-{
-	//printf("%s %s,%s,%s\n", Opcodes[codenode->m_Op], codenode->m_ValueOut.c_str(), codenode->m_ValueIn1.c_str(), codenode->m_ValueIn2.c_str());
-	if (codenode->m_OutputCount)
-		printf("%s %s", Opcodes[codenode->m_Op], codenode->m_ValueOut.c_str());
-	else
-		printf("%s ", Opcodes[codenode->m_Op]);
-	for (int i=0;i<codenode->m_InputCount;++i)
-	{
-		if (codenode->m_OutputCount==0 && i==0)
-			printf("%s", codenode->m_ValueIn[i].c_str());
-		else
-			printf(", %s", codenode->m_ValueIn[i].c_str());
-	}
-	printf("\n");
-
-	//for (auto &subnode : node->m_CodeNodes)
-	//	DebugDumpCodeNode(cctx, subnode);
-}
-
 void DebugDump()
 {
 	printf("Debug dump\n");
 
 	CCompilerContext* globalContext = g_context.m_CompilerContextList[0];
-	//for (auto &node : g_context.m_ASTNodes)
-	//	DebugDumpNode(globalContext, node);
-
-	for (auto &codenode : g_context.m_CodeNodes)
-		DebugDumpCodeNode(globalContext, codenode);
+	for (auto &node : g_context.m_ASTNodes)
+		DebugDumpNode(globalContext, node);
 }
 
 extern int yylineno;
