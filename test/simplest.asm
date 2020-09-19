@@ -70,13 +70,11 @@ push   r0
 ld     r0, 0x00000060
 push   r0
 call   DrawRect
+ld     r0, 0x00000001
+push   r0
+ld     r0, 0x00000002
+push   r0
 ld     r0, 0x00000003
-ld     r1, [VRAM]
-add    r0, r0, r1
-ld     r1, 0x00000001
-push   r1
-ld     r1, 0x00000002
-push   r1
 push   r0
 ld     r0, 0x00000004
 push   r0
