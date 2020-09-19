@@ -1515,6 +1515,7 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		case EN_PostfixArrayExpression:
 		case EN_Decl:
 		case EN_DeclArray:
+		case EN_ArrayJunction:
 		case EN_Prologue:
 		case EN_Epilogue:
 		case EN_Statement:
