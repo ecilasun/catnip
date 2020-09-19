@@ -29,7 +29,10 @@ def DrawRect(posX, posY, width, height)
 def main()
 {
     VRAM = 0x80000000;
-    banana = "stand";
+    var i;
+    i=0;
+    while(i<10)
+        banana[i] = i;
     DrawRect(512, 384, 128, 96);
     DrawRect(1, 2, 3, 4);
 }

@@ -26,7 +26,7 @@ int CompileCode(char *_inputname, char *_outputname)
 
 	SaveAsm(_outputname);
 
-	DebugDump();
+	//DebugDump();
 
 	return 0;
 }

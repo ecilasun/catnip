@@ -197,7 +197,7 @@ struct SVariable
 	std::string m_Name;
 	uint32_t m_Hash{0};
 	uint32_t m_Dimension{1};
-	uint32_t m_InitializedValue{0};
+	std::vector<uint32_t> m_InitializedValues;
 	int m_ScopeDepth{0};
 };
 
@@ -1084,7 +1084,7 @@ void AddSymbols(CCompilerContext *cctx, SASTNode *node)
 		newvariable->m_Name = cctx->m_CurrentFunctionName + ":" + node->m_Value;
 		newvariable->m_Hash = HashString(newvariable->m_Name.c_str());
 		newvariable->m_ScopeDepth = cctx->m_ScopeDepth;
-		//newvariable->m_InitializedValue = ?; Result of assingment declaration's expression node (RHS)
+		//newvariable->m_InitializedValues = {}; Result of assingment declaration's expression node (RHS)
 
 		cctx->m_Variables.push_back(newvariable);
 	}
@@ -1097,15 +1097,16 @@ void AddArraySymbols(CCompilerContext *cctx, SASTNode *node)
 
 	if (node->m_Type == EN_ArrayJunction)
 	{
+		int dim = std::stoi(node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value, 0, 16);
+
 		//printf("Adding array variable '%s:%s[%d]' @%d\n", cctx->m_CurrentFunctionName.c_str(), node->m_ASTNodes[0]->m_Value.c_str(), dim, cctx->m_ScopeDepth);
 
-		int dim = std::stoi(node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value, 0, 16);
 		SVariable *newvariable = new SVariable();
 		newvariable->m_Name = cctx->m_CurrentFunctionName + ":" + node->m_ASTNodes[0]->m_Value;
 		newvariable->m_Hash = HashString(newvariable->m_Name.c_str());
 		newvariable->m_ScopeDepth = cctx->m_ScopeDepth;
 		newvariable->m_Dimension = dim;
-		//newvariable->m_InitializedValue = ?; Result of assingment declaration's expression node (RHS)
+		//newvariable->m_InitializedValues = {}; Result of assingment declaration's expression node (RHS)
 
 		cctx->m_Variables.push_back(newvariable);
 	}
@@ -1124,7 +1125,7 @@ void AddInputParameters(CCompilerContext *cctx, SASTNode *node)
 		newvariable->m_Name = cctx->m_CurrentFunctionName + ":" + node->m_Value;
 		newvariable->m_Hash = HashString(newvariable->m_Name.c_str());
 		newvariable->m_ScopeDepth = cctx->m_ScopeDepth;
-		//newvariable->m_InitializedValue = ?; Result of assingment declaration's expression node (RHS)
+		//newvariable->m_InitializedValues = {}; Result of assingment declaration's expression node (RHS)
 
 		cctx->m_Variables.push_back(newvariable);
 	}
@@ -1217,7 +1218,7 @@ void GatherEntry(CCompilerContext *cctx, SASTNode *node)
 			uint32_t nodehash = HashString(node->m_Value.c_str());
 			SFunction *fun = cctx->FindFunctionInFunctionTable(nodehash);
 			if (fun==nullptr)
-				printf("ERROR: Function call before function body appears in code\n");
+				printf("ERROR: Function '%s' called before its body appears in code\n", node->m_Value.c_str());
 			else
 				fun->m_RefCount++;
 		}
@@ -1257,6 +1258,7 @@ void GatherSymbols()
 	// -create and push a new compilercontext every time we hit a prologue
 	// -pop compiler context stack and destroy the current compilercontext every time we hit an epilogue
 	CCompilerContext* globalContext = new CCompilerContext();
+	globalContext->m_CurrentFunctionName = "";
 	globalContext->m_ScopeDepth = 0;
 	g_context.m_CompilerContextList.push_back(globalContext);
 
@@ -1283,11 +1285,11 @@ bool ScanSymbolAccessEntry(CCompilerContext *cctx, SASTNode *node)
 				printf("ERROR: variable '%s' not found\n", node->m_Value.c_str());
 				return false;
 			}
-			/*else // TODO: We have access to global SVariable at this point
-				printf("global variable '%s' found\n", node->m_Value.c_str());*/
+			/*else
+				printf("Found global var %s\n", node->m_Value.c_str());*/
 		}
-		/*else // TODO: We have access to local SVariable (input parameter) at this point
-			printf("input parameter '%s' found\n", localvar->m_Name.c_str());*/
+		/*else
+			printf("Found var %s\n", node->m_Value.c_str());*/
 	}
 
 	for (auto &subnode : node->m_ASTNodes)
@@ -1313,17 +1315,42 @@ void ScanSymbolAccessErrors()
 {
 	printf("Symbol access check : Find undefined symbols\n");
 
-	// Fetch global context
-	// TODO: scan local context of a function first, then the global one
 	CCompilerContext* globalContext = g_context.m_CompilerContextList[0];
-	globalContext->m_CurrentFunctionName = "global";
+	globalContext->m_CurrentFunctionName = "";
 
+	// Scan global context
 	for (auto &node : g_context.m_ASTNodes)
 	{
 		bool found = ScanSymbolAccessEntry(globalContext, node);
 		if (!found)
 			break;
 	}
+
+	// Scan function bodies
+	for (auto &func : globalContext->m_Functions)
+	{
+		for (auto &subnode : func->m_CodeBlock)
+		{
+			globalContext->m_CurrentFunctionName = func->m_Name;
+			ScanSymbolAccessEntry(globalContext, subnode);
+		}
+	}
+}
+
+std::string ValueOfSourceNode(CCompilerContext *cctx, SASTNode *node)
+{
+	std::string source = node->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[") + node->m_ASTNodes[0]->m_Value + std::string("]") : (/*node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_String ? "string#?" :*/ node->m_ASTNodes[0]->m_Value)) : PopRegister();
+
+	return source;
+}
+
+std::string ValueOfTargetNode(SASTNode *node)
+{
+	bool arrayassignment = node->m_Type == EN_PostfixArrayExpression ? true : false;
+
+	std::string target = arrayassignment ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value + "+" + node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : node->m_ASTNodes[0]->m_Value;
+
+	return target;
 }
 
 void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
@@ -1346,22 +1373,22 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		{
 			SCodeNode *leftop = new SCodeNode();
 			leftop->m_Op = OP_LOAD;
-			leftop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : PopRegister();
+			leftop->m_ValueIn[0] = ValueOfSourceNode(cctx, node->m_ASTNodes[0]);
 			leftop->m_ValueOut = PushRegister();
 			leftop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(leftop);
 
 			SCodeNode *rightop = new SCodeNode();
 			rightop->m_Op = OP_LOAD;
-			rightop->m_ValueIn[0] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : PopRegister();
+			rightop->m_ValueIn[0] = ValueOfSourceNode(cctx, node->m_ASTNodes[1]);
 			rightop->m_ValueOut = PushRegister();
 			rightop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(rightop);
 
 			SCodeNode *newop = new SCodeNode();
 			newop->m_Op = EOpcode(int(OP_MUL) + (node->m_Type-EN_Mul));
-			newop->m_ValueIn[0] = PopRegister();
 			newop->m_ValueIn[1] = PopRegister();
+			newop->m_ValueIn[0] = PopRegister();
 			newop->m_ValueOut = PushRegister();
 			newop->m_InputCount = 2;
 			g_context.m_CodeNodes.push_back(newop);
@@ -1413,22 +1440,22 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		{
 			SCodeNode *leftop = new SCodeNode();
 			leftop->m_Op = OP_LOAD;
-			leftop->m_ValueIn[0] = node->m_ASTNodes[0]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value) : PopRegister();
+			leftop->m_ValueIn[0] = ValueOfSourceNode(cctx, node->m_ASTNodes[0]);
 			leftop->m_ValueOut = PushRegister();
 			leftop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(leftop);
 
 			SCodeNode *rightop = new SCodeNode();
 			rightop->m_Op = OP_LOAD;
-			rightop->m_ValueIn[0] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[")+node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value+std::string("]") : node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : PopRegister();
+			rightop->m_ValueIn[0] = ValueOfSourceNode(cctx, node->m_ASTNodes[1]);
 			rightop->m_ValueOut = PushRegister();
 			rightop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(rightop);
 
 			SCodeNode *newop = new SCodeNode();
 			newop->m_Op = EOpcode(int(OP_LESS) + (node->m_Type-EN_LessThan));
-			newop->m_ValueIn[0] = PopRegister();
 			newop->m_ValueIn[1] = PopRegister();
+			newop->m_ValueIn[0] = PopRegister();
 			newop->m_OutputCount = 0;
 			newop->m_InputCount = 2;
 			g_context.m_CodeNodes.push_back(newop);
@@ -1437,19 +1464,16 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 
 		case EN_AssignmentExpression:
 		{
-			bool arrayassignment = node->m_ASTNodes[0]->m_Type == EN_PostfixArrayExpression ? true:false;
-			std::string target = arrayassignment ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_ASTNodes[0]->m_Value + "+" + node->m_ASTNodes[0]->m_ASTNodes[1]->m_ASTNodes[0]->m_Value) : node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value;
-
 			SCodeNode *addrop = new SCodeNode();
 			addrop->m_Op = OP_LOAD;
-			addrop->m_ValueIn[0] = node->m_ASTNodes[1]->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[") + node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value + std::string("]") : (/*node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_String ? "string#?" :*/ node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value)) : PopRegister();
+			addrop->m_ValueIn[0] = ValueOfSourceNode(cctx, node->m_ASTNodes[1]);
 			addrop->m_ValueOut = PushRegister();
 			addrop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(addrop);
 
 			SCodeNode *newop = new SCodeNode();
 			newop->m_Op = OP_STORE;
-			newop->m_ValueOut = std::string("[") + target + std::string("]");
+			newop->m_ValueOut = std::string("[") + ValueOfTargetNode(node->m_ASTNodes[0]) + std::string("]");
 			newop->m_ValueIn[0] = PopRegister();
 			newop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(newop);
