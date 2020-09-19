@@ -5,6 +5,8 @@
 #include <stack>
 #include <deque>
 #include <string>
+#include <sstream>
+#include <iomanip>
 #include <map>
 #include <vector>
 
@@ -264,27 +266,27 @@ enum EOpcode
 };
 
 const char *Opcodes[]={
-	"nop      ",
-	"mul      ",
-	"div      ",
-	"mod      ",
-	"add      ",
-	"sub      ",
-	"st       ",
-	"ld       ",
-	"cmp.l    ",
-	"cmp.g    ",
-	"cmp.le   ",
-	"cmp.ge   ",
-	"cmp.e    ",
-	"cmp.ne   ",
-	"",
-	"jmp      ",
-	"jmp.nz   ",
-	"call     ",
-	"ret      ",
-	"push     ",
-	"pop      ",
+	"nop   ",
+	"mul   ",
+	"div   ",
+	"mod   ",
+	"add   ",
+	"sub   ",
+	"st    ",
+	"ld    ",
+	"cmp.l ",
+	"cmp.g ",
+	"cmp.le",
+	"cmp.ge",
+	"cmp.e ",
+	"cmp.ne",
+	"@label",
+	"jmp   ",
+	"jmp.nz",
+	"call  ",
+	"ret   ",
+	"push  ",
+	"pop   ",
 };
 
 struct SCodeNode
@@ -367,6 +369,12 @@ std::string PopRegister()
 std::string PushLabel()
 {
 	uint32_t r = g_currentautolabel++;
+	return std::string("label#"+std::to_string(r));
+}
+
+std::string PopLabel()
+{
+	uint32_t r = --g_currentautolabel;
 	return std::string("label#"+std::to_string(r));
 }
 
@@ -453,9 +461,10 @@ simple_identifier
 
 simple_constant
 	: CONSTANT																					{
-																									std::string tmp;
-																									tmp = std::to_string($1);
-																									$$ = new SBaseASTNode(EN_Constant, tmp);
+																									std::stringstream stream;
+																									stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << $1;
+																									std::string result( stream.str() );
+																									$$ = new SBaseASTNode(EN_Constant, std::string("0x")+result);
 																									g_context.PushNode($$);
 																								}
 	;
@@ -736,14 +745,14 @@ while_statement
 																									SBaseASTNode *expression=g_context.PopNode();
 																									std::string toplabel = PushLabel();
 																									std::string endlabel = PushLabel();
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+toplabel));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, toplabel));
 																									$$->PushSubNode(expression);
 																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, endlabel));
 																									$$->PushSubNode(startnode);
 																									$$->PushSubNode(codeblocknode);
 																									$$->PushSubNode(endnode);
 																									$$->PushSubNode(new SBaseASTNode(EN_Flow, toplabel));
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+endlabel));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, endlabel));
 																									g_context.PushNode($$);
 																								}
 	| WHILE '(' expression ')' function_statement												{
@@ -752,12 +761,12 @@ while_statement
 																									SBaseASTNode *expression=g_context.PopNode();
 																									std::string toplabel = PushLabel();
 																									std::string endlabel = PushLabel();
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+toplabel));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, toplabel));
 																									$$->PushSubNode(expression);
 																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, endlabel));
 																									$$->PushSubNode(funcstatement);
 																									$$->PushSubNode(new SBaseASTNode(EN_Flow, toplabel));
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+endlabel));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, endlabel));
 																									g_context.PushNode($$);
 																								}
 	| WHILE '(' expression ')' expression_statement												{
@@ -766,12 +775,12 @@ while_statement
 																									SBaseASTNode *expression=g_context.PopNode();
 																									std::string toplabel = PushLabel();
 																									std::string endlabel = PushLabel();
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+toplabel));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, toplabel));
 																									$$->PushSubNode(expression);
 																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, endlabel));
 																									$$->PushSubNode(funcstatement);
 																									$$->PushSubNode(new SBaseASTNode(EN_Flow, toplabel));
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+endlabel));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, endlabel));
 																									g_context.PushNode($$);
 																								}
 	| WHILE '(' expression ')' variable_declaration_statement									{
@@ -780,12 +789,12 @@ while_statement
 																									SBaseASTNode *expression=g_context.PopNode();
 																									std::string toplabel = PushLabel();
 																									std::string endlabel = PushLabel();
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+toplabel));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, toplabel));
 																									$$->PushSubNode(expression);
 																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, endlabel));
 																									$$->PushSubNode(funcstatement);
 																									$$->PushSubNode(new SBaseASTNode(EN_Flow, toplabel));
-																									$$->PushSubNode(new SBaseASTNode(EN_Label, std::string(":")+endlabel));
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, endlabel));
 																									g_context.PushNode($$);
 																								}
 	;
@@ -1263,12 +1272,6 @@ void ScanSymbolAccessErrors()
 	}
 }
 
-std::string PopLabel()
-{
-	uint32_t r = --g_currentautolabel;
-	return std::string("label#"+std::to_string(r));
-}
-
 void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 {
 	// TODO: Code gen
@@ -1459,6 +1462,7 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		}
 		break;
 
+		case EN_While:
 		case EN_InputParamList:
 		case EN_Constant:
 		case EN_Identifier:
@@ -1501,7 +1505,7 @@ void CompilePassNode(CCompilerContext *cctx, SASTNode *node)
 				// Insert label for function
 				SCodeNode *labelop = new SCodeNode();
 				labelop->m_Op = OP_LABEL;
-				labelop->m_ValueOut = std::string(":")+funcname->m_Value;
+				labelop->m_ValueOut = funcname->m_Value;
 				labelop->m_InputCount = 0;
 				g_context.m_CodeNodes.push_back(labelop);
 
