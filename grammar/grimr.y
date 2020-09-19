@@ -1042,7 +1042,7 @@ void ConvertEntry(SBaseASTNode *node, SASTNode *astnode)
 
 void ConvertNodes()
 {
-	printf("Converting stack based nodes to vector based nodes\n");
+	//printf("Converting stack based nodes to vector based nodes\n");
 
 	size_t sz = g_context.m_NodeStack.size();
 
@@ -1251,7 +1251,7 @@ void GatherEntry(CCompilerContext *cctx, SASTNode *node)
 
 void GatherSymbols()
 {
-	printf("Build symbol tables : Gather globals, locals, and function inputs, generate scope depth\n");
+	//printf("Build symbol tables : Gather globals, locals, and function inputs, generate scope depth\n");
 
 	// Create global context
 	// Compile function should:
@@ -1313,7 +1313,7 @@ bool ScanSymbolAccessEntry(CCompilerContext *cctx, SASTNode *node)
 
 void ScanSymbolAccessErrors()
 {
-	printf("Symbol access check : Find undefined symbols\n");
+	//printf("Symbol access check : Find undefined symbols\n");
 
 	CCompilerContext* globalContext = g_context.m_CompilerContextList[0];
 	globalContext->m_CurrentFunctionName = "";
@@ -1329,6 +1329,8 @@ void ScanSymbolAccessErrors()
 	// Scan function bodies
 	for (auto &func : globalContext->m_Functions)
 	{
+		if (func->m_RefCount == 0)
+			continue; // No need to scan unused function bodies
 		for (auto &subnode : func->m_CodeBlock)
 		{
 			globalContext->m_CurrentFunctionName = func->m_Name;
@@ -1615,7 +1617,7 @@ void CompilePassNode(CCompilerContext *cctx, SASTNode *node)
 
 void CompilePass()
 {
-	printf("Compile pass: Code generation\n");
+	//printf("Compile pass: Code generation\n");
 
 	/*printf("jmp globalinit\n");
 	printf("jmp main\n");
@@ -1664,7 +1666,7 @@ void DumpSymbolTable(FILE *fp, CCompilerContext *cctx)
 
 void SaveAsm(const char *filename)
 {
-	printf("Writing output file\n");
+	//printf("Writing output file\n");
 
 	FILE *fp = fopen(filename, "w");
 
@@ -1714,7 +1716,7 @@ void DebugDumpNode(CCompilerContext *cctx, SASTNode *node)
 
 void DebugDump()
 {
-	printf("Debug dump\n");
+	//printf("Debug dump\n");
 
 	CCompilerContext* globalContext = g_context.m_CompilerContextList[0];
 	for (auto &node : g_context.m_ASTNodes)
