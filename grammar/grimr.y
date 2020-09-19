@@ -837,6 +837,21 @@ variable_declaration
 																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
 																									varnode->PushSubNode(symbolnode);
 																								}
+	| variable_declaration ',' simple_identifier '[' expression ']'								{
+																									SBaseASTNode *expressionnode=g_context.PopNode();
+																									SBaseASTNode *symbolnode=g_context.PopNode();
+
+																									// Add this symbol to the list of known symbols
+																									SSymbol &sym = g_context.DeclareSymbol(symbolnode->m_Value);
+
+																									// Make a junction of variable name and expression node (array dimension)
+																									SBaseASTNode *junc = new SBaseASTNode(EN_ArrayJunction, "");
+																									junc->PushSubNode(symbolnode);
+																									junc->PushSubNode(expressionnode);
+
+																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
+																									varnode->PushSubNode(junc);
+																								}
 	;
 
 variable_declaration_statement
