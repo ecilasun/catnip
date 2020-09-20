@@ -16,10 +16,10 @@ def DrawRect(posX, posY, width, height)
         {
             var address;
             address = spanX + spanY*320;
-            // Array operator can alias a variable
-            // as a pointer at that address if used
-            // on a non-array integer.
+
+            // GrimR feature: Array operator can alias a variable as a pointer at that address if used on a non-array integer.
             VRAM[address] = 0xFF;
+
             spanX = spanX+1;
         }
         spanY = spanY+1;
