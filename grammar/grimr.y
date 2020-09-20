@@ -1341,13 +1341,13 @@ void ScanSymbolAccessErrors()
 
 std::string EvaluateExpression(CCompilerContext *cctx, SASTNode *node, int &isRegister, ENodeSide side=RIGHT_HAND_SIDE)
 {
-	bool arrayexpression = node->m_Type == EN_PostfixArrayExpression ? true : false;
-
 	std::string source;
 
 	if (node->m_Type == EN_PostfixArrayExpression)
 	{
-		source = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister, side) + "+" + EvaluateExpression(cctx, node->m_ASTNodes[1], isRegister, side);
+		std::string offset = EvaluateExpression(cctx, node->m_ASTNodes[1], isRegister, side);
+		std::string base = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister, side);
+		source = base + "+" + offset;
 		isRegister = 0; // Not a register anymore
 		//printf("EN_PostfixArrayExpression -> %s\n", source.c_str());
 	}
@@ -1453,8 +1453,10 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		{
 			SCodeNode *newop = new SCodeNode();
 			newop->m_Op = OP_JUMPNZ;
-			newop->m_ValueOut = node->m_Value;
-			newop->m_InputCount = 0;
+			newop->m_ValueIn[0] = PopRegister();
+			newop->m_ValueIn[1] = node->m_Value;
+			newop->m_InputCount = 2;
+			newop->m_OutputCount = 0;
 			g_context.m_CodeNodes.push_back(newop);
 		}
 		break;
@@ -1534,7 +1536,7 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 			// TODO: push parameters into stack
 			for (auto &param : node->m_ASTNodes)
 			{
-				printf("paramnode: %s\n", NodeTypes[param->m_Type]);
+				//printf("paramnode: %s\n", NodeTypes[param->m_Type]);
 				int isRegister;
 				SCodeNode *loadop = new SCodeNode();
 				loadop->m_Op = OP_LOAD;
