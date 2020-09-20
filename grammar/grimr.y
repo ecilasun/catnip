@@ -76,8 +76,10 @@ enum EASTNodeType
 	EN_Return,
 	EN_StackOp,
 	EN_Decl,
+	EN_DeclInitJunction,
 	EN_DeclArray,
 	EN_ArrayJunction,
+	EN_ArrayWithDataJunction,
 	EN_FuncDecl,
 	EN_InputParamList,
 	EN_InputParam,
@@ -128,8 +130,10 @@ const char* NodeTypes[]=
 	"EN_Return                    ",
 	"EN_StackOp                   ",
 	"EN_Decl                      ",
+	"EN_DeclInit                  ",
 	"EN_DeclArray                 ",
 	"EN_ArrayJunction             ",
+	"EN_ArrayWithDataJunction     ",
 	"EN_FuncDecl                  ",
 	"EN_InputParamList            ",
 	"EN_InputParam                ",
@@ -197,7 +201,7 @@ struct SVariable
 	std::string m_Name;
 	uint32_t m_Hash{0};
 	uint32_t m_Dimension{1};
-	std::vector<uint32_t> m_InitializedValues;
+	std::vector<std::string> m_InitializedValues;
 	int m_ScopeDepth{0};
 };
 
@@ -427,6 +431,7 @@ SParserContext g_context;
 %type <astnode> unary_expression
 %type <astnode> postfix_expression
 
+%type <astnode> variable_declaration_item
 %type <astnode> variable_declaration
 %type <astnode> function_def
 
@@ -800,18 +805,40 @@ while_statement
 																								}
 	;
 
-variable_declaration
-	: VAR simple_identifier 																	{
+variable_declaration_item
+	: simple_identifier 																		{
 																									SBaseASTNode *symbolnode=g_context.PopNode();
 
 																									// Add this symbol to the list of known symbols
 																									SSymbol &sym = g_context.DeclareSymbol(symbolnode->m_Value);
 
 																									$$ = new SBaseASTNode(EN_Decl, "");
-																									$$->PushSubNode(symbolnode);
+
+																									SBaseASTNode *initnode = new SBaseASTNode(EN_DeclInitJunction, "");
+																									SBaseASTNode *datanode = new SBaseASTNode(EN_Constant, "0x00000000");
+																									initnode->PushSubNode(symbolnode);
+																									initnode->PushSubNode(datanode);
+
+																									$$->PushSubNode(initnode);
 																									g_context.PushNode($$);
 																								}
-	| VAR simple_identifier '[' expression ']'													{
+	| simple_identifier '=' expression 															{
+																									SBaseASTNode *expressionnode=g_context.PopNode();
+																									SBaseASTNode *symbolnode=g_context.PopNode();
+
+																									// Add this symbol to the list of known symbols
+																									SSymbol &sym = g_context.DeclareSymbol(symbolnode->m_Value);
+
+																									$$ = new SBaseASTNode(EN_Decl, "");
+
+																									SBaseASTNode *initnode = new SBaseASTNode(EN_DeclInitJunction, "");
+																									initnode->PushSubNode(symbolnode);
+																									initnode->PushSubNode(expressionnode);
+
+																									$$->PushSubNode(initnode);
+																									g_context.PushNode($$);
+																								}
+	| simple_identifier '[' expression ']'														{
 																									SBaseASTNode *expressionnode=g_context.PopNode();
 																									SBaseASTNode *symbolnode=g_context.PopNode();
 
@@ -827,17 +854,8 @@ variable_declaration
 																									$$->PushSubNode(junc);
 																									g_context.PushNode($$);
 																								}
-	| variable_declaration ',' simple_identifier												{
-																									// Append rest of the list items to primary {var} node
-																									SBaseASTNode *symbolnode=g_context.PopNode();
-
-																									// Add this symbol to the list of known symbols
-																									SSymbol &sym = g_context.DeclareSymbol(symbolnode->m_Value);
-
-																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
-																									varnode->PushSubNode(symbolnode);
-																								}
-	| variable_declaration ',' simple_identifier '[' expression ']'								{
+	| simple_identifier '[' expression ']' '=' BEGINBLOCK expression_list ENDBLOCK				{
+																									SBaseASTNode *datanode=g_context.PopNode();
 																									SBaseASTNode *expressionnode=g_context.PopNode();
 																									SBaseASTNode *symbolnode=g_context.PopNode();
 
@@ -845,13 +863,20 @@ variable_declaration
 																									SSymbol &sym = g_context.DeclareSymbol(symbolnode->m_Value);
 
 																									// Make a junction of variable name and expression node (array dimension)
-																									SBaseASTNode *junc = new SBaseASTNode(EN_ArrayJunction, "");
+																									SBaseASTNode *junc = new SBaseASTNode(EN_ArrayWithDataJunction, "");
 																									junc->PushSubNode(symbolnode);
 																									junc->PushSubNode(expressionnode);
+																									junc->PushSubNode(datanode);
 
-																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
-																									varnode->PushSubNode(junc);
+																									$$ = new SBaseASTNode(EN_DeclArray, "");
+																									$$->PushSubNode(junc);
+																									g_context.PushNode($$);
 																								}
+	;
+
+variable_declaration
+	: VAR variable_declaration_item																{}
+	| variable_declaration ',' variable_declaration_item										{}
 	;
 
 variable_declaration_statement
@@ -1021,6 +1046,44 @@ program
 	;
 %%
 
+std::string EvaluateExpression(CCompilerContext *cctx, SASTNode *node, int &isRegister, ENodeSide side=RIGHT_HAND_SIDE)
+{
+	std::string source;
+
+	if (node->m_Type == EN_PostfixArrayExpression)
+	{
+		std::string offset = EvaluateExpression(cctx, node->m_ASTNodes[1], isRegister, side);
+		std::string base = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister, side);
+		source = base + "+" + offset;
+		isRegister = 0; // Not a register anymore
+		//printf("EN_PostfixArrayExpression -> %s\n", source.c_str());
+	}
+	else if (node->m_Type == EN_PrimaryExpression)
+	{
+		source = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister, side);
+		//printf("EN_PrimaryExpression -> %s\n", source.c_str());
+	}
+	else if (node->m_Type == EN_Identifier)
+	{
+		source = node->m_Value;
+		//printf("EN_Identifier -> %s\n", source.c_str());
+	}
+	else if (node->m_Type == EN_Constant)
+	{
+		source = node->m_Value;
+		isRegister = 1; // Consider register, we can't take valueof (i.e.[])
+		//printf("EN_Constant -> %s\n", source.c_str());
+	}
+	else
+	{
+		source = PopRegister();
+		isRegister = 1;
+		//printf("other: %s -> %s\n", NodeTypes[node->m_Type], source.c_str());
+	}
+
+	return source;
+}
+
 void ConvertEntry(SBaseASTNode *node, SASTNode *astnode)
 {
 	size_t sz = node->m_SubNodes.size();
@@ -1076,15 +1139,19 @@ void AddSymbols(CCompilerContext *cctx, SASTNode *node)
 	for (auto &subnode : node->m_ASTNodes)
 		AddSymbols(cctx, subnode);
 
-	if (node->m_Type == EN_Identifier)
+	if (node->m_Type == EN_DeclInitJunction)
 	{
 		//printf("Adding variable '%s:%s' @%d\n", cctx->m_CurrentFunctionName.c_str(), node->m_Value.c_str(), cctx->m_ScopeDepth);
 
 		SVariable *newvariable = new SVariable();
-		newvariable->m_Name = cctx->m_CurrentFunctionName + ":" + node->m_Value;
+		newvariable->m_Name = cctx->m_CurrentFunctionName + ":" + node->m_ASTNodes[0]->m_Value;
 		newvariable->m_Hash = HashString(newvariable->m_Name.c_str());
 		newvariable->m_ScopeDepth = cctx->m_ScopeDepth;
-		//newvariable->m_InitializedValues = {}; Result of assingment declaration's expression node (RHS)
+
+		// Populate initializer array
+		int isRegister = 0;
+		std::string eval = EvaluateExpression(cctx, node->m_ASTNodes[1], isRegister);
+		newvariable->m_InitializedValues.push_back(isRegister ? eval : std::string("[")+eval+std::string("]"));
 
 		cctx->m_Variables.push_back(newvariable);
 	}
@@ -1094,6 +1161,31 @@ void AddArraySymbols(CCompilerContext *cctx, SASTNode *node)
 {
 	for (auto &subnode : node->m_ASTNodes)
 		AddArraySymbols(cctx, subnode);
+
+	if (node->m_Type == EN_ArrayWithDataJunction)
+	{
+		// expression list: node->m_ASTNodes[2];
+
+		int dim = std::stoi(node->m_ASTNodes[1]->m_ASTNodes[0]->m_Value, 0, 16);
+
+		//printf("Adding array variable '%s:%s[%d]' @%d\n", cctx->m_CurrentFunctionName.c_str(), node->m_ASTNodes[0]->m_Value.c_str(), dim, cctx->m_ScopeDepth);
+
+		SVariable *newvariable = new SVariable();
+		newvariable->m_Name = cctx->m_CurrentFunctionName + ":" + node->m_ASTNodes[0]->m_Value;
+		newvariable->m_Hash = HashString(newvariable->m_Name.c_str());
+		newvariable->m_ScopeDepth = cctx->m_ScopeDepth;
+		newvariable->m_Dimension = dim;
+
+		// Populate initializer array
+		for (auto &expressionItem : node->m_ASTNodes[2]->m_ASTNodes)
+		{
+			int isRegister = 0;
+			std::string eval = EvaluateExpression(cctx, expressionItem, isRegister);
+			newvariable->m_InitializedValues.push_back(isRegister ? eval : std::string("[")+eval+std::string("]"));
+		}
+
+		cctx->m_Variables.push_back(newvariable);
+	}
 
 	if (node->m_Type == EN_ArrayJunction)
 	{
@@ -1339,44 +1431,6 @@ void ScanSymbolAccessErrors()
 	}
 }
 
-std::string EvaluateExpression(CCompilerContext *cctx, SASTNode *node, int &isRegister, ENodeSide side=RIGHT_HAND_SIDE)
-{
-	std::string source;
-
-	if (node->m_Type == EN_PostfixArrayExpression)
-	{
-		std::string offset = EvaluateExpression(cctx, node->m_ASTNodes[1], isRegister, side);
-		std::string base = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister, side);
-		source = base + "+" + offset;
-		isRegister = 0; // Not a register anymore
-		//printf("EN_PostfixArrayExpression -> %s\n", source.c_str());
-	}
-	else if (node->m_Type == EN_PrimaryExpression)
-	{
-		source = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister, side);
-		//printf("EN_PrimaryExpression -> %s\n", source.c_str());
-	}
-	else if (node->m_Type == EN_Identifier)
-	{
-		source = node->m_Value;
-		//printf("EN_Identifier -> %s\n", source.c_str());
-	}
-	else if (node->m_Type == EN_Constant)
-	{
-		source = node->m_Value;
-		isRegister = 1; // Consider register, we can't take valueof (i.e.[])
-		//printf("EN_Constant -> %s\n", source.c_str());
-	}
-	else
-	{
-		source = PopRegister();
-		isRegister = 1;
-		//printf("other: %s -> %s\n", NodeTypes[node->m_Type], source.c_str());
-	}
-
-	return source;
-}
-
 void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 {
 	// TODO: Code gen
@@ -1584,9 +1638,12 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		case EN_Identifier:
 		case EN_PrimaryExpression:
 		case EN_PostfixArrayExpression:
+		case EN_ExpressionList:
 		case EN_Decl:
 		case EN_DeclArray:
+		case EN_DeclInitJunction:
 		case EN_ArrayJunction:
+		case EN_ArrayWithDataJunction:
 		case EN_Prologue:
 		case EN_Epilogue:
 		case EN_Statement:
@@ -1688,9 +1745,26 @@ void DumpSymbolTable(FILE *fp, CCompilerContext *cctx)
 
 	for (auto &var : cctx->m_Variables)
 	{
-		fprintf(fp, "@LABEL %s\n", var->m_Name.c_str());\
-		for (int i=0;i<var->m_Dimension;++i)
-			fprintf(fp, "@DW 0x0000 0x0000\n");
+		fprintf(fp, "@LABEL %s\n", var->m_Name.c_str());
+		if (var->m_InitializedValues.size())
+		{
+			if (var->m_Dimension<var->m_InitializedValues.size())
+				printf("WARNING: Too many initializers for array '%s[%d]', found %d. Dropping excess entries\n",var->m_Name.c_str(), var->m_Dimension, uint32_t(var->m_InitializedValues.size()));
+			int i=0;
+			for (auto &initval : var->m_InitializedValues)
+			{
+				if (i>=var->m_Dimension)
+					break;
+				std::stringstream stream;
+				stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << initval;
+				std::string result( stream.str() );
+				fprintf(fp, "@dword %s\n", result.c_str());
+				++i;
+			}
+		}
+		else
+			for (int i=0;i<var->m_Dimension;++i)
+				fprintf(fp, "@dword 0x00000000\n");
 	}
 }
 

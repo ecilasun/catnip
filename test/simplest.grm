@@ -1,12 +1,13 @@
 // GrimR language test file
 
-var cursorX, cursorY;
-var VRAM;
-var banana[16], tree[4];
+var cursorX, cursorY, VRAM=0x80000000;
+var banana[16], tree[4] = {1,2,3,4};
+var sprite[5] = {0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF};
 
 def DrawRect(posX, posY, width, height)
 {
-    var spanX, spanY;
+    var spanX;
+    var spanY;
 
     spanY = posY;
     while (spanY<posY+height)
@@ -28,8 +29,6 @@ def DrawRect(posX, posY, width, height)
 
 def main()
 {
-    VRAM = 0x80000000;
-
     DrawRect(512, 384, 128, 96);
     DrawRect(1, 2, 3, 4);
 }
