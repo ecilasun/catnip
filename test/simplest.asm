@@ -18,66 +18,72 @@ ld     r1, [height]
 add    r0, r0, r1
 ld     r1, [spanY]
 ld     r1, r1
-cmp.l  r0, r1
+cmp.l  r0, r0, r1
 jmp.nz endwhile3
-ld     r0, [posX]
-st     [spanX], r0
+ld     r1, [posX]
+st     [spanX], r1
  
 @label while0
-ld     r0, [posX]
-ld     r1, [width]
-add    r0, r0, r1
-ld     r1, [spanX]
-ld     r1, r1
-cmp.l  r0, r1
+ld     r1, [posX]
+ld     r2, [width]
+add    r1, r1, r2
+ld     r2, [spanX]
+ld     r2, r2
+cmp.l  r1, r1, r2
 jmp.nz endwhile1
-ld     r0, 0x00000140
-ld     r1, [spanY]
-mul    r0, r0, r1
-ld     r1, [spanX]
-ld     r1, r1
-add    r0, r0, r1
-ld     r0, r0
-st     [address], r0
-ld     r0, 0x000000ff
-st     [VRAM+[address]], r0
-ld     r0, [spanX]
-ld     r1, 0x00000001
-add    r0, r0, r1
-ld     r0, r0
-st     [spanX], r0
+ld     r2, 0x00000140
+ld     r3, [spanY]
+mul    r2, r2, r3
+ld     r3, [spanX]
+ld     r3, r3
+add    r2, r2, r3
+ld     r2, r2
+st     [address], r2
+ld     r2, 0x000000ff
+st     [VRAM+address], r2
+ld     r2, [spanX]
+ld     r3, 0x00000001
+add    r2, r2, r3
+ld     r2, r2
+st     [spanX], r2
 jmp    while0
  
 @label endwhile1
-ld     r0, [spanY]
-ld     r1, 0x00000001
-add    r0, r0, r1
-ld     r0, r0
-st     [spanY], r0
+ld     r2, [spanY]
+ld     r3, 0x00000001
+add    r2, r2, r3
+ld     r2, r2
+st     [spanY], r2
 jmp    while2
  
 @label endwhile3
 ret    
 @label main
-ld     r0, 0x80000000
-st     [VRAM], r0
-ld     r0, 0x00000200
-push   r0
-ld     r0, 0x00000180
-push   r0
-ld     r0, 0x00000080
-push   r0
-ld     r0, 0x00000060
-push   r0
+ld     r2, 0x80000000
+st     [VRAM], r2
+ld     r2, 0x00000200
+push   r2
+ld     r2, 0x00000180
+push   r2
+ld     r2, 0x00000080
+push   r2
+ld     r2, 0x00000060
+push   r2
 call   DrawRect
-ld     r0, 0x00000001
-push   r0
-ld     r0, 0x00000002
-push   r0
-ld     r0, 0x00000003
-push   r0
-ld     r0, 0x00000004
-push   r0
+ld     r2, 0x00000002
+ld     r3, [VRAM+0x00000009]
+mul    r2, r2, r3
+ld     r2, r2
+ld     r3, 0x00000001
+add    r2, r2, r3
+ld     r3, 0x00000001
+push   r3
+ld     r3, 0x00000002
+push   r3
+ld     r3, 0x00000003
+push   r3
+ld     r2, r2
+push   r2
 call   DrawRect
 ret    
 

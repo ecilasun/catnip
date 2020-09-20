@@ -382,7 +382,7 @@ std::string PushLabel(std::string labelname)
 void ConvertInputParams(SBaseASTNode *paramlistnode)
 {
 	size_t sz = paramlistnode->m_SubNodes.size();
-	for (size_t i=0;i<sz;++i)
+	for (size_t i=0; i<sz; ++i)
 	{
 		SBaseASTNode *idnode = paramlistnode->m_SubNodes.back();
 		paramlistnode->m_SubNodes.pop_back();
@@ -1339,22 +1339,42 @@ void ScanSymbolAccessErrors()
 	}
 }
 
-std::string ValueOfSourceNode(CCompilerContext *cctx, SASTNode *node)
+std::string EvaluateExpression(CCompilerContext *cctx, SASTNode *node, int &isRegister, ENodeSide side=RIGHT_HAND_SIDE)
 {
 	bool arrayexpression = node->m_Type == EN_PostfixArrayExpression ? true : false;
 
-	std::string source = arrayexpression ? (std::string("[") + node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value + "+" + ValueOfSourceNode(cctx, node->m_ASTNodes[1]) + std::string("]")) : node->m_Type == EN_PrimaryExpression ? (node->m_ASTNodes[0]->m_Type == EN_Identifier ? std::string("[") + node->m_ASTNodes[0]->m_Value + std::string("]") : (/*node->m_ASTNodes[1]->m_ASTNodes[0]->m_Type == EN_String ? "string#?" :*/ node->m_ASTNodes[0]->m_Value)) : PopRegister();
+	std::string source;
+
+	if (node->m_Type == EN_PostfixArrayExpression)
+	{
+		source = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister, side) + "+" + EvaluateExpression(cctx, node->m_ASTNodes[1], isRegister, side);
+		isRegister = 0; // Not a register anymore
+		//printf("EN_PostfixArrayExpression -> %s\n", source.c_str());
+	}
+	else if (node->m_Type == EN_PrimaryExpression)
+	{
+		source = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister, side);
+		//printf("EN_PrimaryExpression -> %s\n", source.c_str());
+	}
+	else if (node->m_Type == EN_Identifier)
+	{
+		source = node->m_Value;
+		//printf("EN_Identifier -> %s\n", source.c_str());
+	}
+	else if (node->m_Type == EN_Constant)
+	{
+		source = node->m_Value;
+		isRegister = 1; // Consider register, we can't take valueof (i.e.[])
+		//printf("EN_Constant -> %s\n", source.c_str());
+	}
+	else
+	{
+		source = PopRegister();
+		isRegister = 1;
+		//printf("other: %s -> %s\n", NodeTypes[node->m_Type], source.c_str());
+	}
 
 	return source;
-}
-
-std::string ValueOfTargetNode(CCompilerContext *cctx, SASTNode *node)
-{
-	bool arrayassignment = node->m_Type == EN_PostfixArrayExpression ? true : false;
-
-	std::string target = arrayassignment ? (node->m_ASTNodes[0]->m_ASTNodes[0]->m_Value + "+" + ValueOfSourceNode(cctx, node->m_ASTNodes[1])) : node->m_ASTNodes[0]->m_Value;
-
-	return target;
 }
 
 void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
@@ -1375,16 +1395,20 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		case EN_Add:
 		case EN_Sub:
 		{
+			int isRegister = 0;
 			SCodeNode *leftop = new SCodeNode();
 			leftop->m_Op = OP_LOAD;
-			leftop->m_ValueIn[0] = ValueOfSourceNode(cctx, node->m_ASTNodes[0]);
+			std::string src1 = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister);
+			leftop->m_ValueIn[0] = isRegister ? src1 : std::string("[") + src1 + std::string("]");
 			leftop->m_ValueOut = PushRegister();
 			leftop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(leftop);
 
+			isRegister = 0;
 			SCodeNode *rightop = new SCodeNode();
 			rightop->m_Op = OP_LOAD;
-			rightop->m_ValueIn[0] = ValueOfSourceNode(cctx, node->m_ASTNodes[1]);
+			std::string src2 = EvaluateExpression(cctx, node->m_ASTNodes[1], isRegister);
+			rightop->m_ValueIn[0] = isRegister ? src2 : std::string("[") + src2 + std::string("]");
 			rightop->m_ValueOut = PushRegister();
 			rightop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(rightop);
@@ -1442,16 +1466,20 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		case EN_Equal:
 		case EN_NotEqual:
 		{
+			int isRegister = 0;
 			SCodeNode *leftop = new SCodeNode();
 			leftop->m_Op = OP_LOAD;
-			leftop->m_ValueIn[0] = ValueOfSourceNode(cctx, node->m_ASTNodes[0]);
+			std::string src1 = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister);
+			leftop->m_ValueIn[0] = isRegister ? src1 : std::string("[") + src1 + std::string("]");
 			leftop->m_ValueOut = PushRegister();
 			leftop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(leftop);
 
+			isRegister = 0;
 			SCodeNode *rightop = new SCodeNode();
 			rightop->m_Op = OP_LOAD;
-			rightop->m_ValueIn[0] = ValueOfSourceNode(cctx, node->m_ASTNodes[1]);
+			std::string src2 = EvaluateExpression(cctx, node->m_ASTNodes[1], isRegister);
+			rightop->m_ValueIn[0] = isRegister ? src2 : std::string("[") + src2 + std::string("]");
 			rightop->m_ValueOut = PushRegister();
 			rightop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(rightop);
@@ -1460,7 +1488,8 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 			newop->m_Op = EOpcode(int(OP_LESS) + (node->m_Type-EN_LessThan));
 			newop->m_ValueIn[1] = PopRegister();
 			newop->m_ValueIn[0] = PopRegister();
-			newop->m_OutputCount = 0;
+			newop->m_ValueOut = PushRegister();
+			newop->m_OutputCount = 1;
 			newop->m_InputCount = 2;
 			g_context.m_CodeNodes.push_back(newop);
 		}
@@ -1468,19 +1497,25 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 
 		case EN_AssignmentExpression:
 		{
-			SCodeNode *addrop = new SCodeNode();
-			addrop->m_Op = OP_LOAD;
-			addrop->m_ValueIn[0] = ValueOfSourceNode(cctx, node->m_ASTNodes[1]);
-			addrop->m_ValueOut = PushRegister();
-			addrop->m_InputCount = 1;
-			g_context.m_CodeNodes.push_back(addrop);
+			// Load RHS into register
+			int isRegister = 0;
+			SCodeNode *loadop = new SCodeNode();
+			loadop->m_Op = OP_LOAD;
+			std::string srcval = EvaluateExpression(cctx, node->m_ASTNodes[1], isRegister);
+			loadop->m_ValueIn[0] = isRegister ? srcval : std::string("[") + srcval + std::string("]");
+			loadop->m_ValueOut = PushRegister();
+			loadop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(loadop);
 
-			SCodeNode *newop = new SCodeNode();
-			newop->m_Op = OP_STORE;
-			newop->m_ValueOut = std::string("[") + ValueOfTargetNode(cctx, node->m_ASTNodes[0]) + std::string("]");
-			newop->m_ValueIn[0] = PopRegister();
-			newop->m_InputCount = 1;
-			g_context.m_CodeNodes.push_back(newop);
+			// Assign to LHS
+			isRegister = 0;
+			SCodeNode *storeop = new SCodeNode();
+			storeop->m_Op = OP_STORE;
+			std::string trgval = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister, LEFT_HAND_SIDE);
+			storeop->m_ValueOut = isRegister ? trgval : std::string("[") + trgval + std::string("]");
+			storeop->m_ValueIn[0] = PopRegister();
+			storeop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(storeop);
 		}
 		break;
 
@@ -1499,32 +1534,23 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 			// TODO: push parameters into stack
 			for (auto &param : node->m_ASTNodes)
 			{
-				if (param->m_Type == EN_PrimaryExpression)
-				{
-					SCodeNode *regop = new SCodeNode();
-					regop->m_Op = OP_LOAD;
-					regop->m_ValueOut = PushRegister();
-					regop->m_ValueIn[0] = param->m_ASTNodes[0]->m_Value;
-					regop->m_OutputCount = 1;
-					regop->m_InputCount = 1;
-					g_context.m_CodeNodes.push_back(regop);
+				printf("paramnode: %s\n", NodeTypes[param->m_Type]);
+				int isRegister;
+				SCodeNode *loadop = new SCodeNode();
+				loadop->m_Op = OP_LOAD;
+				std::string srcval = EvaluateExpression(cctx, param, isRegister);
+				loadop->m_ValueIn[0] = isRegister ? srcval : std::string("[") + srcval + std::string("]");
+				loadop->m_ValueOut = PushRegister();
+				loadop->m_OutputCount = 1;
+				loadop->m_InputCount = 1;
+				g_context.m_CodeNodes.push_back(loadop);
 
-					SCodeNode *callparamop = new SCodeNode();
-					callparamop->m_Op = OP_PUSH;
-					callparamop->m_ValueIn[0] = PopRegister();
-					callparamop->m_OutputCount = 0;
-					callparamop->m_InputCount = 1;
-					g_context.m_CodeNodes.push_back(callparamop);
-				}
-				else
-				{
-					SCodeNode *callparamop = new SCodeNode();
-					callparamop->m_Op = OP_PUSH;
-					callparamop->m_ValueIn[0] = PopRegister();
-					callparamop->m_OutputCount = 0;
-					callparamop->m_InputCount = 1;
-					g_context.m_CodeNodes.push_back(callparamop);
-				}
+				SCodeNode *callparamop = new SCodeNode();
+				callparamop->m_Op = OP_PUSH;
+				callparamop->m_ValueIn[0] = PopRegister();
+				callparamop->m_OutputCount = 0;
+				callparamop->m_InputCount = 1;
+				g_context.m_CodeNodes.push_back(callparamop);
 			}
 
 			// Call the function
