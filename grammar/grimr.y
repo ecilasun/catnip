@@ -274,6 +274,10 @@ enum EOpcode
 	OP_PUSH,
 	OP_POP,
 	OP_LEA,
+	OP_BITAND,
+	OP_BITOR,
+	OP_BITXOR,
+	OP_SELECT,
 };
 
 const char *Opcodes[]={
@@ -300,13 +304,17 @@ const char *Opcodes[]={
 	"push  ",
 	"pop   ",
 	"lea   ",
+	"and   ",
+	"or    ",
+	"xor   ",
+	"sel   ",
 };
 
 struct SCodeNode
 {
 	EOpcode m_Op{OP_NOOP};
 	std::string m_ValueOut;
-	std::string m_ValueIn[2];
+	std::string m_ValueIn[4];
 	int m_OutputCount{1};
 	int m_InputCount{0};
 };
@@ -699,12 +707,12 @@ conditional_expression
 	: logical_or_expression
 	| logical_or_expression '?' expression ':' conditional_expression							{
 																									$$ = new SBaseASTNode(EN_SelectExpression, "");
-																									SBaseASTNode *n0=g_context.PopNode();
-																									SBaseASTNode *n1=g_context.PopNode();
-																									SBaseASTNode *n2=g_context.PopNode();
-																									$$->PushSubNode(n0);
-																									$$->PushSubNode(n1);
-																									$$->PushSubNode(n2);
+																									SBaseASTNode *elseexpression=g_context.PopNode();
+																									SBaseASTNode *ifexpression=g_context.PopNode();
+																									SBaseASTNode *logicexpression=g_context.PopNode();
+																									$$->PushSubNode(elseexpression);
+																									$$->PushSubNode(ifexpression);
+																									$$->PushSubNode(logicexpression);
 																									g_context.PushNode($$);
 																								}
 	;
@@ -1400,7 +1408,7 @@ bool ScanSymbolAccessEntry(CCompilerContext *cctx, SASTNode *node)
 			SVariable *globalvar = cctx->FindSymbolInSymbolTable(globalhash);
 			if (globalvar==nullptr)
 			{
-				printf("ERROR: variable '%s' not found\n", node->m_Value.c_str());
+				printf("ERROR: Symbol '%s' not found\n", node->m_Value.c_str());
 				return false;
 			}
 			/*else
@@ -1577,6 +1585,39 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		}
 		break;
 
+		case EN_BitAnd:
+		case EN_BitOr:
+		case EN_BitXor:
+		{
+			int isRegister = 0;
+			SCodeNode *leftop = new SCodeNode();
+			leftop->m_Op = OP_LOAD;
+			std::string src1 = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister);
+			leftop->m_ValueIn[0] = isRegister ? src1 : std::string("[") + src1 + std::string("]");
+			leftop->m_ValueOut = PushRegister();
+			leftop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(leftop);
+
+			isRegister = 0;
+			SCodeNode *rightop = new SCodeNode();
+			rightop->m_Op = OP_LOAD;
+			std::string src2 = EvaluateExpression(cctx, node->m_ASTNodes[1], isRegister);
+			rightop->m_ValueIn[0] = isRegister ? src2 : std::string("[") + src2 + std::string("]");
+			rightop->m_ValueOut = PushRegister();
+			rightop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(rightop);
+
+			SCodeNode *newop = new SCodeNode();
+			newop->m_Op = EOpcode(int(OP_BITAND) + (node->m_Type-EN_BitAnd));
+			newop->m_ValueIn[1] = PopRegister();
+			newop->m_ValueIn[0] = PopRegister();
+			newop->m_ValueOut = PushRegister();
+			newop->m_OutputCount = 1;
+			newop->m_InputCount = 2;
+			g_context.m_CodeNodes.push_back(newop);
+		}
+		break;
+
 		case EN_AssignmentExpression:
 		{
 			// Load RHS into register
@@ -1617,7 +1658,7 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 			for (auto &param : node->m_ASTNodes)
 			{
 				//printf("paramnode: %s\n", NodeTypes[param->m_Type]);
-				int isRegister;
+				int isRegister=0;
 				SCodeNode *loadop = new SCodeNode();
 				loadop->m_Op = OP_LOAD;
 				std::string srcval = EvaluateExpression(cctx, param, isRegister);
@@ -1658,9 +1699,54 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		}
 		break;
 
+		case EN_SelectExpression:
+		{
+			SCodeNode *loadop = new SCodeNode();
+			loadop->m_Op = OP_LOAD;
+			int isRegister = 0;
+			std::string srcval = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister);
+			loadop->m_ValueIn[0] = isRegister ? srcval : std::string("[") + srcval + std::string("]");
+			loadop->m_ValueOut = PushRegister();
+			loadop->m_OutputCount = 1;
+			loadop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(loadop);
+
+			SCodeNode *loadop2 = new SCodeNode();
+			loadop2->m_Op = OP_LOAD;
+			isRegister = 0;
+			std::string srcval2 = EvaluateExpression(cctx, node->m_ASTNodes[1], isRegister);
+			loadop2->m_ValueIn[0] = isRegister ? srcval2 : std::string("[") + srcval2 + std::string("]");
+			loadop2->m_ValueOut = PushRegister();
+			loadop2->m_OutputCount = 1;
+			loadop2->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(loadop2);
+
+			SCodeNode *loadop3 = new SCodeNode();
+			loadop3->m_Op = OP_LOAD;
+			isRegister = 0;
+			std::string srcval3 = EvaluateExpression(cctx, node->m_ASTNodes[2], isRegister);
+			loadop3->m_ValueIn[0] = isRegister ? srcval3 : std::string("[") + srcval3 + std::string("]");
+			loadop3->m_ValueOut = PushRegister();
+			loadop3->m_OutputCount = 1;
+			loadop3->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(loadop3);
+
+			isRegister = 0;
+			SCodeNode *selop = new SCodeNode();
+			selop->m_Op = OP_SELECT;
+			selop->m_ValueIn[1] = PopRegister();
+			selop->m_ValueIn[2] = PopRegister();
+			selop->m_ValueIn[0] = PopRegister();
+			selop->m_ValueOut = PushRegister();
+			selop->m_OutputCount = 1;
+			selop->m_InputCount = 3;
+			g_context.m_CodeNodes.push_back(selop);
+		}
+		break;
+
 		case EN_UnaryAddressOf:
 		{
-			int isRegister;
+			int isRegister=0;
 			SCodeNode *addrop = new SCodeNode();
 			addrop->m_Op = OP_LEA;
 			std::string srcval = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister);
@@ -1674,7 +1760,7 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 
 		/*case EN_UnaryValueOf:
 		{
-			int isRegister;
+			int isRegister=0;
 			SCodeNode *addrop = new SCodeNode();
 			addrop->m_Op = OP_LOAD;
 			std::string srcval = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister);
