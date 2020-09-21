@@ -64,15 +64,11 @@ GrimR (c)2020 Engin Cilasun
 	push   r0
 	ld     r0, 0x00000002
 	push   r0
-	ld     r0, 0x00000003
-	push   r0
 	ld     r0, 0x00000004
 	push   r0
+	ld     r0, 0x00000008
+	push   r0
 	call   DrawRect
-	ld     r0, Engin Cilasun
-	st     [MyTestStruct:name], r0
-	ld     r0, 1 Syntax Error, Apt #42
-	st     [MyTestStruct:address], r0
 ret    
 
 
@@ -125,8 +121,4 @@ ret
 @label DrawRect:spanX
 	@dword 0x00000000
 @label DrawRect:spanY
-	@dword 0x00000000
-@label MyTestStruct:name
-	@dword 0x00000000
-@label MyTestStruct:address
 	@dword 0x00000000

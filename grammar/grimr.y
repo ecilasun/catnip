@@ -152,6 +152,13 @@ enum ENodeSide
 	LEFT_HAND_SIDE
 };
 
+struct SString
+{
+	std::string m_String;
+	uint32_t m_Hash{0};
+	uint32_t m_Address{0xFFFFFFFF};
+};
+
 class SBaseASTNode
 {
 public:
@@ -183,6 +190,7 @@ public:
 
 	EASTNodeType m_Type{EN_Default};
 	ENodeSide m_Side{RIGHT_HAND_SIDE};
+	SString *m_String{nullptr};
 	std::string m_Value;
 	std::string m_Comment;
 	std::deque<SBaseASTNode*> m_SubNodes;
@@ -194,6 +202,7 @@ public:
 	EASTNodeType m_Type{EN_Default};
 	ENodeSide m_Side{RIGHT_HAND_SIDE};
 	int m_ScopeDepth{0};
+	SString *m_String{nullptr};
 	std::string m_Value;
 	std::vector<SASTNode*> m_ASTNodes;
 };
@@ -203,6 +212,7 @@ struct SVariable
 	std::string m_Name;
 	uint32_t m_Hash{0};
 	uint32_t m_Dimension{1};
+	SString *m_String{nullptr};
 	std::vector<std::string> m_InitializedValues;
 	int m_ScopeDepth{0};
 };
@@ -248,7 +258,7 @@ public:
 struct SSymbol
 {
 	std::string m_Value;
-	uint32_t m_Address{0};
+	uint32_t m_Address{0xFFFFFFFF};
 };
 
 enum EOpcode
@@ -370,8 +380,10 @@ struct SParserContext
 	std::deque<SBaseASTNode*> m_NodeStack;
 	std::vector<SASTNode*> m_ASTNodes;
 	std::map<uint32_t, SSymbol> m_SymbolTable;
+	std::map<uint32_t, SString*> m_StringTable;
 	std::vector<CCompilerContext*> m_CompilerContextList;
 	std::vector<SCodeNode*> m_CodeNodes;
+	uint32_t m_StringAddress{0};
 };
 
 static int g_currentregister = 0;
@@ -413,6 +425,29 @@ void ConvertInputParams(SBaseASTNode *paramlistnode)
 	}
 }
 
+SString *AllocateOrRetreiveString(SParserContext *ctx, const char *string)
+{
+	uint32_t hash = HashString(string);
+
+	auto found = ctx->m_StringTable.find(hash);
+	if (found!=ctx->m_StringTable.end())
+		return found->second;
+
+	SString *str = new SString();
+	uint32_t allocaddress = ctx->m_StringAddress;
+	str->m_Address = allocaddress;
+	str->m_Hash = hash;
+	str->m_String = string;
+
+	printf("Allocated string at %d\n", allocaddress);
+
+	ctx->m_StringAddress += strlen(string);
+
+	ctx->m_StringTable[hash] = str;
+
+	return str;
+}
+
 SParserContext g_context;
 
 %}
@@ -439,6 +474,7 @@ SParserContext g_context;
 %type <astnode> expression_statement
 %type <astnode> variable_declaration_statement
 %type <astnode> while_statement
+%type <astnode> if_statement
 %type <astnode> return_statement
 
 %type <astnode> code_block_start
@@ -496,6 +532,7 @@ simple_constant
 simple_string
 	: STRING_LITERAL																			{
 																									$$ = new SBaseASTNode(EN_String, yytext); // $1 is just a single word, yytext includes spaces
+																									$$->m_String = AllocateOrRetreiveString(&g_context, yytext);
 																									g_context.PushNode($$);
 																								}
 	;
@@ -760,6 +797,12 @@ expression_statement
 																								}*/
 	;
 
+if_statement
+	: IF '(' expression ')' code_block_start code_block_body code_block_end						{
+
+																								}
+	;
+
 while_statement
 	: WHILE '(' expression ')' code_block_start code_block_body code_block_end					{
 																									$$ = new SBaseASTNode(EN_While, "");
@@ -1016,6 +1059,12 @@ code_block_body
 																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
 																									varnode->PushSubNode(n0);
 																								}
+	| if_statement																				{
+
+																								}
+	| code_block_body if_statement																{
+
+																								}
 	| while_statement																			{
 																									$$ = new SBaseASTNode(EN_Statement, "");
 																									SBaseASTNode *n0=g_context.PopNode();
@@ -1131,9 +1180,12 @@ std::string EvaluateExpression(CCompilerContext *cctx, SASTNode *node, int &isRe
 	}
 	else if (node->m_Type == EN_String)
 	{
-		source = node->m_Value;
+		std::stringstream stream;
+		stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << node->m_String->m_Address;
+		std::string result( stream.str() );
+		source = std::string("0x")+result;
 		isRegister = 1; // Consider register, we can't take valueof (i.e.[])
-		//printf("EN_Constant -> %s\n", source.c_str());
+		//printf("EN_String -> %s (%s)\n", source.c_str(), node->m_String->m_String.c_str());
 	}
 	else
 	{
@@ -1157,6 +1209,7 @@ void ConvertEntry(SBaseASTNode *node, SASTNode *astnode)
 		newnode->m_Type = sub->m_Type;
 		newnode->m_Value = sub->m_Value;
 		newnode->m_Side = sub->m_Side;
+		newnode->m_String = sub->m_String ? sub->m_String : nullptr;
 		astnode->m_ASTNodes.push_back(newnode);
 
 		ConvertEntry(sub, newnode);
@@ -1188,6 +1241,7 @@ void ConvertNodes()
 		newnode->m_Type = node->m_Type;
 		newnode->m_Value = node->m_Value;
 		newnode->m_Side = node->m_Side;
+		newnode->m_String = node->m_String ? node->m_String : nullptr;
 		g_context.m_ASTNodes.push_back(newnode);
 
 		ConvertEntry(node, newnode);
@@ -1208,6 +1262,7 @@ void AddSymbols(CCompilerContext *cctx, SASTNode *node)
 		newvariable->m_Name = cctx->m_CurrentFunctionName + ":" + node->m_ASTNodes[0]->m_Value;
 		newvariable->m_Hash = HashString(newvariable->m_Name.c_str());
 		newvariable->m_ScopeDepth = cctx->m_ScopeDepth;
+		newvariable->m_String = node->m_String ? node->m_String : nullptr;
 
 		// Populate initializer array
 		int isRegister = 0;
@@ -1938,6 +1993,16 @@ void DumpSymbolTable(FILE *fp, CCompilerContext *cctx)
 	fprintf(fp, "\n---------------------------\n");
 	fprintf(fp, "        Symbols            \n");
 	fprintf(fp, "---------------------------\n\n");
+
+	for (auto &str : g_context.m_StringTable)
+	{
+		std::stringstream stream;
+		stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << str.second->m_Hash;
+		std::string result( stream.str() );
+		fprintf(fp, "@label 0x%s\n", result.c_str());
+		fprintf(fp, "@org %d\n", str.second->m_Address);
+		fprintf(fp, "@string %s\n", str.second->m_String.c_str());
+	}
 
 	for (auto &var : cctx->m_Variables)
 	{
