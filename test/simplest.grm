@@ -36,6 +36,7 @@ def main()
     DrawRect(1, 2, 3, 4);
 
     MyTestStruct:name = "Engin Cilasun";
+    MyTestStruct:address = "1 Syntax Error, Apt #42";
 
     return;
 }

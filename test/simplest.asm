@@ -51,26 +51,28 @@ GrimR (c)2020 Engin Cilasun
  
 @label endwhile3
 @label main
-	ld     r4, 0x00000200
-	push   r4
-	ld     r4, 0x00000180
-	push   r4
-	ld     r4, 0x00000080
-	push   r4
-	ld     r4, 0x00000060
-	push   r4
+	ld     r0, 0x00000200
+	push   r0
+	ld     r0, 0x00000180
+	push   r0
+	ld     r0, 0x00000080
+	push   r0
+	ld     r0, 0x00000060
+	push   r0
 	call   DrawRect
-	ld     r4, 0x00000001
-	push   r4
-	ld     r4, 0x00000002
-	push   r4
-	ld     r4, 0x00000003
-	push   r4
-	ld     r4, 0x00000004
-	push   r4
+	ld     r0, 0x00000001
+	push   r0
+	ld     r0, 0x00000002
+	push   r0
+	ld     r0, 0x00000003
+	push   r0
+	ld     r0, 0x00000004
+	push   r0
 	call   DrawRect
-	ld     r4, Engin Cilasun
-	st     [MyTestStruct:name], r4
+	ld     r0, Engin Cilasun
+	st     [MyTestStruct:name], r0
+	ld     r0, 1 Syntax Error, Apt #42
+	st     [MyTestStruct:address], r0
 ret    
 
 

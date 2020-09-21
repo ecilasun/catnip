@@ -389,6 +389,11 @@ std::string PopRegister()
 	return std::string("r"+std::to_string(r));
 }
 
+void ResetRegister()
+{
+	g_currentregister = 0;
+}
+
 std::string PushLabel(std::string labelname)
 {
 	uint32_t r = g_currentautolabel++;
@@ -1865,6 +1870,8 @@ void CompilePassNode(CCompilerContext *cctx, SASTNode *node)
 				labelop->m_ValueOut = funcname->m_Value;
 				labelop->m_InputCount = 0;
 				g_context.m_CodeNodes.push_back(labelop);
+
+				ResetRegister();
 
 				// Compile the code
 				for (auto &subnode : func->m_InputParameters)
