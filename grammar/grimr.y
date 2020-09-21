@@ -71,9 +71,11 @@ enum EASTNodeType
 	EN_SelectExpression,
 	EN_ExpressionList,
 	EN_While,
+	EN_If,
 	EN_Label,
 	EN_Flow,
 	EN_FlowNZ,
+	EN_DummyString,
 	EN_Call,
 	EN_Return,
 	EN_StackOp,
@@ -125,9 +127,11 @@ const char* NodeTypes[]=
 	"EN_SelectExpression          ",
 	"EN_ExpressionList            ",
 	"EN_While                     ",
+	"EN_If                        ",
 	"EN_Label                     ",
 	"EN_Flow                      ",
 	"EN_FlowNZ                    ",
+	"EN_DummyString               ",
 	"EN_Call                      ",
 	"EN_Return                    ",
 	"EN_StackOp                   ",
@@ -286,6 +290,7 @@ enum EOpcode
 	OP_PUSH,
 	OP_POP,
 	OP_LEA,
+	OP_DUMMYSTRING,
 	OP_BITAND,
 	OP_BITOR,
 	OP_BITXOR,
@@ -316,6 +321,7 @@ const char *Opcodes[]={
 	"\tpush  ",
 	"\tpop   ",
 	"\tlea   ",
+	"",
 	"\tand   ",
 	"\tor    ",
 	"\txor   ",
@@ -799,7 +805,21 @@ expression_statement
 
 if_statement
 	: IF '(' expression ')' code_block_start code_block_body code_block_end						{
+																									$$ = new SBaseASTNode(EN_If, "");
+																									SBaseASTNode *endnode=g_context.PopNode();
+																									SBaseASTNode *codeblocknode=g_context.PopNode();
+																									SBaseASTNode *startnode=g_context.PopNode();
+																									SBaseASTNode *expression=g_context.PopNode();
 
+																									std::string endlabel = PushLabel("endif");
+																									$$->PushSubNode(new SBaseASTNode(EN_DummyString, ""));
+																									$$->PushSubNode(expression);
+																									$$->PushSubNode(new SBaseASTNode(EN_FlowNZ, endlabel));
+																									$$->PushSubNode(startnode);
+																									$$->PushSubNode(codeblocknode);
+																									$$->PushSubNode(endnode);
+																									$$->PushSubNode(new SBaseASTNode(EN_Label, endlabel));
+																									g_context.PushNode($$);
 																								}
 	;
 
@@ -1060,10 +1080,15 @@ code_block_body
 																									varnode->PushSubNode(n0);
 																								}
 	| if_statement																				{
-
+																									$$ = new SBaseASTNode(EN_Statement, "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->PushSubNode(n0);
+																									g_context.PushNode($$);
 																								}
 	| code_block_body if_statement																{
-
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
+																									varnode->PushSubNode(n0);
 																								}
 	| while_statement																			{
 																									$$ = new SBaseASTNode(EN_Statement, "");
@@ -1859,6 +1884,18 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		}
 		break;
 
+		case EN_DummyString:
+		{
+			int isRegister=0;
+			SCodeNode *addrop = new SCodeNode();
+			addrop->m_Op = OP_DUMMYSTRING;
+			addrop->m_ValueIn[0] = node->m_Value;
+			addrop->m_OutputCount = 0;
+			addrop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(addrop);
+		}
+		break;
+
 		/*case EN_UnaryValueOf:
 		{
 			int isRegister=0;
@@ -1873,6 +1910,7 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		}
 		break;*/
 
+		case EN_If:
 		case EN_While:
 		case EN_InputParamList:
 		case EN_String:
@@ -1889,7 +1927,7 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 		case EN_Prologue:
 		case EN_Epilogue:
 		case EN_Statement:
-			// Nothing to emit
+			// Nothing to emit for these
 		break;
 
 		default:

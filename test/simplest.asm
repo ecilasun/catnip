@@ -51,15 +51,6 @@ GrimR (c)2020 Engin Cilasun
  
 @label endwhile3
 @label main
-	ld     r0, 0x00000200
-	push   r0
-	ld     r0, 0x00000180
-	push   r0
-	ld     r0, 0x00000080
-	push   r0
-	ld     r0, 0x00000060
-	push   r0
-	call   DrawRect
 	ld     r0, 0x00000001
 	push   r0
 	ld     r0, 0x00000002
@@ -69,6 +60,22 @@ GrimR (c)2020 Engin Cilasun
 	ld     r0, 0x00000008
 	push   r0
 	call   DrawRect
+ 
+	ld     r0, [DrawRect:spanX]
+	ld     r1, 0x00000005
+	cmp.g  r0, r1, r0
+	jmp.nz r0, endif4
+	ld     r0, 0x00000200
+	push   r0
+	ld     r0, 0x00000180
+	push   r0
+	ld     r0, 0x00000080
+	push   r0
+	ld     r0, 0x00000060
+	push   r0
+	call   DrawRect
+ 
+@label endif4
 ret    
 
 

@@ -26,8 +26,12 @@ def DrawRect(posX, posY, width, height)
 
 def main()
 {
-    DrawRect(512, 384, 128, 96);
     DrawRect(1, 2, 4, 8);
+
+    if (DrawRect:spanX>5)
+    {
+        DrawRect(512, 384, 128, 96);
+    }
 
     return;
 }
