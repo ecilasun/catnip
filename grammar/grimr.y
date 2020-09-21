@@ -1860,6 +1860,13 @@ void CompilePass()
 
 void DumpCodeNode(FILE *fp, CCompilerContext *cctx, SCodeNode *codenode)
 {
+	// Skip redundant ld ra,rb where a==b
+	if (codenode->m_Op == OP_LOAD)
+	{
+		if (codenode->m_ValueIn[0] == codenode->m_ValueOut)
+			return;
+	}
+
 	if (codenode->m_OutputCount)
 		fprintf(fp, "%s %s", Opcodes[codenode->m_Op], codenode->m_ValueOut.c_str());
 	else

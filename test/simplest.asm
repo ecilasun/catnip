@@ -17,7 +17,6 @@ GrimR (c)2020 Engin Cilasun
 	ld     r1, [height]
 	add    r0, r0, r1
 	ld     r1, [spanY]
-	ld     r1, r1
 	cmp.l  r0, r0, r1
 	jmp.nz r0, endwhile3
 	ld     r0, [posX]
@@ -28,21 +27,18 @@ GrimR (c)2020 Engin Cilasun
 	ld     r1, [width]
 	add    r0, r0, r1
 	ld     r1, [spanX]
-	ld     r1, r1
 	cmp.l  r0, r0, r1
 	jmp.nz r0, endwhile1
 	ld     r0, 0x00000140
 	ld     r1, [spanY]
 	mul    r0, r0, r1
 	ld     r1, [spanX]
-	ld     r1, r1
 	add    r0, r0, r1
 	ld     r1, 0x000000ff
 	st     [VRAM+r0], r1
 	ld     r0, [spanX]
 	ld     r1, 0x00000001
 	add    r0, r0, r1
-	ld     r0, r0
 	st     [spanX], r0
 	jmp    while0
  
@@ -50,7 +46,6 @@ GrimR (c)2020 Engin Cilasun
 	ld     r0, [spanY]
 	ld     r1, 0x00000001
 	add    r0, r0, r1
-	ld     r0, r0
 	st     [spanY], r0
 	jmp    while2
  
