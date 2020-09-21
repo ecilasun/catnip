@@ -37,10 +37,8 @@ mul    r0, r0, r1
 ld     r1, [spanX]
 ld     r1, r1
 add    r0, r0, r1
-ld     r0, r0
-st     [address], r0
-ld     r0, 0x000000ff
-st     [VRAM+address], r0
+ld     r1, 0x000000ff
+st     [VRAM+r0], r1
 ld     r0, [spanX]
 ld     r1, 0x00000001
 add    r0, r0, r1
@@ -128,6 +126,4 @@ ret
 @LABEL DrawRect:spanX
 @dword 0x00000000
 @LABEL DrawRect:spanY
-@dword 0x00000000
-@LABEL DrawRect:address
 @dword 0x00000000

@@ -1591,9 +1591,9 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 			isRegister = 0;
 			SCodeNode *storeop = new SCodeNode();
 			storeop->m_Op = OP_STORE;
+			storeop->m_ValueIn[0] = PopRegister();
 			std::string trgval = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister, LEFT_HAND_SIDE);
 			storeop->m_ValueOut = isRegister ? trgval : std::string("[") + trgval + std::string("]");
-			storeop->m_ValueIn[0] = PopRegister();
 			storeop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(storeop);
 		}
