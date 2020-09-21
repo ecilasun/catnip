@@ -267,7 +267,6 @@ struct SSymbol
 
 enum EOpcode
 {
-	OP_EMPTY,
 	OP_NOOP,
 	OP_MUL,
 	OP_DIV,
@@ -298,7 +297,6 @@ enum EOpcode
 };
 
 const char *Opcodes[]={
-	"",
 	"\tnop   ",
 	"\tmul   ",
 	"\tdiv   ",
@@ -1638,17 +1636,17 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 
 		case EN_Label:
 		{
-			SCodeNode *emptyop = new SCodeNode();
-			emptyop->m_Op = OP_EMPTY;
-			emptyop->m_InputCount = 0;
-			emptyop->m_OutputCount = 0;
-			g_context.m_CodeNodes.push_back(emptyop);
-
 			SCodeNode *newop = new SCodeNode();
 			newop->m_Op = OP_LABEL;
 			newop->m_ValueOut = node->m_Value;
 			newop->m_InputCount = 0;
 			g_context.m_CodeNodes.push_back(newop);
+
+			SCodeNode *emptyop = new SCodeNode();
+			emptyop->m_Op = OP_DUMMYSTRING;
+			emptyop->m_InputCount = 0;
+			emptyop->m_OutputCount = 0;
+			g_context.m_CodeNodes.push_back(emptyop);
 		}
 		break;
 
@@ -1813,8 +1811,7 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 
 		case EN_InputParam:
 		{
-			// TODO: pop input parameters from stack into local variables
-
+			// Input parameters will be taken from stack and written to corresponding local variables
 			SCodeNode *paramop = new SCodeNode();
 			paramop->m_Op = OP_POP;
 			paramop->m_ValueIn[0] = node->m_Value;

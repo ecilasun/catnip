@@ -11,8 +11,8 @@ GrimR (c)2020 Engin Cilasun
 	pop    posX
 	ld     r0, [posY]
 	st     [spanY], r0
- 
 @label while2
+ 
 	ld     r0, [posY]
 	ld     r1, [height]
 	add    r0, r0, r1
@@ -21,8 +21,8 @@ GrimR (c)2020 Engin Cilasun
 	jmp.nz r0, endwhile3
 	ld     r0, [posX]
 	st     [spanX], r0
- 
 @label while0
+ 
 	ld     r0, [posX]
 	ld     r1, [width]
 	add    r0, r0, r1
@@ -41,15 +41,15 @@ GrimR (c)2020 Engin Cilasun
 	add    r0, r0, r1
 	st     [spanX], r0
 	jmp    while0
- 
 @label endwhile1
+ 
 	ld     r0, [spanY]
 	ld     r1, 0x00000001
 	add    r0, r0, r1
 	st     [spanY], r0
 	jmp    while2
- 
 @label endwhile3
+ 
 @label main
 	ld     r0, 0x00000001
 	push   r0
@@ -74,8 +74,8 @@ GrimR (c)2020 Engin Cilasun
 	ld     r0, 0x00000060
 	push   r0
 	call   DrawRect
- 
 @label endif4
+ 
 ret    
 
 
