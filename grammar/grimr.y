@@ -490,7 +490,7 @@ simple_constant
 
 simple_string
 	: STRING_LITERAL																			{
-																									$$ = new SBaseASTNode(EN_String, $1);
+																									$$ = new SBaseASTNode(EN_String, yytext); // $1 is just a single word, yytext includes spaces
 																									g_context.PushNode($$);
 																								}
 	;
@@ -1119,6 +1119,12 @@ std::string EvaluateExpression(CCompilerContext *cctx, SASTNode *node, int &isRe
 		//printf("EN_Identifier -> %s\n", source.c_str());
 	}
 	else if (node->m_Type == EN_Constant)
+	{
+		source = node->m_Value;
+		isRegister = 1; // Consider register, we can't take valueof (i.e.[])
+		//printf("EN_Constant -> %s\n", source.c_str());
+	}
+	else if (node->m_Type == EN_String)
 	{
 		source = node->m_Value;
 		isRegister = 1; // Consider register, we can't take valueof (i.e.[])
@@ -1809,6 +1815,7 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 
 		case EN_While:
 		case EN_InputParamList:
+		case EN_String:
 		case EN_Constant:
 		case EN_Identifier:
 		case EN_PrimaryExpression:

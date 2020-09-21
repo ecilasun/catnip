@@ -24,12 +24,18 @@ def DrawRect(posX, posY, width, height)
     }
 }
 
+def MyTestStruct()
+{
+    var name;
+    var address;
+}
+
 def main()
 {
     DrawRect(512, 384, 128, 96);
     DrawRect(1, 2, 3, 4);
 
-    cursorX = DrawRect:spanX;
+    MyTestStruct:name = "Engin Cilasun";
 
     return;
 }

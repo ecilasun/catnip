@@ -69,8 +69,8 @@ GrimR (c)2020 Engin Cilasun
 	ld     r4, 0x00000004
 	push   r4
 	call   DrawRect
-	ld     r4, [DrawRect:spanX]
-	st     [cursorX], r4
+	ld     r4, Engin Cilasun
+	st     [MyTestStruct:name], r4
 ret    
 
 
@@ -123,4 +123,8 @@ ret
 @label DrawRect:spanX
 	@dword 0x00000000
 @label DrawRect:spanY
+	@dword 0x00000000
+@label MyTestStruct:name
+	@dword 0x00000000
+@label MyTestStruct:address
 	@dword 0x00000000

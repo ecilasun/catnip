@@ -22,6 +22,7 @@ extern YYSTYPE yylval;
 int check_type();
 void comment();
 void count();
+void stripquotes(char *string);
 
 %}
 
@@ -75,7 +76,7 @@ void count();
 "&&"						{ count();  return(AND_OP); }
 "||"						{ count();  return(OR_OP); }
 
-{L}(":"|{L}|{D})*				{ count();  sscanf(yytext, "%s", yylval.string); return(IDENTIFIER); }
+{L}(":"|{L}|{D})*			{ count(); sscanf(yytext, "%s", yylval.string); return(IDENTIFIER); }
 
 0[xX]{H}+{IS}?				{ count(); sscanf(yytext, "%x", &yylval.numeric); return(CONSTANT); }
 0[0-7]*{IS}?				{ count(); yylval.numeric = atoi(yytext); return(CONSTANT); }
@@ -89,7 +90,7 @@ L?'(\\.|[^\\'\n])+'			{ count(); return(CONSTANT); }
 0[xX]{H}*"."{H}+{P}?{FS}?	{ count(); return(CONSTANT); }
 0[xX]{H}+"."{H}*{P}?{FS}?	{ count(); return(CONSTANT); }
 
-L?\"(\\.|[^\\"\n])*\"		{ count(); sscanf(yytext, "%s", yylval.string); return(STRING_LITERAL); }
+L?\"(\\.|[^\\"\n])*\"		{ count(); sscanf(yytext, "%s", yylval.string); stripquotes(yytext); return(STRING_LITERAL); }
 
 [ \t\v\n\f]					{ count(); }
 .							{ /* ignore bad characters */ }
@@ -112,6 +113,14 @@ int check_type()
 */
 
 	return(IDENTIFIER);
+}
+
+void stripquotes(char *string)
+{
+	char *copy = strdup(string);
+	int l = strlen(string);
+	strncpy(string, copy+1, l-2);
+	string[l-2] = 0;
 }
 
 void comment()
