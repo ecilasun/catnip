@@ -1,8 +1,8 @@
 // GrimR language test file
 
 var cursorX, cursorY, VRAM=0x80000000;
-var banana[16], tree[4] = {1,2,3,4};
-var sprite[5] = {0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF};
+var banana[16], tree[] = {1,2,3,4};
+var sprite[5] = {0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF};
 
 def DrawRect(posX, posY, width, height)
 {

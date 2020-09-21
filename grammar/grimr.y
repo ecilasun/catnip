@@ -872,6 +872,30 @@ variable_declaration_item
 																									$$->PushSubNode(junc);
 																									g_context.PushNode($$);
 																								}
+	| simple_identifier '['  ']' '=' BEGINBLOCK expression_list ENDBLOCK						{
+																									SBaseASTNode *datanode=g_context.PopNode();
+																									SBaseASTNode *symbolnode=g_context.PopNode();
+
+																									std::stringstream stream;
+																									stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << datanode->m_SubNodes.size();
+																									std::string result( stream.str() );
+																									SBaseASTNode *expressionnode = new SBaseASTNode(EN_PrimaryExpression, "");
+																									SBaseASTNode *constantnode = new SBaseASTNode(EN_Constant, result); // Auto-set array size
+																									expressionnode->PushSubNode(constantnode);
+
+																									// Add this symbol to the list of known symbols
+																									SSymbol &sym = g_context.DeclareSymbol(symbolnode->m_Value);
+
+																									// Make a junction of variable name and expression node (array dimension)
+																									SBaseASTNode *junc = new SBaseASTNode(EN_ArrayWithDataJunction, "");
+																									junc->PushSubNode(symbolnode);
+																									junc->PushSubNode(expressionnode);
+																									junc->PushSubNode(datanode);
+
+																									$$ = new SBaseASTNode(EN_DeclArray, "");
+																									$$->PushSubNode(junc);
+																									g_context.PushNode($$);
+																								}
 	;
 
 variable_declaration
