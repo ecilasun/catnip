@@ -15,7 +15,8 @@ GrimR (c)2020 Engin Cilasun
  
 	lea    r0, posY
 	ld     r0, [r0]
-	ld     r1, [height]
+	lea    r1, height
+	ld     r1, [r1]
 	add    r0, r0, r1
 	ld     r1, [spanY]
 	cmp.l  r0, r1, r0
@@ -26,13 +27,15 @@ GrimR (c)2020 Engin Cilasun
  
 	lea    r0, posX
 	ld     r0, [r0]
-	ld     r1, [width]
+	lea    r1, width
+	ld     r1, [r1]
 	add    r0, r0, r1
 	ld     r1, [spanX]
 	cmp.l  r0, r1, r0
 	jmp.nz r0, endwhile1
 	ld     r0, 0x00000140
-	ld     r1, [spanY]
+	lea    r1, spanY
+	ld     r1, [r1]
 	mul    r0, r0, r1
 	lea    r1, spanX
 	ld     r1, [r1]

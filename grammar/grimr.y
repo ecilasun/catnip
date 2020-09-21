@@ -1593,7 +1593,7 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 			{
 				SCodeNode *leftop = new SCodeNode();
 				leftop->m_Op = OP_LOAD;
-				leftop->m_ValueIn[0] = isRegister ? src1 : std::string("[") + src1 + std::string("]");
+				leftop->m_ValueIn[0] = src1;
 				leftop->m_ValueOut = PushRegister();
 				leftop->m_InputCount = 1;
 				g_context.m_CodeNodes.push_back(leftop);
@@ -1618,12 +1618,31 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 			isRegister = 0;
 			std::string src2 = EvaluateExpression(cctx, node->m_ASTNodes[1], isRegister);
 
-			SCodeNode *rightop = new SCodeNode();
-			rightop->m_Op = OP_LOAD;
-			rightop->m_ValueIn[0] = isRegister ? src2 : std::string("[") + src2 + std::string("]");
-			rightop->m_ValueOut = PushRegister();
-			rightop->m_InputCount = 1;
-			g_context.m_CodeNodes.push_back(rightop);
+			if (isRegister)
+			{
+				SCodeNode *leftop = new SCodeNode();
+				leftop->m_Op = OP_LOAD;
+				leftop->m_ValueIn[0] = src2;
+				leftop->m_ValueOut = PushRegister();
+				leftop->m_InputCount = 1;
+				g_context.m_CodeNodes.push_back(leftop);
+			}
+			else
+			{
+				SCodeNode *leftoplea = new SCodeNode();
+				leftoplea->m_Op = OP_LEA;
+				leftoplea->m_ValueIn[0] = src2;
+				leftoplea->m_ValueOut = PushRegister();
+				leftoplea->m_InputCount = 1;
+				g_context.m_CodeNodes.push_back(leftoplea);
+
+				SCodeNode *leftop = new SCodeNode();
+				leftop->m_Op = OP_LOAD;
+				leftop->m_ValueIn[0] = std::string("[") + PopRegister() + std::string("]");
+				leftop->m_ValueOut = PushRegister();
+				leftop->m_InputCount = 1;
+				g_context.m_CodeNodes.push_back(leftop);
+			}
 
 			SCodeNode *newop = new SCodeNode();
 			newop->m_Op = EOpcode(int(OP_MUL) + (node->m_Type-EN_Mul));
