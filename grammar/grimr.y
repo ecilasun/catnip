@@ -1818,8 +1818,7 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 			SCodeNode *paramop = new SCodeNode();
 			paramop->m_Op = OP_POP;
 			paramop->m_ValueIn[0] = node->m_Value;
-			paramop->m_ValueOut = PushRegister();
-			paramop->m_OutputCount = 1;
+			paramop->m_OutputCount = 0;
 			paramop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(paramop);
 		}
