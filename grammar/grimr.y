@@ -474,12 +474,13 @@ SParserContext g_context;
 %type <astnode> simple_constant
 %type <astnode> simple_string
 
+%type <astnode> variable_declaration_statement
 %type <astnode> function_statement
 %type <astnode> expression_statement
-%type <astnode> variable_declaration_statement
 %type <astnode> while_statement
 %type <astnode> if_statement
 %type <astnode> return_statement
+%type <astnode> any_statement
 
 %type <astnode> code_block_start
 %type <astnode> code_block_end
@@ -1050,21 +1051,19 @@ code_block_end
 																								}
 	;
 
-code_block_body
-	:																							{
-																									$$ = new SBaseASTNode(EN_Statement, "");
+return_statement
+	: RETURN ';'																				{
+																									$$ = new SBaseASTNode(EN_Return, "");
 																									g_context.PushNode($$);
 																								}
-	| function_statement																		{
+	;
+
+any_statement
+	: function_statement																		{
 																									$$ = new SBaseASTNode(EN_Statement, "");
 																									SBaseASTNode *n0=g_context.PopNode();
 																									$$->PushSubNode(n0);
 																									g_context.PushNode($$);
-																								}
-	| code_block_body function_statement														{
-																									SBaseASTNode *n0=g_context.PopNode();
-																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
-																									varnode->PushSubNode(n0);
 																								}
 	| expression_statement																		{
 																									$$ = new SBaseASTNode(EN_Statement, "");
@@ -1072,21 +1071,11 @@ code_block_body
 																									$$->PushSubNode(n0);
 																									g_context.PushNode($$);
 																								}
-	| code_block_body expression_statement														{
-																									SBaseASTNode *n0=g_context.PopNode();
-																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
-																									varnode->PushSubNode(n0);
-																								}
 	| if_statement																				{
 																									$$ = new SBaseASTNode(EN_Statement, "");
 																									SBaseASTNode *n0=g_context.PopNode();
 																									$$->PushSubNode(n0);
 																									g_context.PushNode($$);
-																								}
-	| code_block_body if_statement																{
-																									SBaseASTNode *n0=g_context.PopNode();
-																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
-																									varnode->PushSubNode(n0);
 																								}
 	| while_statement																			{
 																									$$ = new SBaseASTNode(EN_Statement, "");
@@ -1094,21 +1083,11 @@ code_block_body
 																									$$->PushSubNode(n0);
 																									g_context.PushNode($$);
 																								}
-	| code_block_body while_statement															{
-																									SBaseASTNode *n0=g_context.PopNode();
-																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
-																									varnode->PushSubNode(n0);
-																								}
 	| variable_declaration_statement															{
 																									$$ = new SBaseASTNode(EN_Statement, "");
 																									SBaseASTNode *n0=g_context.PopNode();
 																									$$->PushSubNode(n0);
 																									g_context.PushNode($$);
-																								}
-	| code_block_body variable_declaration_statement											{
-																									SBaseASTNode *n0=g_context.PopNode();
-																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
-																									varnode->PushSubNode(n0);
 																								}
 	| return_statement																			{
 																									$$ = new SBaseASTNode(EN_Statement, "");
@@ -1116,17 +1095,18 @@ code_block_body
 																									$$->PushSubNode(n0);
 																									g_context.PushNode($$);
 																								}
-	| code_block_body return_statement															{
+	;
+
+code_block_body
+	:																							{
+																									$$ = new SBaseASTNode(EN_Statement, "");
+																									g_context.PushNode($$);
+																								}
+	| any_statement
+	| code_block_body any_statement																{
 																									SBaseASTNode *n0=g_context.PopNode();
 																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
 																									varnode->PushSubNode(n0);
-																								}
-	;
-
-return_statement
-	: RETURN ';'																				{
-																									$$ = new SBaseASTNode(EN_Return, "");
-																									g_context.PushNode($$);
 																								}
 	;
 
