@@ -14,6 +14,8 @@ extern int yylex(void);
 void yyerror(const char *);
 int yyparse(void);
 
+extern int yylineno;
+extern int column;
 extern FILE *yyin;
 extern char *yytext;
 extern FILE *fp;
@@ -422,7 +424,7 @@ SParserContext g_context;
 %token <string> STRING_LITERAL
 
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
-%token VAR FUNCTION IF THEN ELSE WHILE BEGINBLOCK ENDBLOCK GOTO RETURN
+%token VAR FUNCTION IF WHILE BEGINBLOCK ENDBLOCK RETURN
 
 %type <astnode> simple_identifier
 %type <astnode> simple_constant
@@ -432,6 +434,7 @@ SParserContext g_context;
 %type <astnode> expression_statement
 %type <astnode> variable_declaration_statement
 %type <astnode> while_statement
+%type <astnode> return_statement
 
 %type <astnode> code_block_start
 %type <astnode> code_block_end
@@ -1030,6 +1033,24 @@ code_block_body
 																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
 																									varnode->PushSubNode(n0);
 																								}
+	| return_statement																			{
+																									$$ = new SBaseASTNode(EN_Statement, "");
+																									SBaseASTNode *n0=g_context.PopNode();
+																									$$->PushSubNode(n0);
+																									g_context.PushNode($$);
+																								}
+	| code_block_body return_statement															{
+																									SBaseASTNode *n0=g_context.PopNode();
+																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
+																									varnode->PushSubNode(n0);
+																								}
+	;
+
+return_statement
+	: RETURN ';'																				{
+																									$$ = new SBaseASTNode(EN_Return, "");
+																									g_context.PushNode($$);
+																								}
 	;
 
 function_def
@@ -1051,25 +1072,20 @@ function_def
 																									// Add this symbol to the list of known symbols
 																									SSymbol &sym = g_context.DeclareSymbol(funcnamenode->m_Value);
 
-																									SBaseASTNode *returnblock = new SBaseASTNode(EN_Return, "");
-
 																									$$->PushSubNode(funcnamenode);
 																									$$->PushSubNode(paramlist);
 																									$$->PushSubNode(blockbegin);
 																									$$->PushSubNode(codeblock);
-																									$$->PushSubNode(returnblock);
 																									$$->PushSubNode(blockend);
 																									g_context.PushNode($$);
 																								}
 	;
 
 translation_unit
-	: variable_declaration_statement
-	| function_statement
-	| translation_unit function_statement
-	| function_def
+	: translation_unit variable_declaration_statement
 	| translation_unit function_def
-	| translation_unit variable_declaration_statement
+	| variable_declaration_statement
+	| function_def
 	;
 
 program
@@ -1273,7 +1289,6 @@ void AddFunction(CCompilerContext *cctx, SASTNode *node)
 	SASTNode *paramsnode = node->m_ASTNodes[1];
 	//SASTNode *prologuenode = node->m_ASTNodes[2];
 	SASTNode *codenode = node->m_ASTNodes[3];
-	SASTNode *returnnode = node->m_ASTNodes[4];
 	//SASTNode *epiloguenode = node->m_ASTNodes[5];
 
 	//printf("Adding function '%s'\n", namenode->m_Value.c_str());
@@ -1289,14 +1304,11 @@ void AddFunction(CCompilerContext *cctx, SASTNode *node)
 	GatherParamBlock(cctx, newfunction, paramsnode);
 	//GatherPrologue(cctx, newfunction, prologuenode);
 	GatherCodeBlock(cctx, newfunction, codenode);
-	GatherCodeBlock(cctx, newfunction, returnnode);
 	//GatherEpilogue(cctx, newfunction, epiloguenode);
 
 	cctx->m_Functions.push_back(newfunction);
 
 	// Remove the epilogue
-	node->m_ASTNodes.erase(node->m_ASTNodes.begin()+5);
-	// Remove return block
 	node->m_ASTNodes.erase(node->m_ASTNodes.begin()+4);
 	// Remove the code block
 	node->m_ASTNodes.erase(node->m_ASTNodes.begin()+3);
@@ -1344,7 +1356,7 @@ void GatherEntry(CCompilerContext *cctx, SASTNode *node)
 			uint32_t nodehash = HashString(node->m_Value.c_str());
 			SFunction *fun = cctx->FindFunctionInFunctionTable(nodehash);
 			if (fun==nullptr)
-				printf("ERROR: Function '%s' called before its body appears in code\n", node->m_Value.c_str());
+				printf("line #%d column #%d : ERROR: Function '%s' called before its body appears in code\n", yylineno, column, node->m_Value.c_str());
 			else
 				fun->m_RefCount++;
 		}
@@ -1396,26 +1408,48 @@ bool ScanSymbolAccessEntry(CCompilerContext *cctx, SASTNode *node)
 {
 	if (node->m_Type == EN_Identifier)
 	{
+		bool found = false;
+		std::string expandedVarName;
+
 		// Scan function local scope first
 		std::string localname = cctx->m_CurrentFunctionName + ":" + node->m_Value;
+		expandedVarName = localname;
 		uint32_t localhash = HashString(localname.c_str());
 		SVariable *localvar = cctx->FindSymbolInSymbolTable(localhash);
 		if (localvar==nullptr)
 		{
 			// Scan global scope next
 			std::string globalname = ":" + node->m_Value;
+			expandedVarName = globalname;
 			uint32_t globalhash = HashString(globalname.c_str());
 			SVariable *globalvar = cctx->FindSymbolInSymbolTable(globalhash);
 			if (globalvar==nullptr)
 			{
-				printf("ERROR: Symbol '%s' not found\n", node->m_Value.c_str());
-				return false;
+				// Scan scoped-names last
+				for(auto &func : cctx->m_Functions)
+				{
+					std::string scopedname = node->m_Value;
+					expandedVarName = scopedname;
+					uint32_t scopedhash = HashString(scopedname.c_str());
+					SVariable *scopedvar = cctx->FindSymbolInSymbolTable(scopedhash);
+					if (scopedvar)
+					{
+						found = true;
+						break;
+					}
+				}
 			}
-			/*else
-				printf("Found global var %s\n", node->m_Value.c_str());*/
+			else
+				found = true;
 		}
-		/*else
-			printf("Found var %s\n", node->m_Value.c_str());*/
+		else
+			found = true;
+
+		if (!found)
+		{
+			printf("line #%d column #%d : ERROR: Symbol '%s' not found\n", yylineno, column, expandedVarName.c_str());
+			return false;
+		}
 	}
 
 	for (auto &subnode : node->m_ASTNodes)
@@ -1693,7 +1727,8 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 			SCodeNode *paramop = new SCodeNode();
 			paramop->m_Op = OP_POP;
 			paramop->m_ValueIn[0] = node->m_Value;
-			paramop->m_OutputCount = 0;
+			paramop->m_ValueOut = PushRegister();
+			paramop->m_OutputCount = 1;
 			paramop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(paramop);
 		}
@@ -1808,7 +1843,7 @@ void CompilePassNode(CCompilerContext *cctx, SASTNode *node)
 		uint32_t funchash = HashString(funcname->m_Value.c_str());
 		SFunction *func = cctx->FindFunctionInFunctionTable(funchash);
 		if (func == nullptr)
-			printf("ERROR: Can not find function %s\n", funcname->m_Value.c_str());
+			printf("line #%d column #%d : ERROR: Can not find function %s\n", yylineno, column, funcname->m_Value.c_str());
 		else
 		{
 			// TODO: Code gen
@@ -1977,8 +2012,7 @@ void DebugDump()
 		DebugDumpNode(globalContext, node);
 }
 
-extern int yylineno;
 void yyerror(const char *s) {
-	printf("%d : %s %s\n", yylineno, s, yytext );
+	printf("line #%d columnd #%d : %s %s\n", yylineno, column, s, yytext );
 	err++;
 }

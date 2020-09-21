@@ -28,4 +28,8 @@ def main()
 {
     DrawRect(512, 384, 128, 96);
     DrawRect(1, 2, 3, 4);
+
+    cursorX = DrawRect:spanX;
+
+    return;
 }

@@ -5,72 +5,72 @@ GrimR (c)2020 Engin Cilasun
 ---------------------------
 
 @label DrawRect
-	pop    height
-	pop    width
-	pop    posY
-	pop    posX
-	ld     r0, [posY]
-	st     [spanY], r0
+	pop    r0, height
+	pop    r1, width
+	pop    r2, posY
+	pop    r3, posX
+	ld     r4, [posY]
+	st     [spanY], r4
  
 @label while2
-	ld     r0, [posY]
-	ld     r1, [height]
-	add    r0, r0, r1
-	ld     r1, [spanY]
-	cmp.l  r0, r1, r0
-	jmp.nz r0, endwhile3
-	ld     r0, [posX]
-	st     [spanX], r0
+	ld     r4, [posY]
+	ld     r5, [height]
+	add    r4, r4, r5
+	ld     r5, [spanY]
+	cmp.l  r4, r5, r4
+	jmp.nz r4, endwhile3
+	ld     r4, [posX]
+	st     [spanX], r4
  
 @label while0
-	ld     r0, [posX]
-	ld     r1, [width]
-	add    r0, r0, r1
-	ld     r1, [spanX]
-	cmp.l  r0, r1, r0
-	jmp.nz r0, endwhile1
-	ld     r0, 0x00000140
-	ld     r1, [spanY]
-	mul    r0, r0, r1
-	ld     r1, [spanX]
-	add    r0, r0, r1
-	ld     r1, 0x000000ff
-	st     [VRAM+r0], r1
-	ld     r0, [spanX]
-	ld     r1, 0x00000001
-	add    r0, r0, r1
-	st     [spanX], r0
+	ld     r4, [posX]
+	ld     r5, [width]
+	add    r4, r4, r5
+	ld     r5, [spanX]
+	cmp.l  r4, r5, r4
+	jmp.nz r4, endwhile1
+	ld     r4, 0x00000140
+	ld     r5, [spanY]
+	mul    r4, r4, r5
+	ld     r5, [spanX]
+	add    r4, r4, r5
+	ld     r5, 0x000000ff
+	st     [VRAM+r4], r5
+	ld     r4, [spanX]
+	ld     r5, 0x00000001
+	add    r4, r4, r5
+	st     [spanX], r4
 	jmp    while0
  
 @label endwhile1
-	ld     r0, [spanY]
-	ld     r1, 0x00000001
-	add    r0, r0, r1
-	st     [spanY], r0
+	ld     r4, [spanY]
+	ld     r5, 0x00000001
+	add    r4, r4, r5
+	st     [spanY], r4
 	jmp    while2
  
 @label endwhile3
-ret    
-
 @label main
-	ld     r0, 0x00000200
-	push   r0
-	ld     r0, 0x00000180
-	push   r0
-	ld     r0, 0x00000080
-	push   r0
-	ld     r0, 0x00000060
-	push   r0
+	ld     r4, 0x00000200
+	push   r4
+	ld     r4, 0x00000180
+	push   r4
+	ld     r4, 0x00000080
+	push   r4
+	ld     r4, 0x00000060
+	push   r4
 	call   DrawRect
-	ld     r0, 0x00000001
-	push   r0
-	ld     r0, 0x00000002
-	push   r0
-	ld     r0, 0x00000003
-	push   r0
-	ld     r0, 0x00000004
-	push   r0
+	ld     r4, 0x00000001
+	push   r4
+	ld     r4, 0x00000002
+	push   r4
+	ld     r4, 0x00000003
+	push   r4
+	ld     r4, 0x00000004
+	push   r4
 	call   DrawRect
+	ld     r4, [DrawRect:spanX]
+	st     [cursorX], r4
 ret    
 
 

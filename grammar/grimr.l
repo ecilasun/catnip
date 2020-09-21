@@ -36,15 +36,12 @@ void count();
 "def"						{ count();  return(FUNCTION); }
 
 "if"						{ count();  return(IF); }
-"then"						{ count();  return(THEN); }
-"else"						{ count();  return(ELSE); }
 
 "while"						{ count();  return(WHILE); }
 
 "{"							{ count();  return(BEGINBLOCK); }
 "}"							{ count();  return(ENDBLOCK); }
 
-"goto"						{ count();  return(GOTO); }
 "return"					{ count();  return(RETURN); }
 
 "["							{ count();  return('['); }
@@ -78,7 +75,7 @@ void count();
 "&&"						{ count();  return(AND_OP); }
 "||"						{ count();  return(OR_OP); }
 
-{L}({L}|{D})*				{ count();  sscanf(yytext, "%s", yylval.string); return(IDENTIFIER); }
+{L}(":"|{L}|{D})*				{ count();  sscanf(yytext, "%s", yylval.string); return(IDENTIFIER); }
 
 0[xX]{H}+{IS}?				{ count(); sscanf(yytext, "%x", &yylval.numeric); return(CONSTANT); }
 0[0-7]*{IS}?				{ count(); yylval.numeric = atoi(yytext); return(CONSTANT); }
@@ -129,7 +126,6 @@ void comment()
 	printf("ERROR: unterminated comment");
 }
 
-int line = 0;
 int column = 0;
 
 void count()
@@ -140,7 +136,7 @@ void count()
 		if (yytext[i] == '\n')
 		{
 			column = 0;
-			++line;
+			++yylineno;
 		}
 		else if (yytext[i] == '\t')
 			column += 8 - (column % 8);
