@@ -273,6 +273,7 @@ enum EOpcode
 	OP_RETURN,
 	OP_PUSH,
 	OP_POP,
+	OP_LEA,
 };
 
 const char *Opcodes[]={
@@ -298,6 +299,7 @@ const char *Opcodes[]={
 	"ret   ",
 	"push  ",
 	"pop   ",
+	"lea   ",
 };
 
 struct SCodeNode
@@ -1655,6 +1657,34 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 			g_context.m_CodeNodes.push_back(paramop);
 		}
 		break;
+
+		case EN_UnaryAddressOf:
+		{
+			int isRegister;
+			SCodeNode *addrop = new SCodeNode();
+			addrop->m_Op = OP_LEA;
+			std::string srcval = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister);
+			addrop->m_ValueIn[0] = srcval;
+			addrop->m_ValueOut = PushRegister();
+			addrop->m_OutputCount = 1;
+			addrop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(addrop);
+		}
+		break;
+
+		/*case EN_UnaryValueOf:
+		{
+			int isRegister;
+			SCodeNode *addrop = new SCodeNode();
+			addrop->m_Op = OP_LOAD;
+			std::string srcval = EvaluateExpression(cctx, node->m_ASTNodes[0], isRegister);
+			addrop->m_ValueIn[0] = std::string("[") + srcval + std::string("]");
+			addrop->m_ValueOut = PushRegister();
+			addrop->m_OutputCount = 1;
+			addrop->m_InputCount = 1;
+			g_context.m_CodeNodes.push_back(addrop);
+		}
+		break;*/
 
 		case EN_While:
 		case EN_InputParamList:
