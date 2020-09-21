@@ -17,7 +17,7 @@ GrimR (c)2020 Engin Cilasun
 	ld     r1, [height]
 	add    r0, r0, r1
 	ld     r1, [spanY]
-	cmp.l  r0, r0, r1
+	cmp.l  r0, r1, r0
 	jmp.nz r0, endwhile3
 	ld     r0, [posX]
 	st     [spanX], r0
@@ -27,7 +27,7 @@ GrimR (c)2020 Engin Cilasun
 	ld     r1, [width]
 	add    r0, r0, r1
 	ld     r1, [spanX]
-	cmp.l  r0, r0, r1
+	cmp.l  r0, r1, r0
 	jmp.nz r0, endwhile1
 	ld     r0, 0x00000140
 	ld     r1, [spanY]

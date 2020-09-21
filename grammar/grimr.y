@@ -1576,8 +1576,8 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 
 			SCodeNode *newop = new SCodeNode();
 			newop->m_Op = EOpcode(int(OP_LESS) + (node->m_Type-EN_LessThan));
-			newop->m_ValueIn[1] = PopRegister();
 			newop->m_ValueIn[0] = PopRegister();
+			newop->m_ValueIn[1] = PopRegister();
 			newop->m_ValueOut = PushRegister();
 			newop->m_OutputCount = 1;
 			newop->m_InputCount = 2;
