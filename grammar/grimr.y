@@ -282,32 +282,32 @@ enum EOpcode
 
 const char *Opcodes[]={
 	"",
-	"nop   ",
-	"mul   ",
-	"div   ",
-	"mod   ",
-	"add   ",
-	"sub   ",
-	"st    ",
-	"ld    ",
-	"cmp.l ",
-	"cmp.g ",
-	"cmp.le",
-	"cmp.ge",
-	"cmp.e ",
-	"cmp.ne",
+	"\tnop   ",
+	"\tmul   ",
+	"\tdiv   ",
+	"\tmod   ",
+	"\tadd   ",
+	"\tsub   ",
+	"\tst    ",
+	"\tld    ",
+	"\tcmp.l ",
+	"\tcmp.g ",
+	"\tcmp.le",
+	"\tcmp.ge",
+	"\tcmp.e ",
+	"\tcmp.ne",
 	"@label",
-	"jmp   ",
-	"jmp.nz",
-	"call  ",
+	"\tjmp   ",
+	"\tjmp.nz",
+	"\tcall  ",
 	"ret   ",
-	"push  ",
-	"pop   ",
-	"lea   ",
-	"and   ",
-	"or    ",
-	"xor   ",
-	"sel   ",
+	"\tpush  ",
+	"\tpop   ",
+	"\tlea   ",
+	"\tand   ",
+	"\tor    ",
+	"\txor   ",
+	"\tsel   ",
 };
 
 struct SCodeNode
@@ -1873,8 +1873,8 @@ void DumpCodeNode(FILE *fp, CCompilerContext *cctx, SCodeNode *codenode)
 	}
 	fprintf(fp, "\n");
 
-	//for (auto &subnode : node->m_CodeNodes)
-	//	DumpCodeNode(fp, cctx, subnode);
+	if (codenode->m_Op == OP_RETURN)
+		fprintf(fp, "\n");
 }
 
 void DumpSymbolTable(FILE *fp, CCompilerContext *cctx)
@@ -1885,7 +1885,7 @@ void DumpSymbolTable(FILE *fp, CCompilerContext *cctx)
 
 	for (auto &var : cctx->m_Variables)
 	{
-		fprintf(fp, "@LABEL %s\n", var->m_Name.c_str());
+		fprintf(fp, "@label %s\n", var->m_Name.c_str());
 		if (var->m_InitializedValues.size())
 		{
 			if (var->m_Dimension<var->m_InitializedValues.size())
@@ -1898,13 +1898,16 @@ void DumpSymbolTable(FILE *fp, CCompilerContext *cctx)
 				std::stringstream stream;
 				stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << initval;
 				std::string result( stream.str() );
-				fprintf(fp, "@dword %s\n", result.c_str());
+				fprintf(fp, "\t@dword %s\n", result.c_str());
 				++i;
 			}
+			// Pad missing values with zeroes
+			for (;i<var->m_Dimension;++i)
+				fprintf(fp, "\t@dword 0x00000000\n");
 		}
 		else
 			for (int i=0;i<var->m_Dimension;++i)
-				fprintf(fp, "@dword 0x00000000\n");
+				fprintf(fp, "\t@dword 0x00000000\n");
 	}
 }
 
