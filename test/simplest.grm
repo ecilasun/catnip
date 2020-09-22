@@ -16,8 +16,7 @@ def DrawRect(posX, posY, width, height)
         while (spanX<posX+width)
         {
             // GrimR feature: Array operator can alias a variable as a pointer at that address if used on a non-array integer.
-            VRAM[spanX + spanY*320] = 0xFF;
-
+            VRAM[spanX + spanY*320] = 0xFF00FF00;
             spanX = spanX+1;
         }
         spanY = spanY+1;

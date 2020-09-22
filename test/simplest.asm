@@ -40,7 +40,7 @@ GrimR (c)2020 Engin Cilasun
 	lea    r1, spanX
 	ld     r1, [r1]
 	add    r0, r0, r1
-	ld     r1, 0x000000ff
+	ld     r1, 0xff00ff00
 	st     [VRAM+r0], r1
 	lea    r0, spanX
 	ld     r0, [r0]
