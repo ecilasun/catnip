@@ -29,6 +29,7 @@ def main()
 
     if (DrawRect:spanX>5)
     {
+        cursorX = cursorY>5 ? 1:3;
         DrawRect(512, 384, 128, 96);
     }
 
