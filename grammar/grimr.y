@@ -1098,11 +1098,7 @@ any_statement
 	;
 
 code_block_body
-	:																							{
-																									$$ = new SBaseASTNode(EN_Statement, "");
-																									g_context.PushNode($$);
-																								}
-	| any_statement
+	: any_statement
 	| code_block_body any_statement																{
 																									SBaseASTNode *n0=g_context.PopNode();
 																									SBaseASTNode *varnode = g_context.m_NodeStack.back();
