@@ -1888,10 +1888,10 @@ void CompileCodeBlock(CCompilerContext *cctx, SASTNode *node)
 			SCodeNode *storeop = new SCodeNode();
 			storeop->m_Op = OP_STORE;
 			storeop->m_ValueIn[0] = leftop->m_ValueOut;
-			PopRegister();
-			storeop->m_ValueOut = std::string("[") + PushRegister() + std::string("]");
+			storeop->m_ValueOut = std::string("[") + leftoplea->m_ValueOut + std::string("]");
 			storeop->m_InputCount = 1;
 			g_context.m_CodeNodes.push_back(storeop);
+			PopRegister();
 			PopRegister();
 		}
 		break;

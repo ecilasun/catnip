@@ -15,55 +15,55 @@ GrimR (c)2020 Engin Cilasun
 	st     [r1], r0
 @label while2
  
-	lea    r1, posY
+	lea    r0, posY
+	ld     r0, [r0]
+	lea    r1, height
 	ld     r1, [r1]
-	lea    r2, height
-	ld     r2, [r2]
-	add    r1, r1, r2
-	lea    r2, spanY
-	ld     r2, [r2]
-	cmp.l  r1, r2, r1
-	jmp.nz r1, endwhile3
-	lea    r1, posX
+	add    r0, r0, r1
+	lea    r1, spanY
 	ld     r1, [r1]
-	lea    r2, spanX
-	st     [r2], r1
+	cmp.l  r0, r1, r0
+	jmp.nz r0, endwhile3
+	lea    r0, posX
+	ld     r0, [r0]
+	lea    r1, spanX
+	st     [r1], r0
 @label while0
  
-	lea    r2, posX
-	ld     r2, [r2]
-	lea    r3, width
-	ld     r3, [r3]
-	add    r2, r2, r3
-	lea    r3, spanX
-	ld     r3, [r3]
-	cmp.l  r2, r3, r2
-	jmp.nz r2, endwhile1
-	ld     r2, 0x00000140
-	lea    r3, spanY
-	ld     r3, [r3]
-	mul    r2, r2, r3
-	lea    r3, spanX
-	ld     r3, [r3]
-	add    r2, r2, r3
-	ld     r3, 0xff00ff00
-	lea    r4, VRAM+r4
-	st     [r3], r3
-	lea    r3, spanX
-	ld     r3, [r3]
-	ld     r4, 0x00000001
-	add    r3, r3, r4
-	lea    r4, spanX
-	st     [r4], r3
+	lea    r0, posX
+	ld     r0, [r0]
+	lea    r1, width
+	ld     r1, [r1]
+	add    r0, r0, r1
+	lea    r1, spanX
+	ld     r1, [r1]
+	cmp.l  r0, r1, r0
+	jmp.nz r0, endwhile1
+	ld     r0, 0x00000140
+	lea    r1, spanY
+	ld     r1, [r1]
+	mul    r0, r0, r1
+	lea    r1, spanX
+	ld     r1, [r1]
+	add    r0, r0, r1
+	ld     r1, 0xff00ff00
+	lea    r2, VRAM+r2
+	st     [r2], r1
+	lea    r0, spanX
+	ld     r0, [r0]
+	ld     r1, 0x00000001
+	add    r0, r0, r1
+	lea    r1, spanX
+	st     [r1], r0
 	jmp    while0
 @label endwhile1
  
-	lea    r4, spanY
-	ld     r4, [r4]
-	ld     r5, 0x00000001
-	add    r4, r4, r5
-	lea    r5, spanY
-	st     [r5], r4
+	lea    r0, spanY
+	ld     r0, [r0]
+	ld     r1, 0x00000001
+	add    r0, r0, r1
+	lea    r1, spanY
+	st     [r1], r0
 	jmp    while2
 @label endwhile3
  
@@ -92,14 +92,14 @@ GrimR (c)2020 Engin Cilasun
 	sel    r0, r0, r2, r1
 	lea    r1, cursorX
 	st     [r1], r0
-	ld     r1, 0x00000200
-	push   r1
-	ld     r1, 0x00000180
-	push   r1
-	ld     r1, 0x00000080
-	push   r1
-	ld     r1, 0x00000060
-	push   r1
+	ld     r0, 0x00000200
+	push   r0
+	ld     r0, 0x00000180
+	push   r0
+	ld     r0, 0x00000080
+	push   r0
+	ld     r0, 0x00000060
+	push   r0
 	call   DrawRect
 @label endif4
  
