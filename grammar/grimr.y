@@ -2297,14 +2297,16 @@ void SaveAsm(const char *filename)
 
 void DebugDumpCodeBlock(CCompilerContext *cctx, SASTNode *node)
 {
-	printf("\t%s(%d) %s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
+	std::string spaces = ".................................................................................";
+	printf("%s%s(%d) %s\n", spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
 	for (auto &subnode : node->m_ASTNodes)
 		DebugDumpCodeBlock(cctx, subnode);
 }
 
 void DebugDumpNode(CCompilerContext *cctx, SASTNode *node)
 {
-	printf("%s(%d) %s\n", NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
+	std::string spaces = ".................................................................................";
+	printf("%s%s(%d) %s\n", spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
 
 	if (node->m_Type == EN_FuncDecl)
 	{
