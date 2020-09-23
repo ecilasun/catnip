@@ -81,7 +81,8 @@ enum EASTNodeType
 	EN_Return,
 	EN_EndCodeBlock,
 	EN_BeginCodeBlock,
-	EN_StackOp,
+	EN_StackPush,
+	EN_StackPop,
 	EN_Decl,
 	EN_DeclInitJunction,
 	EN_DeclArray,
@@ -139,7 +140,8 @@ const char* NodeTypes[]=
 	"EN_Return                    ",
 	"EN_EndCodeBlock              ",
 	"EN_BeginCodeBlock            ",
-	"EN_StackOp                   ",
+	"EN_StackPush                 ",
+	"EN_StackPop                  ",
 	"EN_Decl                      ",
 	"EN_DeclInitJunction          ",
 	"EN_DeclArray                 ",
@@ -177,11 +179,14 @@ enum EOpcode
 	OP_POPCONTEXT,
 	OP_IF,
 	OP_WHILE,
+	OP_CALL,
+	OP_PUSH,
+	OP_POP,
 };
 
 const char *Opcodes[]={
 	"nop",
-	"const",
+	"mov",
 	"addrof",
 	"valof",
 	"bnot",
@@ -192,8 +197,8 @@ const char *Opcodes[]={
 	"mod",
 	"add",
 	"sub",
-	"ident",
-	"assign",
+	"lea",
+	"st",
 	"bulkassign",
 	"dataarray",
 	"ret",
@@ -201,6 +206,9 @@ const char *Opcodes[]={
 	"popcontext",
 	"if",
 	"while",
+	"call",
+	"push",
+	"pop",
 };
 
 enum ENodeSide
@@ -479,6 +487,7 @@ postfix_expression
 																									$$ = new SASTNode(EN_PostfixArrayExpression, "");
 																									$$->PushNode(exprnode);
 																									$$->PushNode(offsetexpressionnode);
+																									$$->m_Opcode = OP_ADD;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -956,6 +965,7 @@ functioncall_statement
 	: simple_identifier parameter_list ';'														{
 																									$$ = new SASTNode(EN_Call, "");
 																									bool done = false;
+																									int paramcount = 0;
 																									do
 																									{
 																										SASTNode *paramnode = g_ASC.PeekNode();
@@ -963,10 +973,16 @@ functioncall_statement
 																										if (done)
 																											break;
 																										g_ASC.PopNode();
-																										$$->PushNode(paramnode->m_ASTNodes[0]); // Remove the EN_Expression
+																										// Replace EN_Expression with EN_StackPush
+																										paramnode->m_Type = EN_StackPush;
+																										paramnode->m_Opcode = OP_PUSH;
+																										$$->PushNode(paramnode);
+																										++paramcount;
 																									} while (1);
 																									SASTNode *namenode = g_ASC.PopNode();
 																									$$->PushNode(namenode);
+																									$$->m_Opcode = OP_CALL;
+																									$$->m_Value = std::string("(paramcount: ") + std::to_string(paramcount) + std::string(")");
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -1049,7 +1065,7 @@ function_def
 																										done = n0->m_Type == EN_Expression ? false:true;
 																										if (done)
 																											break;
-																										n0->m_Type = EN_InputParam;
+																										n0->m_Type = EN_StackPop;
 																										g_ASC.PopNode();
 																										// Add the input parameter to code block
 																										$$->PushNode(n0);

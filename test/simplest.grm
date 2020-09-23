@@ -24,6 +24,8 @@ def DrawRect(posX, posY, width, height)
 
 def main()
 {
-    cursorX = cursorY*2;
-    DrawRect(0,0,512+3-cursorY,384);
+    if (cursorY > 2)
+    {
+        DrawRect(0,0,512+3-cursorY,384);
+    }
 }
