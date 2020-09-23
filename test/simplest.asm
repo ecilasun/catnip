@@ -115,9 +115,15 @@ EN_FuncDecl                  (0) nop
 ...........EN_Identifier                (11) lea spanY
 ........EN_PostfixArrayExpression    (8) add 
 .........EN_Identifier                (9) lea sprite
-.........EN_Mod                       (9) mod 
-..........EN_Constant                  (10) mov 0x00000004
-..........EN_Identifier                (10) lea spanX
+.........EN_Add                       (9) add 
+..........EN_Mod                       (10) mod 
+...........EN_Constant                  (11) mov 0x00000004
+...........EN_Identifier                (11) lea spanX
+..........EN_Mul                       (10) mul 
+...........EN_Constant                  (11) mov 0x00000004
+...........EN_Mod                       (11) mod 
+............EN_Constant                  (12) mov 0x00000008
+............EN_Identifier                (12) lea spanY
 .....EN_EndCodeBlock              (5) popcontext 
 .....EN_Jump                      (5) jmp beginwhile0
 .....EN_Label                     (5) @label endwhile1
