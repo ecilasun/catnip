@@ -1100,10 +1100,15 @@ void DebugDumpNode(FILE *_fp, int scopeDepth, SASTNode *node)
 
 void DebugDump(const char *_filename)
 {
-	int scopeDepth = 0;
 	FILE *fp = fopen(_filename, "w");
+
+	fprintf(fp, "\n------------Code----------------------\n");
+
+	int scopeDepth = 0;
 	for (auto &node : g_ASC.m_ASTNodes)
 		DebugDumpNode(fp, scopeDepth, node);
+
+	fprintf(fp, "\n------------Symbol table--------------\n");
 
 	for (auto &func : g_ASC.m_Functions)
 		fprintf(fp, "Function '%s', hash %.8X\n", func->m_Name.c_str(), func->m_Hash);

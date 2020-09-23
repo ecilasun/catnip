@@ -1,3 +1,5 @@
+
+------------Code----------------------
 EN_Decl                      (0) nop 
 .EN_Identifier                (1) ident cursorX
 EN_Decl                      (0) nop 
@@ -118,6 +120,8 @@ EN_FuncDecl                  (0) nop
 ....EN_Constant                  (4) const 0x00000000
 ...EN_Identifier                (3) ident DrawRect
 .EN_EndCodeBlock              (1) popcontext 
+
+------------Symbol table--------------
 Function 'DrawRect', hash 032D1965
 Function 'main', hash BC76E6BA
 Variable 'cursorX', hash 2AB08A05
