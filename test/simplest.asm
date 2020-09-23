@@ -18,7 +18,7 @@ EN_Decl                      (0) nop
 .EN_DeclInitJunction          (1) bulkassign 
 ..EN_Identifier                (2) ident tree
 ..EN_Constant                  (2) const 4
-..EN_ArrayWithDataJunction     (2) nop 
+..EN_ArrayWithDataJunction     (2) dataarray 
 ...EN_Expression                (3) nop 
 ....EN_ConditionalExpr           (4) nop 
 .....EN_PrimaryExpression         (5) nop 
@@ -41,7 +41,7 @@ EN_Decl                      (0) nop
 ..EN_ConditionalExpr           (2) nop 
 ...EN_PrimaryExpression         (3) nop 
 ....EN_Constant                  (4) const 0x00000005
-..EN_ArrayWithDataJunction     (2) nop 
+..EN_ArrayWithDataJunction     (2) dataarray 
 ...EN_Expression                (3) nop 
 ....EN_ConditionalExpr           (4) nop 
 .....EN_PrimaryExpression         (5) nop 
@@ -80,8 +80,8 @@ EN_FuncDecl                  (0) nop
 ...EN_PrimaryExpression         (3) nop 
 ....EN_Identifier                (4) ident posX
 .EN_Identifier                (1) ident DrawRect
-.EN_CodeBlock                 (1) nop 
-..EN_While                     (2) nop 
+.EN_CodeBlock                 (1) pushcontext 
+..EN_While                     (2) while 
 ...EN_ConditionalExpr           (3) nop 
 ....EN_LessThan                  (4) nop 
 .....EN_PrimaryExpression         (5) nop 
@@ -91,7 +91,7 @@ EN_FuncDecl                  (0) nop
 .......EN_Identifier                (7) ident posY
 ......EN_PrimaryExpression         (6) nop 
 .......EN_Identifier                (7) ident height
-...EN_CodeBlock                 (3) nop 
+...EN_CodeBlock                 (3) pushcontext 
 ....EN_Statement                 (4) nop 
 .....EN_AssignmentExpression      (5) assign 
 ......EN_PrimaryExpression         (6) nop 
@@ -102,7 +102,7 @@ EN_FuncDecl                  (0) nop
 .........EN_Identifier                (9) ident spanY
 ........EN_PrimaryExpression         (8) nop 
 .........EN_Constant                  (9) const 0x00000001
-....EN_While                     (4) nop 
+....EN_While                     (4) while 
 .....EN_ConditionalExpr           (5) nop 
 ......EN_LessThan                  (6) nop 
 .......EN_PrimaryExpression         (7) nop 
@@ -112,7 +112,7 @@ EN_FuncDecl                  (0) nop
 .........EN_Identifier                (9) ident posX
 ........EN_PrimaryExpression         (8) nop 
 .........EN_Identifier                (9) ident width
-.....EN_CodeBlock                 (5) nop 
+.....EN_CodeBlock                 (5) pushcontext 
 ......EN_Statement                 (6) nop 
 .......EN_AssignmentExpression      (7) assign 
 ........EN_PrimaryExpression         (8) nop 
@@ -140,6 +140,7 @@ EN_FuncDecl                  (0) nop
 ........EN_ConditionalExpr           (8) nop 
 .........EN_PrimaryExpression         (9) nop 
 ..........EN_Constant                  (10) const 0xff00ff00
+.....EN_EndCodeBlock              (5) popcontext 
 ....EN_Statement                 (4) nop 
 .....EN_AssignmentExpression      (5) assign 
 ......EN_PrimaryExpression         (6) nop 
@@ -147,6 +148,7 @@ EN_FuncDecl                  (0) nop
 ......EN_ConditionalExpr           (6) nop 
 .......EN_PrimaryExpression         (7) nop 
 ........EN_Identifier                (8) ident posX
+...EN_EndCodeBlock              (3) popcontext 
 ..EN_Statement                 (2) nop 
 ...EN_AssignmentExpression      (3) assign 
 ....EN_PrimaryExpression         (4) nop 
@@ -158,9 +160,10 @@ EN_FuncDecl                  (0) nop
 ...EN_Identifier                (3) ident spanY
 ..EN_Decl                      (2) nop 
 ...EN_Identifier                (3) ident spanX
+.EN_EndCodeBlock              (1) popcontext 
 EN_FuncDecl                  (0) nop 
 .EN_Identifier                (1) ident main
-.EN_CodeBlock                 (1) nop 
+.EN_CodeBlock                 (1) pushcontext 
 ..EN_Call                      (2) nop 
 ...EN_Expression                (3) nop 
 ....EN_ConditionalExpr           (4) nop 
@@ -185,6 +188,7 @@ EN_FuncDecl                  (0) nop
 .....EN_PrimaryExpression         (5) nop 
 ......EN_Constant                  (6) const 0x00000000
 ...EN_Identifier                (3) ident DrawRect
+.EN_EndCodeBlock              (1) popcontext 
 Function 'DrawRect', hash 032D1965
 Function 'main', hash BC76E6BA
 Variable 'cursorX', hash 2AB08A05
