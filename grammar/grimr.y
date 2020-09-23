@@ -797,7 +797,7 @@ if_statement
 																									$$->m_Opcode = OP_IF;
 																									g_ASC.PushNode($$);
 																								}
-	| IF '(' expression ')' code_block_start code_block_body code_block_end	ELSE code_block_start code_block_body code_block_end	{
+	| IF '(' expression ')' code_block_start code_block_body code_block_end ELSE code_block_start code_block_body code_block_end	{
 																									$$ = new SASTNode(EN_If, "");
 
 																									// Remove epilogue
