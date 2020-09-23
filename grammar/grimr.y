@@ -695,23 +695,7 @@ assignment_expression
 	;
 
 expression
-	: assignment_expression
-	| simple_identifier parameter_list															{
-																									$$ = new SASTNode(EN_Call, "");
-																									bool done = false;
-																									do
-																									{
-																										SASTNode *paramnode = g_ASC.PeekNode();
-																										done = paramnode->m_Type == EN_CallParam ? false:true;
-																										if (done)
-																											break;
-																										g_ASC.PopNode();
-																										$$->PushNode(paramnode);
-																									} while (1);
-																									SASTNode *namenode = g_ASC.PopNode();
-																									$$->PushNode(namenode);
-																									g_ASC.PushNode($$);
-																								}
+	: assignment_expression																	
 	/*| expression ',' assignment_expression													{
 																								}*/ // NOTE: This is causing much grief and I don't think I need it at this point
 	;
