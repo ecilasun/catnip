@@ -22,3 +22,8 @@ def DrawRect(posX, posY, width, height)
         spanY = spanY+1;
     }
 }
+
+def main()
+{
+    DrawRect(0,0,512,384);
+}

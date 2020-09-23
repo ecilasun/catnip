@@ -233,21 +233,19 @@ struct SVariable
 	std::string m_Name;
 	uint32_t m_Hash{0};
 	uint32_t m_Dimension{1};
+	int m_RefCount{0};
+	std::string m_Value;
+	class SASTNode *m_RootNode{nullptr};
 	SString *m_String{nullptr};
-	std::vector<std::string> m_InitializedValues;
-	int m_ScopeDepth{0};
+	std::vector<std::string> m_InitialValues;
 };
 
 struct SFunction
 {
 	std::string m_Name;
 	uint32_t m_Hash;
-	int m_ScopeDepth{0};
 	int m_RefCount{0};
-	std::vector<class SASTNode*> m_InputParameters;
-	std::vector<class SASTNode*> m_PrologueBlock;
-	std::vector<class SASTNode*> m_CodeBlock;
-	std::vector<class SASTNode*> m_EpilogueBlock;
+	class SASTNode *m_RootNode{nullptr};
 };
 
 struct SSymbol
@@ -282,6 +280,7 @@ public:
 	EASTNodeType m_Type{EN_Default};
 	ENodeSide m_Side{RIGHT_HAND_SIDE};
 	int m_ScopeDepth{0};
+	int m_ScopeScore{0};
 	SString *m_String{nullptr};
 	std::string m_Value;
 	std::vector<SASTNode*> m_ASTNodes;
@@ -779,17 +778,79 @@ variable_declaration_item
 																								}
 	| simple_identifier '=' expression 															{
 																									$$ = new SASTNode(EN_DeclInitJunction, "");
-																									SASTNode *n0=g_ASC.PopNode();
-																									SASTNode *n1=g_ASC.PopNode();
-																									$$->PushNode(n1);
-																									$$->PushNode(n0);
+																									SASTNode *valnode=g_ASC.PopNode();
+																									SASTNode *namenode=g_ASC.PopNode();
+																									$$->PushNode(namenode);
+																									$$->PushNode(valnode);
 																									g_ASC.PushNode($$);
 																								}
 	| simple_identifier '[' expression ']'														{
+																									$$ = new SASTNode(EN_DeclArray, "");
+																									SASTNode *dimnode=g_ASC.PopNode();
+																									SASTNode *namenode=g_ASC.PopNode();
+																									$$->PushNode(namenode);
+																									$$->PushNode(dimnode);
+																									g_ASC.PushNode($$);
 																								}
-	| simple_identifier '[' expression ']' '=' BEGINBLOCK expression_list ENDBLOCK				{
+	| simple_identifier '[' expression ']' '=' code_block_start expression_list code_block_end	{
+																									$$ = new SASTNode(EN_DeclInitJunction, "");
+
+																									// Discard epilogue
+																									g_ASC.PopNode();
+
+																									// Create initializer array
+																									SASTNode *initarray = new SASTNode(EN_ArrayWithDataJunction, "");
+																									// Collect everything up till prologue
+																									bool done = false;
+																									do
+																									{
+																										SASTNode *n0 = g_ASC.PeekNode();
+																										done = n0->m_Type == EN_Prologue ? true:false;
+																										if (done)
+																											break;
+																										g_ASC.PopNode();
+																										initarray->PushNode(n0);
+																									} while (1);
+
+																									// Discard prologue
+																									g_ASC.PopNode();
+
+																									SASTNode *dimnode=g_ASC.PopNode();
+																									SASTNode *namenode=g_ASC.PopNode();
+																									$$->PushNode(namenode);
+																									$$->PushNode(dimnode);
+																									$$->PushNode(initarray);
+																									g_ASC.PushNode($$);
 																								}
-	| simple_identifier '['  ']' '=' BEGINBLOCK expression_list ENDBLOCK						{
+	| simple_identifier '['  ']' '=' code_block_start expression_list code_block_end			{
+																									$$ = new SASTNode(EN_DeclInitJunction, "");
+
+																									// Discard epilogue
+																									g_ASC.PopNode();
+
+																									// Create initializer array
+																									SASTNode *initarray = new SASTNode(EN_ArrayWithDataJunction, "");
+																									// Collect everything up till prologue
+																									bool done = false;
+																									do
+																									{
+																										SASTNode *n0 = g_ASC.PeekNode();
+																										done = n0->m_Type == EN_Prologue ? true:false;
+																										if (done)
+																											break;
+																										g_ASC.PopNode();
+																										initarray->PushNode(n0);
+																									} while (1);
+
+																									// Discard prologue
+																									g_ASC.PopNode();
+
+																									SASTNode *dimnode=new SASTNode(EN_Constant, "1");
+																									SASTNode *namenode=g_ASC.PopNode();
+																									$$->PushNode(namenode);
+																									$$->PushNode(dimnode);
+																									$$->PushNode(initarray);
+																									g_ASC.PushNode($$);
 																								}
 	;
 
@@ -799,12 +860,35 @@ variable_declaration
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
 																									g_ASC.PushNode($$);
+
+																									// Variable has initializer
+																									//if (n0->m_Type==EN_DeclInitJunction)
+
+																									// Also store the variable in function list for later retreival
+																									SVariable *var = new SVariable();
+																									var->m_Name = n0->m_Type==EN_DeclInitJunction ? n0->m_ASTNodes[0]->m_Value : n0->m_Value;
+																									var->m_Hash = HashString(var->m_Name.c_str());
+																									var->m_RootNode = $$;
+																									var->m_Dimension = 1;
+																									var->m_RefCount = 0;
+																									var->m_Value = "";
+																									g_ASC.m_Variables.push_back(var);
 																								}
 	| variable_declaration ',' variable_declaration_item										{
 																									$$ = new SASTNode(EN_Decl, "");
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
 																									g_ASC.PushNode($$);
+
+																									// Also store the variable in function list for later retreival
+																									SVariable *var = new SVariable();
+																									var->m_Name = n0->m_Value;
+																									var->m_Hash = HashString(var->m_Name.c_str());
+																									var->m_RootNode = $$;
+																									var->m_Dimension = 1;
+																									var->m_RefCount = 0;
+																									var->m_Value = "";
+																									g_ASC.m_Variables.push_back(var);
 																								}
 	;
 
@@ -938,6 +1022,13 @@ function_def
 																									$$->PushNode(codeblocknode);
 
 																									g_ASC.PushNode($$);
+
+																									// Also store the function in function list for later retreival
+																									SFunction *func = new SFunction();
+																									func->m_Name = namenode->m_Value;
+																									func->m_Hash = HashString(func->m_Name.c_str());
+																									func->m_RootNode = $$;
+																									g_ASC.m_Functions.push_back(func);
 																								}
 	;
 
@@ -959,7 +1050,7 @@ void DebugDumpNode(int scopeDepth, SASTNode *node)
 	node->m_ScopeDepth = scopeDepth;
 
 	std::string spaces = ".................................................................................";
-	printf("%s%s(%d) %s\n", spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
+	printf("%s%s(%d) %s\n", spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeScore, node->m_Value.c_str());
 
 	for (auto &subnode : node->m_ASTNodes)
 		DebugDumpNode(scopeDepth+1, subnode);
@@ -970,6 +1061,12 @@ void DebugDump()
 	int scopeDepth = 0;
 	for (auto &node : g_ASC.m_ASTNodes)
 		DebugDumpNode(scopeDepth, node);
+
+	for (auto &func : g_ASC.m_Functions)
+		printf("Function '%s', hash %.8X\n", func->m_Name.c_str(), func->m_Hash);
+
+	for (auto &var : g_ASC.m_Variables)
+		printf("Variable '%s', hash %.8X\n", var->m_Name.c_str(), var->m_Hash);
 }
 
 void yyerror(const char *s) {
