@@ -170,6 +170,8 @@ enum EOpcode
 	OP_ASSIGN,
 	OP_BULKASSIGN,
 	OP_RETURN,
+	OP_PUSHCONTEXT,
+	OP_POPCONTEXT,
 };
 
 const char *Opcodes[]={
@@ -189,6 +191,8 @@ const char *Opcodes[]={
 	"assign",
 	"bulkassign",
 	"ret",
+	"pushcontext",
+	"popcontext",
 };
 
 enum ENodeSide
@@ -947,6 +951,7 @@ functioncall_statement
 code_block_start
 	: BEGINBLOCK																				{
 																									$$ = new SASTNode(EN_Prologue, "");
+																									$$->m_Opcode = OP_PUSHCONTEXT;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -954,6 +959,7 @@ code_block_start
 code_block_end
 	: ENDBLOCK																					{
 																									$$ = new SASTNode(EN_Epilogue, "");
+																									$$->m_Opcode = OP_POPCONTEXT;
 																									g_ASC.PushNode($$);
 																								}
 	;
