@@ -1,5 +1,5 @@
 // GrimR language test file
-
+/*
 var cursorX, cursorY, VRAM=0x80000000;
 var banana[16], tree[] = {1,2,3,4};
 var sprite[32] = {
@@ -45,4 +45,10 @@ def main()
     {
         cursorY = 1;
     }
+}
+*/
+
+def main()
+{
+    a[c[4-d]+23] = b[1];
 }

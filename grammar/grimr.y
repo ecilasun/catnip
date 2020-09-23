@@ -163,7 +163,6 @@ const char* NodeTypes[]=
 enum EOpcode
 {
 	OP_NOOP,
-	OP_CONST,
 	OP_ADDRESSOF,
 	OP_VALUEOF,
 	OP_BITNOT,
@@ -174,7 +173,8 @@ enum EOpcode
 	OP_MOD,
 	OP_ADD,
 	OP_SUB,
-	OP_IDENT,
+	OP_LEA,
+	OP_LOAD,
 	OP_ASSIGN,
 	OP_BULKASSIGN,
 	OP_DATAARRAY,
@@ -206,7 +206,6 @@ enum EOpcode
 
 const char *Opcodes[]={
 	"nop",
-	"mov",
 	"addrof",
 	"valof",
 	"bnot",
@@ -218,6 +217,7 @@ const char *Opcodes[]={
 	"add",
 	"sub",
 	"lea",
+	"ld",
 	"st",
 	"bulkassign",
 	"dataarray",
@@ -317,6 +317,9 @@ public:
 	SString *m_String{nullptr};
 	std::string m_Value;
 	std::vector<SASTNode*> m_ASTNodes;
+	std::string m_TargetRegister;
+	std::string m_SourceRegisterA;
+	std::string m_SourceRegisterB;
 };
 
 struct SASTScanContext
@@ -418,6 +421,29 @@ struct SASTScanContext
 	int m_CurrentAutoLabel{0};
 };
 
+typedef void (*FVisitCallback)(SASTNode *node);
+
+void VisitNode(SASTNode *node, FVisitCallback callback)
+{
+	// Visit op : parent first
+	callback(node);
+
+	for (auto &subnode : node->m_ASTNodes)
+		VisitNode(subnode, callback);
+
+	// Visit op : child first
+}
+
+void VisitNodeHierarchy(SASTNode *rootNode, FVisitCallback callback)
+{
+	VisitNode(rootNode, callback);
+}
+
+void SetAsLeftHandSideCallback(SASTNode *node)
+{
+	node->m_Side = LEFT_HAND_SIDE;
+}
+
 SASTScanContext g_ASC;
 
 %}
@@ -486,7 +512,7 @@ simple_identifier
 	: IDENTIFIER																				{
 																									uint32_t hash = HashString($1);
 																									$$ = new SASTNode(EN_Identifier, std::string($1));
-																									$$->m_Opcode = OP_IDENT;
+																									$$->m_Opcode = OP_LEA;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -497,7 +523,7 @@ simple_constant
 																									stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << $1;
 																									std::string result( stream.str() );
 																									$$ = new SASTNode(EN_Constant, std::string("0x")+result);
-																									$$->m_Opcode = OP_CONST;
+																									$$->m_Opcode = OP_LOAD;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -506,6 +532,7 @@ simple_string
 	: STRING_LITERAL																			{
 																									$$ = new SASTNode(EN_String, yytext); // $1 is just a single word, yytext includes spaces
 																									$$->m_String = g_ASC.AllocateOrRetreiveString(yytext);
+																									$$->m_Opcode = OP_LOAD;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -770,6 +797,7 @@ assignment_expression
 																									$$ = new SASTNode(EN_AssignmentExpression, "");
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
+																									VisitNodeHierarchy(leftnode, SetAsLeftHandSideCallback);
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
 																									$$->m_Opcode = OP_ASSIGN;
@@ -1053,7 +1081,7 @@ variable_declaration_item
 																									std::string result( stream.str() );
 
 																									SASTNode *dimnode=new SASTNode(EN_Constant, std::string("0x")+result);
-																									dimnode->m_Opcode = OP_CONST;
+																									dimnode->m_Opcode = OP_LOAD;
 																									SASTNode *namenode=g_ASC.PopNode();
 																									$$->PushNode(namenode);
 																									$$->PushNode(dimnode);
@@ -1272,20 +1300,12 @@ program
 	;
 %%
 
-void DebugDumpNodeReverse(FILE *_fp, SASTNode *node)
-{
-	for (auto &subnode : node->m_ASTNodes)
-		DebugDumpNodeReverse(_fp, subnode);
-
-	fprintf(_fp, "%s %s\n", Opcodes[node->m_Opcode], node->m_Value.c_str());
-}
-
 void DebugDumpNode(FILE *_fp, int scopeDepth, SASTNode *node)
 {
 	node->m_ScopeDepth = scopeDepth;
 
 	std::string spaces = ".................................................................................";
-	fprintf(_fp, "%s%s(%d) %s %s\n", spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeDepth, Opcodes[node->m_Opcode], node->m_Value.c_str());
+	fprintf(_fp, "%s: %s%s(%d) %s %s,%s,%s,%s\n", node->m_Side==LEFT_HAND_SIDE?"L":"R", spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeDepth, Opcodes[node->m_Opcode], node->m_TargetRegister.c_str(), node->m_SourceRegisterA.c_str(), node->m_SourceRegisterB.c_str(), node->m_Value.c_str());
 
 	for (auto &subnode : node->m_ASTNodes)
 		DebugDumpNode(_fp, scopeDepth+1, subnode);
@@ -1300,11 +1320,6 @@ void DebugDump(const char *_filename)
 	int scopeDepth = 0;
 	for (auto &node : g_ASC.m_ASTNodes)
 		DebugDumpNode(fp, scopeDepth, node);
-
-	fprintf(fp, "\n------------Code Reverse--------------\n");
-
-	for (auto &node : g_ASC.m_ASTNodes)
-		DebugDumpNodeReverse(fp, node);
 
 	fprintf(fp, "\n------------Symbol table--------------\n");
 
