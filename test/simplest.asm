@@ -43,11 +43,13 @@ EN_FuncDecl                  (0) nop
 .EN_Identifier                (1) lea DrawRect
 .EN_BeginCodeBlock            (1) pushcontext 
 ..EN_While                     (2) while 
+...EN_Label                     (3) @label beginwhile2
 ...EN_LessThan                  (3) nop 
 ....EN_Identifier                (4) lea spanY
 ....EN_Add                       (4) add 
 .....EN_Identifier                (5) lea posY
 .....EN_Identifier                (5) lea height
+...EN_JumpNZ                    (3) jmpnz endwhile3
 ...EN_BeginCodeBlock            (3) pushcontext 
 ....EN_Statement                 (4) nop 
 .....EN_AssignmentExpression      (5) st 
@@ -56,11 +58,13 @@ EN_FuncDecl                  (0) nop
 .......EN_Identifier                (7) lea spanY
 .......EN_Constant                  (7) mov 0x00000001
 ....EN_While                     (4) while 
+.....EN_Label                     (5) @label beginwhile0
 .....EN_LessThan                  (5) nop 
 ......EN_Identifier                (6) lea spanX
 ......EN_Add                       (6) add 
 .......EN_Identifier                (7) lea posX
 .......EN_Identifier                (7) lea width
+.....EN_JumpNZ                    (5) jmpnz endwhile1
 .....EN_BeginCodeBlock            (5) pushcontext 
 ......EN_Statement                 (6) nop 
 .......EN_AssignmentExpression      (7) st 
@@ -79,11 +83,15 @@ EN_FuncDecl                  (0) nop
 ...........EN_Identifier                (11) lea spanY
 ........EN_Constant                  (8) mov 0xff00ff00
 .....EN_EndCodeBlock              (5) popcontext 
+.....EN_Jump                      (5) jmp beginwhile0
+.....EN_Label                     (5) @label endwhile1
 ....EN_Statement                 (4) nop 
 .....EN_AssignmentExpression      (5) st 
 ......EN_Identifier                (6) lea spanX
 ......EN_Identifier                (6) lea posX
 ...EN_EndCodeBlock              (3) popcontext 
+...EN_Jump                      (3) jmp beginwhile2
+...EN_Label                     (3) @label endwhile3
 ..EN_Statement                 (2) nop 
 ...EN_AssignmentExpression      (3) st 
 ....EN_Identifier                (4) lea spanY
@@ -100,6 +108,7 @@ EN_FuncDecl                  (0) nop
 ...EN_GreaterThan               (3) nop 
 ....EN_Identifier                (4) lea cursorY
 ....EN_Constant                  (4) mov 0x00000002
+...EN_JumpNZ                    (3) jmpnz endif4
 ...EN_BeginCodeBlock            (3) pushcontext 
 ....EN_Call                      (4) call (paramcount: 4)
 .....EN_StackPush                 (5) push 
@@ -116,6 +125,7 @@ EN_FuncDecl                  (0) nop
 ......EN_Constant                  (6) mov 0x00000000
 .....EN_Identifier                (5) lea DrawRect
 ...EN_EndCodeBlock              (3) popcontext 
+...EN_Label                     (3) @label endif4
 .EN_EndCodeBlock              (1) popcontext 
 
 ------------Symbol table--------------

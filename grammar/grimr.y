@@ -74,6 +74,8 @@ enum EASTNodeType
 	EN_While,
 	EN_If,
 	EN_Label,
+	EN_Jump,
+	EN_JumpNZ,
 	EN_Flow,
 	EN_FlowNZ,
 	EN_DummyString,
@@ -133,6 +135,8 @@ const char* NodeTypes[]=
 	"EN_While                     ",
 	"EN_If                        ",
 	"EN_Label                     ",
+	"EN_Jump                      ",
+	"EN_JumpNZ                    ",
 	"EN_Flow                      ",
 	"EN_FlowNZ                    ",
 	"EN_DummyString               ",
@@ -182,6 +186,9 @@ enum EOpcode
 	OP_CALL,
 	OP_PUSH,
 	OP_POP,
+	OP_JUMP,
+	OP_JUMPNZ,
+	OP_LABEL,
 };
 
 const char *Opcodes[]={
@@ -209,6 +216,9 @@ const char *Opcodes[]={
 	"call",
 	"push",
 	"pop",
+	"jmp",
+	"jmpnz",
+	"@label",
 };
 
 enum ENodeSide
@@ -348,6 +358,11 @@ struct SASTScanContext
 	{
 		uint32_t r = m_CurrentAutoLabel++;
 		return std::string(labelname+std::to_string(r));
+	}
+
+	std::string PopLabel(std::string labelname)
+	{
+		return std::string(labelname+std::to_string(m_CurrentAutoLabel--));
 	}
 
 	SVariable *FindSymbolInSymbolTable(uint32_t hash)
@@ -766,10 +781,19 @@ if_statement
 																									// Remove prologue
 																									g_ASC.PopNode();
 
+																									std::string label = g_ASC.PushLabel("endif");
+																									SASTNode *branchcode = new SASTNode(EN_JumpNZ, label);
+																									branchcode->m_Opcode = OP_JUMPNZ;
+																									SASTNode *endlabel = new SASTNode(EN_Label, label);
+																									endlabel->m_Opcode = OP_LABEL;
+																									g_ASC.PopLabel("endif");
+
 																									SASTNode *exprnode=g_ASC.PopNode();
 																									$$->PushNode(exprnode);
+																									$$->PushNode(branchcode);
 																									$$->PushNode(codeblocknode);
 																									$$->PushNode(endcodeblocknode);
+																									$$->PushNode(endlabel);
 																									$$->m_Opcode = OP_IF;
 																									g_ASC.PushNode($$);
 																								}
@@ -804,10 +828,25 @@ while_statement
 																									// Remove prologue
 																									g_ASC.PopNode();
 
+																									std::string startlabel = g_ASC.PushLabel("beginwhile");
+																									std::string label = g_ASC.PushLabel("endwhile");
+																									SASTNode *branchcode = new SASTNode(EN_JumpNZ, label);
+																									branchcode->m_Opcode = OP_JUMPNZ;
+																									SASTNode *branchcodeend = new SASTNode(EN_Jump, startlabel);
+																									branchcodeend->m_Opcode = OP_JUMP;
+																									SASTNode *beginlabel = new SASTNode(EN_Label, startlabel);
+																									beginlabel->m_Opcode = OP_LABEL;
+																									SASTNode *endlabel = new SASTNode(EN_Label, label);
+																									endlabel->m_Opcode = OP_LABEL;
+
 																									SASTNode *exprnode=g_ASC.PopNode();
+																									$$->PushNode(beginlabel);
 																									$$->PushNode(exprnode);
+																									$$->PushNode(branchcode);
 																									$$->PushNode(codeblocknode);
 																									$$->PushNode(endcodeblocknode);
+																									$$->PushNode(branchcodeend);
+																									$$->PushNode(endlabel);
 																									$$->m_Opcode = OP_WHILE;
 																									g_ASC.PushNode($$);
 																								}
