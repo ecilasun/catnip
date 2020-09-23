@@ -189,6 +189,19 @@ enum EOpcode
 	OP_JUMP,
 	OP_JUMPNZ,
 	OP_LABEL,
+	OP_DECL,
+	OP_DIM,
+	OP_CMPL,
+	OP_CMPG,
+	OP_CMPLE,
+	OP_CMPGE,
+	OP_CMPE,
+	OP_CMPNE,
+	OP_BITAND,
+	OP_BITXOR,
+	OP_BITOR,
+	OP_LOGICAND,
+	OP_LOGICOR,
 };
 
 const char *Opcodes[]={
@@ -219,6 +232,19 @@ const char *Opcodes[]={
 	"jmp",
 	"jmpnz",
 	"@label",
+	"decl",
+	"dim",
+	"cmp.l",
+	"cmp.g",
+	"cmp.le",
+	"cmp.ge",
+	"cmp.e",
+	"cmp.ne",
+	"bitand",
+	"bitxor",
+	"bitor",
+	"logicand",
+	"logicor",
 };
 
 enum ENodeSide
@@ -287,6 +313,7 @@ public:
 	EASTNodeType m_Type{EN_Default};
 	ENodeSide m_Side{RIGHT_HAND_SIDE};
 	int m_ScopeDepth{0};
+	int m_Visited{0};
 	SString *m_String{nullptr};
 	std::string m_Value;
 	std::vector<SASTNode*> m_ASTNodes;
@@ -609,6 +636,7 @@ relational_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_CMPL;
 																									g_ASC.PushNode($$);
 																								}
 	| relational_expression GREATER_OP additive_expression										{
@@ -617,6 +645,7 @@ relational_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_CMPG;
 																									g_ASC.PushNode($$);
 																								}
 	| relational_expression LESSEQUAL_OP additive_expression									{
@@ -625,6 +654,7 @@ relational_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_CMPLE;
 																									g_ASC.PushNode($$);
 																								}
 	| relational_expression GREATEREQUAL_OP additive_expression									{
@@ -633,6 +663,7 @@ relational_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_CMPGE;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -645,6 +676,7 @@ equality_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_CMPE;
 																									g_ASC.PushNode($$);
 																								}
 	| equality_expression NOTEQUAL_OP relational_expression										{
@@ -653,6 +685,7 @@ equality_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_CMPNE;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -665,6 +698,7 @@ and_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_BITAND;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -677,6 +711,7 @@ exclusive_or_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_BITXOR;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -689,6 +724,7 @@ inclusive_or_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_BITOR;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -701,6 +737,7 @@ logical_and_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_LOGICAND;
 																									g_ASC.PushNode($$);
 	}
 	;
@@ -713,6 +750,7 @@ logical_or_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_LOGICOR;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -949,6 +987,7 @@ variable_declaration_item
 																									SASTNode *namenode=g_ASC.PopNode();
 																									$$->PushNode(namenode);
 																									$$->PushNode(dimnode);
+																									dimnode->m_Opcode = OP_DIM;
 																									g_ASC.PushNode($$);
 																								}
 	| simple_identifier '[' expression ']' '=' code_block_start expression_list code_block_end	{
@@ -979,6 +1018,7 @@ variable_declaration_item
 																									SASTNode *namenode=g_ASC.PopNode();
 																									$$->PushNode(namenode);
 																									$$->PushNode(dimnode);
+																									dimnode->m_Opcode = OP_DIM;
 																									$$->PushNode(initarray);
 																									$$->m_Opcode = OP_BULKASSIGN;
 																									g_ASC.PushNode($$);
@@ -1008,12 +1048,16 @@ variable_declaration_item
 																									g_ASC.PopNode();
 
 																									// Set dimension to init array size
-																									std::string dim = std::to_string(initarray->m_ASTNodes.size());
-																									SASTNode *dimnode=new SASTNode(EN_Constant, dim);
+																									std::stringstream stream;
+																									stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << initarray->m_ASTNodes.size();
+																									std::string result( stream.str() );
+
+																									SASTNode *dimnode=new SASTNode(EN_Constant, std::string("0x")+result);
 																									dimnode->m_Opcode = OP_CONST;
 																									SASTNode *namenode=g_ASC.PopNode();
 																									$$->PushNode(namenode);
 																									$$->PushNode(dimnode);
+																									dimnode->m_Opcode = OP_DIM;
 																									$$->PushNode(initarray);
 																									$$->m_Opcode = OP_BULKASSIGN;
 																									g_ASC.PushNode($$);
@@ -1035,6 +1079,7 @@ variable_declaration
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
 																									var->m_Value = "";
+																									$$->m_Opcode = OP_DECL;
 																									g_ASC.m_Variables.push_back(var);
 																								}
 	| variable_declaration ',' variable_declaration_item										{
@@ -1051,6 +1096,7 @@ variable_declaration
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
 																									var->m_Value = "";
+																									$$->m_Opcode = OP_DECL;
 																									g_ASC.m_Variables.push_back(var);
 																								}
 	;
@@ -1189,9 +1235,14 @@ function_def
 																										$$->PushNode(n0);
 																									} while (1);
 
-																									// Add the name after input parameters
 																									SASTNode *namenode = g_ASC.PopNode();
-																									$$->PushNode(namenode);
+
+																									SASTNode *labelnode = new SASTNode(EN_Label, namenode->m_Value);
+																									labelnode->m_Opcode = OP_LABEL;
+																									$$->PushNode(labelnode);
+
+																									// Add the name after input parameters
+																									//$$->PushNode(namenode);
 
 																									// Add the code block after name
 																									$$->PushNode(codeblocknode);
@@ -1221,6 +1272,14 @@ program
 	;
 %%
 
+void DebugDumpNodeReverse(FILE *_fp, SASTNode *node)
+{
+	for (auto &subnode : node->m_ASTNodes)
+		DebugDumpNodeReverse(_fp, subnode);
+
+	fprintf(_fp, "%s %s\n", Opcodes[node->m_Opcode], node->m_Value.c_str());
+}
+
 void DebugDumpNode(FILE *_fp, int scopeDepth, SASTNode *node)
 {
 	node->m_ScopeDepth = scopeDepth;
@@ -1241,6 +1300,11 @@ void DebugDump(const char *_filename)
 	int scopeDepth = 0;
 	for (auto &node : g_ASC.m_ASTNodes)
 		DebugDumpNode(fp, scopeDepth, node);
+
+	fprintf(fp, "\n------------Code Reverse--------------\n");
+
+	for (auto &node : g_ASC.m_ASTNodes)
+		DebugDumpNodeReverse(fp, node);
 
 	fprintf(fp, "\n------------Symbol table--------------\n");
 
