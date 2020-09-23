@@ -2,7 +2,20 @@
 
 var cursorX, cursorY, VRAM=0x80000000;
 var banana[16], tree[] = {1,2,3,4};
-var sprite[5] = {0xFFFFFFFA,0xFFFFFFFB,0xFFFFFFFC,0xFFFFFFFD,0xFFFFFFFE};
+var sprite[32] = {
+    0xFFFFFFFA,0xFFFFFFFB,0xFFFFFFFC,0xFFFFFFFD,
+    0xFFFFFFFE,0xFFFFFFFF,0xFFFFFF00,0xFFFFFF01,
+    0xFFFFFFFA,0xFFFFFFFB,0xFFFFFFFC,0xFFFFFFFD,
+    0xFFFFFFFA,0xFFFFFFFB,0xFFFFFFFC,0xFFFFFFFD,
+    0xFFFFFFFA,0xF00FFFFB,0xFFFFFFFC,0xFFFFFFFD,
+    0xFFFFFFFA,0xFFFFFFFB,0xFF222FFC,0xFFFFFFFD,
+    0xFFFFFFFA,0xFFFFFFFB,0xFFFFFFFC,0xFFFFFFFD,
+    0xFFFFFFFA,0xFFFFFFFB,0xFFFFFFFC,0xFFEDCAFD };
+
+def test()
+{
+    return;
+}
 
 def DrawRect(posX, posY, width, height)
 {
@@ -15,7 +28,7 @@ def DrawRect(posX, posY, width, height)
         while (spanX<posX+width)
         {
             // GrimR feature: Array operator can alias a variable as a pointer at that address if used on a non-array integer.
-            VRAM[spanX + spanY*320] = 0xFF00FF00;
+            VRAM[spanX + spanY*320] = sprite[spanX%4];
             spanX = spanX+1;
         }
         spanY = spanY+1;

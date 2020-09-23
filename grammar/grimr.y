@@ -487,6 +487,7 @@ primary_expression
 	: simple_identifier
 	| simple_constant
 	| simple_string
+	| '(' expression ')'																		{}
 	;
 
 postfix_expression
@@ -499,6 +500,7 @@ postfix_expression
 	| postfix_expression '[' expression ']'														{
 																									SASTNode *offsetexpressionnode = g_ASC.PopNode();
 																									SASTNode *exprnode = g_ASC.PopNode();
+
 																									$$ = new SASTNode(EN_PostfixArrayExpression, "");
 																									$$->PushNode(exprnode);
 																									$$->PushNode(offsetexpressionnode);
@@ -738,7 +740,7 @@ assignment_expression
 	;
 
 expression
-	: assignment_expression																	
+	: assignment_expression
 	/*| expression ',' assignment_expression														{
 																								}*/ // NOTE: This is causing much grief and I don't think I need it at this point
 	;

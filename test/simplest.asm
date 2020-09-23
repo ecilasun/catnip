@@ -24,13 +24,45 @@ EN_Decl                      (0) nop
 EN_Decl                      (0) nop 
 .EN_DeclInitJunction          (1) bulkassign 
 ..EN_Identifier                (2) lea sprite
-..EN_Constant                  (2) mov 0x00000005
+..EN_Constant                  (2) mov 0x00000020
 ..EN_ArrayWithDataJunction     (2) dataarray 
+...EN_Constant                  (3) mov 0xffedcafd
+...EN_Constant                  (3) mov 0xfffffffc
+...EN_Constant                  (3) mov 0xfffffffb
+...EN_Constant                  (3) mov 0xfffffffa
+...EN_Constant                  (3) mov 0xfffffffd
+...EN_Constant                  (3) mov 0xfffffffc
+...EN_Constant                  (3) mov 0xfffffffb
+...EN_Constant                  (3) mov 0xfffffffa
+...EN_Constant                  (3) mov 0xfffffffd
+...EN_Constant                  (3) mov 0xff222ffc
+...EN_Constant                  (3) mov 0xfffffffb
+...EN_Constant                  (3) mov 0xfffffffa
+...EN_Constant                  (3) mov 0xfffffffd
+...EN_Constant                  (3) mov 0xfffffffc
+...EN_Constant                  (3) mov 0xf00ffffb
+...EN_Constant                  (3) mov 0xfffffffa
+...EN_Constant                  (3) mov 0xfffffffd
+...EN_Constant                  (3) mov 0xfffffffc
+...EN_Constant                  (3) mov 0xfffffffb
+...EN_Constant                  (3) mov 0xfffffffa
+...EN_Constant                  (3) mov 0xfffffffd
+...EN_Constant                  (3) mov 0xfffffffc
+...EN_Constant                  (3) mov 0xfffffffb
+...EN_Constant                  (3) mov 0xfffffffa
+...EN_Constant                  (3) mov 0xffffff01
+...EN_Constant                  (3) mov 0xffffff00
+...EN_Constant                  (3) mov 0xffffffff
 ...EN_Constant                  (3) mov 0xfffffffe
 ...EN_Constant                  (3) mov 0xfffffffd
 ...EN_Constant                  (3) mov 0xfffffffc
 ...EN_Constant                  (3) mov 0xfffffffb
 ...EN_Constant                  (3) mov 0xfffffffa
+EN_FuncDecl                  (0) nop 
+.EN_Identifier                (1) lea test
+.EN_BeginCodeBlock            (1) pushcontext 
+..EN_Return                    (2) ret 
+.EN_EndCodeBlock              (1) popcontext 
 EN_FuncDecl                  (0) nop 
 .EN_StackPop                  (1) nop 
 ..EN_Identifier                (2) lea height
@@ -81,7 +113,11 @@ EN_FuncDecl                  (0) nop
 ..........EN_Mul                       (10) mul 
 ...........EN_Constant                  (11) mov 0x00000140
 ...........EN_Identifier                (11) lea spanY
-........EN_Constant                  (8) mov 0xff00ff00
+........EN_PostfixArrayExpression    (8) add 
+.........EN_Identifier                (9) lea sprite
+.........EN_Mod                       (9) mod 
+..........EN_Constant                  (10) mov 0x00000004
+..........EN_Identifier                (10) lea spanX
 .....EN_EndCodeBlock              (5) popcontext 
 .....EN_Jump                      (5) jmp beginwhile0
 .....EN_Label                     (5) @label endwhile1
@@ -137,6 +173,7 @@ EN_FuncDecl                  (0) nop
 .EN_EndCodeBlock              (1) popcontext 
 
 ------------Symbol table--------------
+Function 'test', hash BC2C0BE9
 Function 'DrawRect', hash 032D1965
 Function 'main', hash BC76E6BA
 Variable 'cursorX', hash 2AB08A05
