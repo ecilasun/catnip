@@ -882,7 +882,7 @@ variable_declaration
 
 																									// Also store the variable in function list for later retreival
 																									SVariable *var = new SVariable();
-																									var->m_Name = n0->m_Value;
+																									var->m_Name = n0->m_Type==EN_DeclInitJunction ? n0->m_ASTNodes[0]->m_Value : n0->m_Value;
 																									var->m_Hash = HashString(var->m_Name.c_str());
 																									var->m_RootNode = $$;
 																									var->m_Dimension = 1;
