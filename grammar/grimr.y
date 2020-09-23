@@ -845,7 +845,9 @@ variable_declaration_item
 																									// Discard prologue
 																									g_ASC.PopNode();
 
-																									SASTNode *dimnode=new SASTNode(EN_Constant, "1");
+																									// Set dimension to init array size
+																									std::string dim = std::to_string(initarray->m_ASTNodes.size());
+																									SASTNode *dimnode=new SASTNode(EN_Constant, dim);
 																									SASTNode *namenode=g_ASC.PopNode();
 																									$$->PushNode(namenode);
 																									$$->PushNode(dimnode);
