@@ -6,8 +6,7 @@ var sprite[5] = {0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF};
 
 def DrawRect(posX, posY, width, height)
 {
-    var spanX;
-    var spanY;
+    var spanX, spanY;
 
     spanY = posY;
     while (spanY<posY+height)
