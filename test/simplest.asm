@@ -17,7 +17,7 @@ EN_Decl                      (0) nop
 EN_Decl                      (0) nop 
 .EN_DeclInitJunction          (1) bulkassign 
 ..EN_Identifier                (2) ident tree
-..EN_Constant                  (2) nop 4
+..EN_Constant                  (2) const 4
 ..EN_ArrayWithDataJunction     (2) nop 
 ...EN_Expression                (3) nop 
 ....EN_ConditionalExpr           (4) nop 

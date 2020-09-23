@@ -861,6 +861,7 @@ variable_declaration_item
 																									// Set dimension to init array size
 																									std::string dim = std::to_string(initarray->m_ASTNodes.size());
 																									SASTNode *dimnode=new SASTNode(EN_Constant, dim);
+																									dimnode->m_Opcode = OP_CONST;
 																									SASTNode *namenode=g_ASC.PopNode();
 																									$$->PushNode(namenode);
 																									$$->PushNode(dimnode);
