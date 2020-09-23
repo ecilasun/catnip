@@ -2,7 +2,7 @@
 
 var cursorX, cursorY, VRAM=0x80000000;
 var banana[16], tree[] = {1,2,3,4};
-var sprite[5] = {0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF};
+var sprite[5] = {0xFFFFFFFA,0xFFFFFFFB,0xFFFFFFFC,0xFFFFFFFD,0xFFFFFFFE};
 
 def DrawRect(posX, posY, width, height)
 {
@@ -24,5 +24,6 @@ def DrawRect(posX, posY, width, height)
 
 def main()
 {
+    cursorX = cursorY*2;
     DrawRect(0,0,512+3-cursorY,384);
 }

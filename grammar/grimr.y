@@ -80,7 +80,7 @@ enum EASTNodeType
 	EN_Call,
 	EN_Return,
 	EN_EndCodeBlock,
-	EN_CodeBlock,
+	EN_BeginCodeBlock,
 	EN_StackOp,
 	EN_Decl,
 	EN_DeclInitJunction,
@@ -138,7 +138,7 @@ const char* NodeTypes[]=
 	"EN_Call                      ",
 	"EN_Return                    ",
 	"EN_EndCodeBlock              ",
-	"EN_CodeBlock                 ",
+	"EN_BeginCodeBlock            ",
 	"EN_StackOp                   ",
 	"EN_Decl                      ",
 	"EN_DeclInitJunction          ",
@@ -736,7 +736,7 @@ if_statement
 																									g_ASC.PopNode();
 
 																									// Create code block node
-																									SASTNode *codeblocknode = new SASTNode(EN_CodeBlock, "");
+																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
 																									codeblocknode->m_Opcode = OP_PUSHCONTEXT;
 
 																									SASTNode *endcodeblocknode = new SASTNode(EN_EndCodeBlock, "");
@@ -774,7 +774,7 @@ while_statement
 																									g_ASC.PopNode();
 
 																									// Create code block node
-																									SASTNode *codeblocknode = new SASTNode(EN_CodeBlock, "");
+																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
 																									codeblocknode->m_Opcode = OP_PUSHCONTEXT;
 
 																									SASTNode *endcodeblocknode = new SASTNode(EN_EndCodeBlock, "");
@@ -841,7 +841,7 @@ variable_declaration_item
 																										if (done)
 																											break;
 																										g_ASC.PopNode();
-																										initarray->PushNode(n0);
+																										initarray->PushNode(n0->m_ASTNodes[0]); // Remove the EN_Expression
 																									} while (1);
 																									initarray->m_Opcode = OP_DATAARRAY;
 
@@ -873,7 +873,7 @@ variable_declaration_item
 																										if (done)
 																											break;
 																										g_ASC.PopNode();
-																										initarray->PushNode(n0);
+																										initarray->PushNode(n0->m_ASTNodes[0]); // Remove the EN_Expression
 																									} while (1);
 																									initarray->m_Opcode = OP_DATAARRAY;
 
@@ -963,7 +963,7 @@ functioncall_statement
 																										if (done)
 																											break;
 																										g_ASC.PopNode();
-																										$$->PushNode(paramnode);
+																										$$->PushNode(paramnode->m_ASTNodes[0]); // Remove the EN_Expression
 																									} while (1);
 																									SASTNode *namenode = g_ASC.PopNode();
 																									$$->PushNode(namenode);
@@ -1021,7 +1021,7 @@ function_def
 																									g_ASC.PopNode();
 
 																									// Create code block node
-																									SASTNode *codeblocknode = new SASTNode(EN_CodeBlock, "");
+																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
 																									codeblocknode->m_Opcode = OP_PUSHCONTEXT;
 
 																									SASTNode *endcodeblocknode = new SASTNode(EN_EndCodeBlock, "");

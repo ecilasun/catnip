@@ -17,29 +17,20 @@ EN_Decl                      (0) nop
 ..EN_Identifier                (2) ident tree
 ..EN_Constant                  (2) const 4
 ..EN_ArrayWithDataJunction     (2) dataarray 
-...EN_Expression                (3) nop 
-....EN_Constant                  (4) const 0x00000004
-...EN_Expression                (3) nop 
-....EN_Constant                  (4) const 0x00000003
-...EN_Expression                (3) nop 
-....EN_Constant                  (4) const 0x00000002
-...EN_Expression                (3) nop 
-....EN_Constant                  (4) const 0x00000001
+...EN_Constant                  (3) const 0x00000004
+...EN_Constant                  (3) const 0x00000003
+...EN_Constant                  (3) const 0x00000002
+...EN_Constant                  (3) const 0x00000001
 EN_Decl                      (0) nop 
 .EN_DeclInitJunction          (1) bulkassign 
 ..EN_Identifier                (2) ident sprite
 ..EN_Constant                  (2) const 0x00000005
 ..EN_ArrayWithDataJunction     (2) dataarray 
-...EN_Expression                (3) nop 
-....EN_Constant                  (4) const 0xffffffff
-...EN_Expression                (3) nop 
-....EN_Constant                  (4) const 0xffffffff
-...EN_Expression                (3) nop 
-....EN_Constant                  (4) const 0xffffffff
-...EN_Expression                (3) nop 
-....EN_Constant                  (4) const 0xffffffff
-...EN_Expression                (3) nop 
-....EN_Constant                  (4) const 0xffffffff
+...EN_Constant                  (3) const 0xfffffffe
+...EN_Constant                  (3) const 0xfffffffd
+...EN_Constant                  (3) const 0xfffffffc
+...EN_Constant                  (3) const 0xfffffffb
+...EN_Constant                  (3) const 0xfffffffa
 EN_FuncDecl                  (0) nop 
 .EN_InputParam                (1) nop 
 ..EN_Identifier                (2) ident height
@@ -50,14 +41,14 @@ EN_FuncDecl                  (0) nop
 .EN_InputParam                (1) nop 
 ..EN_Identifier                (2) ident posX
 .EN_Identifier                (1) ident DrawRect
-.EN_CodeBlock                 (1) pushcontext 
+.EN_BeginCodeBlock            (1) pushcontext 
 ..EN_While                     (2) while 
 ...EN_LessThan                  (3) nop 
 ....EN_Identifier                (4) ident spanY
 ....EN_Add                       (4) add 
 .....EN_Identifier                (5) ident posY
 .....EN_Identifier                (5) ident height
-...EN_CodeBlock                 (3) pushcontext 
+...EN_BeginCodeBlock            (3) pushcontext 
 ....EN_Statement                 (4) nop 
 .....EN_AssignmentExpression      (5) assign 
 ......EN_Identifier                (6) ident spanY
@@ -70,7 +61,7 @@ EN_FuncDecl                  (0) nop
 ......EN_Add                       (6) add 
 .......EN_Identifier                (7) ident posX
 .......EN_Identifier                (7) ident width
-.....EN_CodeBlock                 (5) pushcontext 
+.....EN_BeginCodeBlock            (5) pushcontext 
 ......EN_Statement                 (6) nop 
 .......EN_AssignmentExpression      (7) assign 
 ........EN_Identifier                (8) ident spanX
@@ -104,21 +95,23 @@ EN_FuncDecl                  (0) nop
 .EN_EndCodeBlock              (1) popcontext 
 EN_FuncDecl                  (0) nop 
 .EN_Identifier                (1) ident main
-.EN_CodeBlock                 (1) pushcontext 
+.EN_BeginCodeBlock            (1) pushcontext 
 ..EN_Call                      (2) nop 
-...EN_Expression                (3) nop 
-....EN_Constant                  (4) const 0x00000180
-...EN_Expression                (3) nop 
-....EN_Sub                       (4) sub 
-.....EN_Add                       (5) add 
-......EN_Constant                  (6) const 0x00000200
-......EN_Constant                  (6) const 0x00000003
-.....EN_Identifier                (5) ident cursorY
-...EN_Expression                (3) nop 
-....EN_Constant                  (4) const 0x00000000
-...EN_Expression                (3) nop 
-....EN_Constant                  (4) const 0x00000000
+...EN_Constant                  (3) const 0x00000180
+...EN_Sub                       (3) sub 
+....EN_Add                       (4) add 
+.....EN_Constant                  (5) const 0x00000200
+.....EN_Constant                  (5) const 0x00000003
+....EN_Identifier                (4) ident cursorY
+...EN_Constant                  (3) const 0x00000000
+...EN_Constant                  (3) const 0x00000000
 ...EN_Identifier                (3) ident DrawRect
+..EN_Statement                 (2) nop 
+...EN_AssignmentExpression      (3) assign 
+....EN_Identifier                (4) ident cursorX
+....EN_Mul                       (4) mul 
+.....EN_Constant                  (5) const 0x00000002
+.....EN_Identifier                (5) ident cursorY
 .EN_EndCodeBlock              (1) popcontext 
 
 ------------Symbol table--------------
