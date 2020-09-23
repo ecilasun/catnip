@@ -1,6 +1,6 @@
 // GrimR language test file
 
-/*var cursorX, cursorY, VRAM=0x80000000;
+var cursorX, cursorY, VRAM=0x80000000;
 var banana[16], tree[] = {1,2,3,4};
 var sprite[5] = {0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF};
 
@@ -20,19 +20,5 @@ def DrawRect(posX, posY, width, height)
             spanX = spanX+1;
         }
         spanY = spanY+1;
-    }
-}*/
-
-def miuw(a,b)
-{
-    return;
-}
-
-def main(X,Y)
-{
-    var A, B = 2;
-    if (A>B)
-    {
-        miuw(X,Y);
     }
 }

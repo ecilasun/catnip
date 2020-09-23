@@ -745,14 +745,31 @@ if_statement
 while_statement
 	: WHILE '(' expression ')' code_block_start code_block_body code_block_end					{
 																									$$ = new SASTNode(EN_While, "");
-																									SASTNode *n0=g_ASC.PopNode();
-																									SASTNode *n1=g_ASC.PopNode();
-																									SASTNode *n2=g_ASC.PopNode();
-																									SASTNode *n3=g_ASC.PopNode();
-																									$$->PushNode(n3);
-																									$$->PushNode(n2);
-																									$$->PushNode(n1);
-																									$$->PushNode(n0);
+
+																									// Remove epilogue
+																									g_ASC.PopNode();
+
+																									// Create code block node
+																									SASTNode *codeblocknode = new SASTNode(EN_CodeBlock, "");
+
+																									// Collect everything up till prologue
+																									bool done = false;
+																									do
+																									{
+																										SASTNode *n0 = g_ASC.PeekNode();
+																										done = n0->m_Type == EN_Prologue ? true:false;
+																										if (done)
+																											break;
+																										g_ASC.PopNode();
+																										codeblocknode->PushNode(n0);
+																									} while (1);
+
+																									// Remove prologue
+																									g_ASC.PopNode();
+
+																									SASTNode *exprnode=g_ASC.PopNode();
+																									$$->PushNode(exprnode);
+																									$$->PushNode(codeblocknode);
 																									g_ASC.PushNode($$);
 																								}
 	;
