@@ -467,12 +467,12 @@ primary_expression
 	;
 
 postfix_expression
-	: primary_expression																		{
+	: primary_expression																		/*{
 																									SASTNode *exprnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_PrimaryExpression, "");
 																									$$->PushNode(exprnode);
 																									g_ASC.PushNode($$);
-																								}
+																								}*/
 	| postfix_expression '[' expression ']'														{
 																									SASTNode *offsetexpressionnode = g_ASC.PopNode();
 																									SASTNode *exprnode = g_ASC.PopNode();
@@ -692,12 +692,12 @@ logical_or_expression
 	;
 
 conditional_expression
-	: logical_or_expression																		{
+	: logical_or_expression																		/*{
 																									$$ = new SASTNode(EN_ConditionalExpr, "");
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
 																									g_ASC.PushNode($$);
-																								}
+																								}*/
 	;
 
 assignment_expression
