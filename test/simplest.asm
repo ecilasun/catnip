@@ -3,7 +3,7 @@ EN_Decl                      (0) nop
 EN_Decl                      (0) nop 
 .EN_Identifier                (1) ident cursorY
 EN_Decl                      (0) nop 
-.EN_DeclInitJunction          (1) nop 
+.EN_DeclInitJunction          (1) assign 
 ..EN_Identifier                (2) ident VRAM
 ..EN_ConditionalExpr           (2) nop 
 ...EN_PrimaryExpression         (3) nop 
@@ -15,7 +15,7 @@ EN_Decl                      (0) nop
 ...EN_PrimaryExpression         (3) nop 
 ....EN_Constant                  (4) const 0x00000010
 EN_Decl                      (0) nop 
-.EN_DeclInitJunction          (1) nop 
+.EN_DeclInitJunction          (1) bulkassign 
 ..EN_Identifier                (2) ident tree
 ..EN_Constant                  (2) nop 4
 ..EN_ArrayWithDataJunction     (2) nop 
@@ -36,7 +36,7 @@ EN_Decl                      (0) nop
 .....EN_PrimaryExpression         (5) nop 
 ......EN_Constant                  (6) const 0x00000001
 EN_Decl                      (0) nop 
-.EN_DeclInitJunction          (1) nop 
+.EN_DeclInitJunction          (1) bulkassign 
 ..EN_Identifier                (2) ident sprite
 ..EN_ConditionalExpr           (2) nop 
 ...EN_PrimaryExpression         (3) nop 

@@ -168,6 +168,8 @@ enum EOpcode
 	OP_SUB,
 	OP_IDENT,
 	OP_ASSIGN,
+	OP_BULKASSIGN,
+	OP_RETURN,
 };
 
 const char *Opcodes[]={
@@ -185,6 +187,8 @@ const char *Opcodes[]={
 	"sub",
 	"ident",
 	"assign",
+	"bulkassign",
+	"ret",
 };
 
 enum ENodeSide
@@ -785,6 +789,7 @@ variable_declaration_item
 																									SASTNode *namenode=g_ASC.PopNode();
 																									$$->PushNode(namenode);
 																									$$->PushNode(valnode);
+																									$$->m_Opcode = OP_ASSIGN;
 																									g_ASC.PushNode($$);
 																								}
 	| simple_identifier '[' expression ']'														{
@@ -823,6 +828,7 @@ variable_declaration_item
 																									$$->PushNode(namenode);
 																									$$->PushNode(dimnode);
 																									$$->PushNode(initarray);
+																									$$->m_Opcode = OP_BULKASSIGN;
 																									g_ASC.PushNode($$);
 																								}
 	| simple_identifier '['  ']' '=' code_block_start expression_list code_block_end			{
@@ -855,6 +861,7 @@ variable_declaration_item
 																									$$->PushNode(namenode);
 																									$$->PushNode(dimnode);
 																									$$->PushNode(initarray);
+																									$$->m_Opcode = OP_BULKASSIGN;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -954,6 +961,7 @@ code_block_end
 return_statement
 	: RETURN ';'																				{
 																									$$ = new SASTNode(EN_Return, "");
+																									$$->m_Opcode = OP_RETURN;
 																									g_ASC.PushNode($$);
 																								}
 	;
