@@ -24,5 +24,5 @@ def DrawRect(posX, posY, width, height)
 
 def main()
 {
-    DrawRect(0,0,512,384);
+    DrawRect(0,0,512+3-cursorY,384);
 }

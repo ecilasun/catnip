@@ -42,14 +42,15 @@ enum EASTNodeType
 {
 	EN_Default,
 	EN_Identifier,
-	EN_FunctionName,
 	EN_Constant,
 	EN_String,
-	EN_Postfix,
 	EN_PostfixArrayExpression,
 	EN_PrimaryExpression,
 	EN_UnaryValueOf,
 	EN_UnaryAddressOf,
+	EN_UnaryBitNot,
+	EN_UnaryNegate,
+	EN_UnaryLogicNot,
 	EN_Mul,
 	EN_Div,
 	EN_Mod,
@@ -70,7 +71,6 @@ enum EASTNodeType
 	EN_LogicAnd,
 	EN_LogicOr,
 	EN_SelectExpression,
-	EN_ExpressionList,
 	EN_While,
 	EN_If,
 	EN_Label,
@@ -89,7 +89,6 @@ enum EASTNodeType
 	EN_FuncDecl,
 	EN_InputParamList,
 	EN_InputParam,
-	EN_CallParam,
 	EN_Prologue,
 	EN_Epilogue,
 	EN_Statement,
@@ -100,14 +99,15 @@ const char* NodeTypes[]=
 {
 	"EN_Default                   ",
 	"EN_Identifier                ",
-	"EN_FunctionName              ",
 	"EN_Constant                  ",
 	"EN_String                    ",
-	"EN_Postfix                   ",
 	"EN_PostfixArrayExpression    ",
 	"EN_PrimaryExpression         ",
 	"EN_UnaryValueOf              ",
 	"EN_UnaryAddressOf            ",
+	"EN_UnaryBitNot               ",
+	"EN_UnaryNegate               ",
+	"EN_UnaryLogicNot             ",
 	"EN_Mul                       ",
 	"EN_Div                       ",
 	"EN_Mod                       ",
@@ -128,7 +128,6 @@ const char* NodeTypes[]=
 	"EN_LogicAnd                  ",
 	"EN_LogicOr                   ",
 	"EN_SelectExpression          ",
-	"EN_ExpressionList            ",
 	"EN_While                     ",
 	"EN_If                        ",
 	"EN_Label                     ",
@@ -147,7 +146,6 @@ const char* NodeTypes[]=
 	"EN_FuncDecl                  ",
 	"EN_InputParamList            ",
 	"EN_InputParam                ",
-	"EN_CallParam                 ",
 	"EN_Prologue                  ",
 	"EN_Epilogue                  ",
 	"EN_Statement                 ",
@@ -280,7 +278,6 @@ public:
 	EASTNodeType m_Type{EN_Default};
 	ENodeSide m_Side{RIGHT_HAND_SIDE};
 	int m_ScopeDepth{0};
-	int m_ScopeScore{0};
 	SString *m_String{nullptr};
 	std::string m_Value;
 	std::vector<SASTNode*> m_ASTNodes;
@@ -495,6 +492,24 @@ postfix_expression
 
 unary_expression
 	: postfix_expression
+	| '~' unary_expression																		{
+																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
+																									$$ = new SASTNode(EN_UnaryBitNot, "");
+																									$$->PushNode(unaryexpressionnode);
+																									g_ASC.PushNode($$);
+																								}
+	| '-' unary_expression																		{
+																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
+																									$$ = new SASTNode(EN_UnaryNegate, "");
+																									$$->PushNode(unaryexpressionnode);
+																									g_ASC.PushNode($$);
+																								}
+	| '!' unary_expression																		{
+																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
+																									$$ = new SASTNode(EN_UnaryLogicNot, "");
+																									$$->PushNode(unaryexpressionnode);
+																									g_ASC.PushNode($$);
+																								}
 	| '&' unary_expression																		{
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryAddressOf, "");
@@ -696,7 +711,7 @@ assignment_expression
 
 expression
 	: assignment_expression																	
-	/*| expression ',' assignment_expression													{
+	/*| expression ',' assignment_expression														{
 																								}*/ // NOTE: This is causing much grief and I don't think I need it at this point
 	;
 
@@ -897,13 +912,13 @@ variable_declaration_statement
 
 expression_list
 	: expression																				{
-																									$$ = new SASTNode(EN_CallParam, "");
+																									$$ = new SASTNode(EN_Expression, "");
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
 																									g_ASC.PushNode($$);
 																								}
 	| expression_list ',' expression															{
-																									$$ = new SASTNode(EN_CallParam, "");
+																									$$ = new SASTNode(EN_Expression, "");
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
 																									g_ASC.PushNode($$);
@@ -922,7 +937,7 @@ functioncall_statement
 																									do
 																									{
 																										SASTNode *paramnode = g_ASC.PeekNode();
-																										done = paramnode->m_Type == EN_CallParam ? false:true;
+																										done = paramnode->m_Type == EN_Expression ? false:true;
 																										if (done)
 																											break;
 																										g_ASC.PopNode();
@@ -1004,7 +1019,7 @@ function_def
 																									do
 																									{
 																										SASTNode *n0 = g_ASC.PeekNode();
-																										done = n0->m_Type == EN_CallParam ? false:true;
+																										done = n0->m_Type == EN_Expression ? false:true;
 																										if (done)
 																											break;
 																										n0->m_Type = EN_InputParam;
@@ -1044,28 +1059,30 @@ program
 	;
 %%
 
-void DebugDumpNode(int scopeDepth, SASTNode *node)
+void DebugDumpNode(FILE *_fp, int scopeDepth, SASTNode *node)
 {
 	node->m_ScopeDepth = scopeDepth;
 
 	std::string spaces = ".................................................................................";
-	printf("%s%s(%d) %s\n", spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeScore, node->m_Value.c_str());
+	fprintf(_fp, "%s%s(%d) %s\n", spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
 
 	for (auto &subnode : node->m_ASTNodes)
-		DebugDumpNode(scopeDepth+1, subnode);
+		DebugDumpNode(_fp, scopeDepth+1, subnode);
 }
 
-void DebugDump()
+void DebugDump(const char *_filename)
 {
 	int scopeDepth = 0;
+	FILE *fp = fopen(_filename, "w");
 	for (auto &node : g_ASC.m_ASTNodes)
-		DebugDumpNode(scopeDepth, node);
+		DebugDumpNode(fp, scopeDepth, node);
 
 	for (auto &func : g_ASC.m_Functions)
-		printf("Function '%s', hash %.8X\n", func->m_Name.c_str(), func->m_Hash);
+		fprintf(fp, "Function '%s', hash %.8X\n", func->m_Name.c_str(), func->m_Hash);
 
 	for (auto &var : g_ASC.m_Variables)
-		printf("Variable '%s', hash %.8X\n", var->m_Name.c_str(), var->m_Hash);
+		fprintf(fp, "Variable '%s', hash %.8X\n", var->m_Name.c_str(), var->m_Hash);
+	fclose(fp);
 }
 
 void yyerror(const char *s) {

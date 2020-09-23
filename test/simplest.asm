@@ -1,158 +1,197 @@
-
----------------------------
-     Compiled by GrimR     
-GrimR (c)2020 Engin Cilasun
----------------------------
-
-@label DrawRect
-	pop    height
-	pop    width
-	pop    posY
-	pop    posX
-	lea    r0, posY
-	ld     r0, [r0]
-	lea    r1, spanY
-	st     [r1], r0
-@label while2
- 
-	lea    r0, posY
-	ld     r0, [r0]
-	lea    r1, height
-	ld     r1, [r1]
-	add    r0, r0, r1
-	lea    r1, spanY
-	ld     r1, [r1]
-	cmp.l  r0, r1, r0
-	jmp.nz r0, endwhile3
-	lea    r0, posX
-	ld     r0, [r0]
-	lea    r1, spanX
-	st     [r1], r0
-@label while0
- 
-	lea    r0, posX
-	ld     r0, [r0]
-	lea    r1, width
-	ld     r1, [r1]
-	add    r0, r0, r1
-	lea    r1, spanX
-	ld     r1, [r1]
-	cmp.l  r0, r1, r0
-	jmp.nz r0, endwhile1
-	ld     r0, 0x00000140
-	lea    r1, spanY
-	ld     r1, [r1]
-	mul    r0, r0, r1
-	lea    r1, spanX
-	ld     r1, [r1]
-	add    r0, r0, r1
-	ld     r1, 0xff00ff00
-	lea    r2, VRAM+r2
-	st     [r2], r1
-	lea    r0, spanX
-	ld     r0, [r0]
-	ld     r1, 0x00000001
-	add    r0, r0, r1
-	lea    r1, spanX
-	st     [r1], r0
-	jmp    while0
-@label endwhile1
- 
-	lea    r0, spanY
-	ld     r0, [r0]
-	ld     r1, 0x00000001
-	add    r0, r0, r1
-	lea    r1, spanY
-	st     [r1], r0
-	jmp    while2
-@label endwhile3
- 
-@label main
-	ld     r0, 0x00000001
-	push   r0
-	ld     r0, 0x00000002
-	push   r0
-	ld     r0, 0x00000004
-	push   r0
-	ld     r0, 0x00000008
-	push   r0
-	call   DrawRect
- 
-	lea    r0, DrawRect:spanX
-	ld     r0, [r0]
-	ld     r1, 0x00000005
-	cmp.g  r0, r1, r0
-	jmp.nz r0, endif4
-	lea    r0, cursorY
-	ld     r0, [r0]
-	ld     r1, 0x00000005
-	cmp.g  r0, r1, r0
-	ld     r1, 0x00000003
-	ld     r2, 0x00000001
-	sel    r0, r0, r2, r1
-	lea    r1, cursorX
-	st     [r1], r0
-	ld     r0, 0x00000200
-	push   r0
-	ld     r0, 0x00000180
-	push   r0
-	ld     r0, 0x00000080
-	push   r0
-	ld     r0, 0x00000060
-	push   r0
-	call   DrawRect
-@label endif4
- 
-ret    
-
-
----------------------------
-        Symbols            
----------------------------
-
-@label :cursorX
-	@dword 0x00000000
-@label :cursorY
-	@dword 0x00000000
-@label :VRAM
-	@dword 0x80000000
-@label :banana
-	@dword 0x00000000
-	@dword 0x00000000
-	@dword 0x00000000
-	@dword 0x00000000
-	@dword 0x00000000
-	@dword 0x00000000
-	@dword 0x00000000
-	@dword 0x00000000
-	@dword 0x00000000
-	@dword 0x00000000
-	@dword 0x00000000
-	@dword 0x00000000
-	@dword 0x00000000
-	@dword 0x00000000
-	@dword 0x00000000
-	@dword 0x00000000
-@label :tree
-	@dword 0x00000001
-	@dword 0x00000002
-	@dword 0x00000003
-	@dword 0x00000004
-@label :sprite
-	@dword 0xffffffff
-	@dword 0xffffffff
-	@dword 0xffffffff
-	@dword 0xffffffff
-	@dword 0xffffffff
-@label DrawRect:height
-	@dword 0x00000000
-@label DrawRect:width
-	@dword 0x00000000
-@label DrawRect:posY
-	@dword 0x00000000
-@label DrawRect:posX
-	@dword 0x00000000
-@label DrawRect:spanX
-	@dword 0x00000000
-@label DrawRect:spanY
-	@dword 0x00000000
+EN_Decl                      (0) 
+.EN_Identifier                (1) cursorX
+EN_Decl                      (0) 
+.EN_Identifier                (1) cursorY
+EN_Decl                      (0) 
+.EN_DeclInitJunction          (1) 
+..EN_Identifier                (2) VRAM
+..EN_ConditionalExpr           (2) 
+...EN_PrimaryExpression         (3) 
+....EN_Constant                  (4) 0x80000000
+EN_Decl                      (0) 
+.EN_DeclArray                 (1) 
+..EN_Identifier                (2) banana
+..EN_ConditionalExpr           (2) 
+...EN_PrimaryExpression         (3) 
+....EN_Constant                  (4) 0x00000010
+EN_Decl                      (0) 
+.EN_DeclInitJunction          (1) 
+..EN_Identifier                (2) tree
+..EN_Constant                  (2) 4
+..EN_ArrayWithDataJunction     (2) 
+...EN_Expression                (3) 
+....EN_ConditionalExpr           (4) 
+.....EN_PrimaryExpression         (5) 
+......EN_Constant                  (6) 0x00000004
+...EN_Expression                (3) 
+....EN_ConditionalExpr           (4) 
+.....EN_PrimaryExpression         (5) 
+......EN_Constant                  (6) 0x00000003
+...EN_Expression                (3) 
+....EN_ConditionalExpr           (4) 
+.....EN_PrimaryExpression         (5) 
+......EN_Constant                  (6) 0x00000002
+...EN_Expression                (3) 
+....EN_ConditionalExpr           (4) 
+.....EN_PrimaryExpression         (5) 
+......EN_Constant                  (6) 0x00000001
+EN_Decl                      (0) 
+.EN_DeclInitJunction          (1) 
+..EN_Identifier                (2) sprite
+..EN_ConditionalExpr           (2) 
+...EN_PrimaryExpression         (3) 
+....EN_Constant                  (4) 0x00000005
+..EN_ArrayWithDataJunction     (2) 
+...EN_Expression                (3) 
+....EN_ConditionalExpr           (4) 
+.....EN_PrimaryExpression         (5) 
+......EN_Constant                  (6) 0xffffffff
+...EN_Expression                (3) 
+....EN_ConditionalExpr           (4) 
+.....EN_PrimaryExpression         (5) 
+......EN_Constant                  (6) 0xffffffff
+...EN_Expression                (3) 
+....EN_ConditionalExpr           (4) 
+.....EN_PrimaryExpression         (5) 
+......EN_Constant                  (6) 0xffffffff
+...EN_Expression                (3) 
+....EN_ConditionalExpr           (4) 
+.....EN_PrimaryExpression         (5) 
+......EN_Constant                  (6) 0xffffffff
+...EN_Expression                (3) 
+....EN_ConditionalExpr           (4) 
+.....EN_PrimaryExpression         (5) 
+......EN_Constant                  (6) 0xffffffff
+EN_FuncDecl                  (0) 
+.EN_InputParam                (1) 
+..EN_ConditionalExpr           (2) 
+...EN_PrimaryExpression         (3) 
+....EN_Identifier                (4) height
+.EN_InputParam                (1) 
+..EN_ConditionalExpr           (2) 
+...EN_PrimaryExpression         (3) 
+....EN_Identifier                (4) width
+.EN_InputParam                (1) 
+..EN_ConditionalExpr           (2) 
+...EN_PrimaryExpression         (3) 
+....EN_Identifier                (4) posY
+.EN_InputParam                (1) 
+..EN_ConditionalExpr           (2) 
+...EN_PrimaryExpression         (3) 
+....EN_Identifier                (4) posX
+.EN_Identifier                (1) DrawRect
+.EN_CodeBlock                 (1) 
+..EN_While                     (2) 
+...EN_ConditionalExpr           (3) 
+....EN_LessThan                  (4) 
+.....EN_PrimaryExpression         (5) 
+......EN_Identifier                (6) spanY
+.....EN_Add                       (5) 
+......EN_PrimaryExpression         (6) 
+.......EN_Identifier                (7) posY
+......EN_PrimaryExpression         (6) 
+.......EN_Identifier                (7) height
+...EN_CodeBlock                 (3) 
+....EN_Statement                 (4) 
+.....EN_AssignmentExpression      (5) 
+......EN_PrimaryExpression         (6) 
+.......EN_Identifier                (7) spanY
+......EN_ConditionalExpr           (6) 
+.......EN_Add                       (7) 
+........EN_PrimaryExpression         (8) 
+.........EN_Identifier                (9) spanY
+........EN_PrimaryExpression         (8) 
+.........EN_Constant                  (9) 0x00000001
+....EN_While                     (4) 
+.....EN_ConditionalExpr           (5) 
+......EN_LessThan                  (6) 
+.......EN_PrimaryExpression         (7) 
+........EN_Identifier                (8) spanX
+.......EN_Add                       (7) 
+........EN_PrimaryExpression         (8) 
+.........EN_Identifier                (9) posX
+........EN_PrimaryExpression         (8) 
+.........EN_Identifier                (9) width
+.....EN_CodeBlock                 (5) 
+......EN_Statement                 (6) 
+.......EN_AssignmentExpression      (7) 
+........EN_PrimaryExpression         (8) 
+.........EN_Identifier                (9) spanX
+........EN_ConditionalExpr           (8) 
+.........EN_Add                       (9) 
+..........EN_PrimaryExpression         (10) 
+...........EN_Identifier                (11) spanX
+..........EN_PrimaryExpression         (10) 
+...........EN_Constant                  (11) 0x00000001
+......EN_Statement                 (6) 
+.......EN_AssignmentExpression      (7) 
+........EN_PostfixArrayExpression    (8) 
+.........EN_PrimaryExpression         (9) 
+..........EN_Identifier                (10) VRAM
+.........EN_ConditionalExpr           (9) 
+..........EN_Add                       (10) 
+...........EN_PrimaryExpression         (11) 
+............EN_Identifier                (12) spanX
+...........EN_Mul                       (11) 
+............EN_PrimaryExpression         (12) 
+.............EN_Constant                  (13) 0x00000140
+............EN_PrimaryExpression         (12) 
+.............EN_Identifier                (13) spanY
+........EN_ConditionalExpr           (8) 
+.........EN_PrimaryExpression         (9) 
+..........EN_Constant                  (10) 0xff00ff00
+....EN_Statement                 (4) 
+.....EN_AssignmentExpression      (5) 
+......EN_PrimaryExpression         (6) 
+.......EN_Identifier                (7) spanX
+......EN_ConditionalExpr           (6) 
+.......EN_PrimaryExpression         (7) 
+........EN_Identifier                (8) posX
+..EN_Statement                 (2) 
+...EN_AssignmentExpression      (3) 
+....EN_PrimaryExpression         (4) 
+.....EN_Identifier                (5) spanY
+....EN_ConditionalExpr           (4) 
+.....EN_PrimaryExpression         (5) 
+......EN_Identifier                (6) posY
+..EN_Decl                      (2) 
+...EN_Identifier                (3) spanY
+..EN_Decl                      (2) 
+...EN_Identifier                (3) spanX
+EN_FuncDecl                  (0) 
+.EN_Identifier                (1) main
+.EN_CodeBlock                 (1) 
+..EN_Call                      (2) 
+...EN_Expression                (3) 
+....EN_ConditionalExpr           (4) 
+.....EN_PrimaryExpression         (5) 
+......EN_Constant                  (6) 0x00000180
+...EN_Expression                (3) 
+....EN_ConditionalExpr           (4) 
+.....EN_Sub                       (5) 
+......EN_Add                       (6) 
+.......EN_PrimaryExpression         (7) 
+........EN_Constant                  (8) 0x00000200
+.......EN_PrimaryExpression         (7) 
+........EN_Constant                  (8) 0x00000003
+......EN_PrimaryExpression         (6) 
+.......EN_Identifier                (7) cursorY
+...EN_Expression                (3) 
+....EN_ConditionalExpr           (4) 
+.....EN_PrimaryExpression         (5) 
+......EN_Constant                  (6) 0x00000000
+...EN_Expression                (3) 
+....EN_ConditionalExpr           (4) 
+.....EN_PrimaryExpression         (5) 
+......EN_Constant                  (6) 0x00000000
+...EN_Identifier                (3) DrawRect
+Function 'DrawRect', hash 032D1965
+Function 'main', hash BC76E6BA
+Variable 'cursorX', hash 2AB08A05
+Variable 'cursorY', hash 2AB08A04
+Variable 'VRAM', hash 6FF3DA43
+Variable 'banana', hash EA716BD2
+Variable 'tree', hash C602CD31
+Variable 'sprite', hash 43466C92
+Variable 'spanX', hash FD3E6BD3
+Variable 'spanY', hash FD3E6BD2
