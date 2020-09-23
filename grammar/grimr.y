@@ -861,9 +861,6 @@ variable_declaration
 																									$$->PushNode(n0);
 																									g_ASC.PushNode($$);
 
-																									// Variable has initializer
-																									//if (n0->m_Type==EN_DeclInitJunction)
-
 																									// Also store the variable in function list for later retreival
 																									SVariable *var = new SVariable();
 																									var->m_Name = n0->m_Type==EN_DeclInitJunction ? n0->m_ASTNodes[0]->m_Value : n0->m_Value;
