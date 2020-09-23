@@ -155,62 +155,36 @@ const char* NodeTypes[]=
 enum EOpcode
 {
 	OP_NOOP,
+	OP_CONST,
+	OP_ADDRESSOF,
+	OP_VALUEOF,
+	OP_BITNOT,
+	OP_NEG,
+	OP_LOGICNOT,
 	OP_MUL,
 	OP_DIV,
 	OP_MOD,
 	OP_ADD,
 	OP_SUB,
-	OP_STORE,
-	OP_LOAD,
-	OP_LESS,
-	OP_GREATER,
-	OP_LE,
-	OP_GE,
-	OP_EQ,
-	OP_NEQ,
-	OP_LABEL,
-	OP_JUMP,
-	OP_JUMPNZ,
-	OP_CALL,
-	OP_RETURN,
-	OP_PUSH,
-	OP_POP,
-	OP_LEA,
-	OP_DUMMYSTRING,
-	OP_BITAND,
-	OP_BITOR,
-	OP_BITXOR,
-	OP_SELECT,
+	OP_IDENT,
+	OP_ASSIGN,
 };
 
 const char *Opcodes[]={
-	"\tnop   ",
-	"\tmul   ",
-	"\tdiv   ",
-	"\tmod   ",
-	"\tadd   ",
-	"\tsub   ",
-	"\tst    ",
-	"\tld    ",
-	"\tcmp.l ",
-	"\tcmp.g ",
-	"\tcmp.le",
-	"\tcmp.ge",
-	"\tcmp.e ",
-	"\tcmp.ne",
-	"@label",
-	"\tjmp   ",
-	"\tjmp.nz",
-	"\tcall  ",
-	"ret   ",
-	"\tpush  ",
-	"\tpop   ",
-	"\tlea   ",
-	"",
-	"\tand   ",
-	"\tor    ",
-	"\txor   ",
-	"\tsel   ",
+	"nop",
+	"const",
+	"addrof",
+	"valof",
+	"bnot",
+	"neg",
+	"lnot",
+	"mul",
+	"div",
+	"mod",
+	"add",
+	"sub",
+	"ident",
+	"assign",
 };
 
 enum ENodeSide
@@ -275,6 +249,7 @@ public:
 		return node;
 	}
 
+	EOpcode m_Opcode{OP_NOOP};
 	EASTNodeType m_Type{EN_Default};
 	ENodeSide m_Side{RIGHT_HAND_SIDE};
 	int m_ScopeDepth{0};
@@ -445,6 +420,7 @@ simple_identifier
 	: IDENTIFIER																				{
 																									uint32_t hash = HashString($1);
 																									$$ = new SASTNode(EN_Identifier, std::string($1));
+																									$$->m_Opcode = OP_IDENT;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -455,6 +431,7 @@ simple_constant
 																									stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << $1;
 																									std::string result( stream.str() );
 																									$$ = new SASTNode(EN_Constant, std::string("0x")+result);
+																									$$->m_Opcode = OP_CONST;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -496,30 +473,35 @@ unary_expression
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryBitNot, "");
 																									$$->PushNode(unaryexpressionnode);
+																									$$->m_Opcode = OP_BITNOT;
 																									g_ASC.PushNode($$);
 																								}
 	| '-' unary_expression																		{
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryNegate, "");
 																									$$->PushNode(unaryexpressionnode);
+																									$$->m_Opcode = OP_NEG;
 																									g_ASC.PushNode($$);
 																								}
 	| '!' unary_expression																		{
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryLogicNot, "");
 																									$$->PushNode(unaryexpressionnode);
+																									$$->m_Opcode = OP_LOGICNOT;
 																									g_ASC.PushNode($$);
 																								}
 	| '&' unary_expression																		{
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryAddressOf, "");
 																									$$->PushNode(unaryexpressionnode);
+																									$$->m_Opcode = OP_ADDRESSOF;
 																									g_ASC.PushNode($$);
 																								}
 	| '*' unary_expression																		{
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryValueOf, "");
 																									$$->PushNode(n0);
+																									$$->m_Opcode = OP_VALUEOF;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -532,6 +514,7 @@ multiplicative_expression
 																									SASTNode *n1=g_ASC.PopNode();
 																									$$->PushNode(n0);
 																									$$->PushNode(n1);
+																									$$->m_Opcode = OP_MUL;
 																									g_ASC.PushNode($$);
 																								}
 	| multiplicative_expression '/' unary_expression											{
@@ -540,6 +523,7 @@ multiplicative_expression
 																									SASTNode *n1=g_ASC.PopNode();
 																									$$->PushNode(n0);
 																									$$->PushNode(n1);
+																									$$->m_Opcode = OP_DIV;
 																									g_ASC.PushNode($$);
 																								}
 	| multiplicative_expression '%' unary_expression											{
@@ -548,6 +532,7 @@ multiplicative_expression
 																									SASTNode *n1=g_ASC.PopNode();
 																									$$->PushNode(n0);
 																									$$->PushNode(n1);
+																									$$->m_Opcode = OP_MOD;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -560,6 +545,7 @@ additive_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_ADD;
 																									g_ASC.PushNode($$);
 																								}
 	| additive_expression '-' multiplicative_expression											{
@@ -568,6 +554,7 @@ additive_expression
 																									SASTNode *leftnode = g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_SUB;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -705,6 +692,7 @@ assignment_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_ASSIGN;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -1064,7 +1052,7 @@ void DebugDumpNode(FILE *_fp, int scopeDepth, SASTNode *node)
 	node->m_ScopeDepth = scopeDepth;
 
 	std::string spaces = ".................................................................................";
-	fprintf(_fp, "%s%s(%d) %s\n", spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
+	fprintf(_fp, "%s%s(%d) %s %s\n", spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeDepth, Opcodes[node->m_Opcode], node->m_Value.c_str());
 
 	for (auto &subnode : node->m_ASTNodes)
 		DebugDumpNode(_fp, scopeDepth+1, subnode);
