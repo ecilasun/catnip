@@ -19,12 +19,12 @@ int CompileCode(char *_inputname, char *_outputname)
 	int result = yyparse();
 	fclose(yyin);
 
-	ConvertNodes();
+	/*ConvertNodes();
 	GatherSymbols();
 	ScanSymbolAccessErrors();
 	CompilePass();
 
-	SaveAsm(_outputname);
+	SaveAsm(_outputname);*/
 
 	DebugDump();
 
