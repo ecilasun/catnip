@@ -125,7 +125,15 @@ EN_FuncDecl                  (0) nop
 ......EN_Constant                  (6) mov 0x00000000
 .....EN_Identifier                (5) lea DrawRect
 ...EN_EndCodeBlock              (3) popcontext 
+...EN_Jump                      (3) jmp exitif5
 ...EN_Label                     (3) @label endif4
+...EN_BeginCodeBlock            (3) pushcontext 
+....EN_Statement                 (4) nop 
+.....EN_AssignmentExpression      (5) st 
+......EN_Identifier                (6) lea cursorY
+......EN_Constant                  (6) mov 0x00000001
+...EN_EndCodeBlock              (3) popcontext 
+...EN_Label                     (3) @label exitif5
 .EN_EndCodeBlock              (1) popcontext 
 
 ------------Symbol table--------------

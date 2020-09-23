@@ -407,7 +407,7 @@ SASTScanContext g_ASC;
 %token <string> STRING_LITERAL
 
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
-%token VAR FUNCTION IF WHILE BEGINBLOCK ENDBLOCK RETURN
+%token VAR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
 
 %type <astnode> simple_identifier
 %type <astnode> simple_constant
@@ -794,6 +794,83 @@ if_statement
 																									$$->PushNode(codeblocknode);
 																									$$->PushNode(endcodeblocknode);
 																									$$->PushNode(endlabel);
+																									$$->m_Opcode = OP_IF;
+																									g_ASC.PushNode($$);
+																								}
+	| IF '(' expression ')' code_block_start code_block_body code_block_end	ELSE code_block_start code_block_body code_block_end	{
+																									$$ = new SASTNode(EN_If, "");
+
+																									// Remove epilogue
+																									g_ASC.PopNode();
+
+																									// Create code block node
+																									SASTNode *elseblocknode = new SASTNode(EN_BeginCodeBlock, "");
+																									elseblocknode->m_Opcode = OP_PUSHCONTEXT;
+
+																									SASTNode *ifblocknode = new SASTNode(EN_BeginCodeBlock, "");
+																									ifblocknode->m_Opcode = OP_PUSHCONTEXT;
+
+																									SASTNode *ifcodeblockendnode = new SASTNode(EN_EndCodeBlock, "");
+																									ifcodeblockendnode->m_Opcode = OP_POPCONTEXT;
+																									SASTNode *elsecodeblockendnode = new SASTNode(EN_EndCodeBlock, "");
+																									elsecodeblockendnode->m_Opcode = OP_POPCONTEXT;
+
+																									// Collect everything up till prologue
+																									bool done = false;
+																									do
+																									{
+																										SASTNode *n0 = g_ASC.PeekNode();
+																										done = n0->m_Type == EN_Prologue ? true:false;
+																										if (done)
+																											break;
+																										g_ASC.PopNode();
+																										elseblocknode->PushNode(n0);
+																									} while (1);
+
+																									// Remove prologue
+																									g_ASC.PopNode();
+
+																									// Remove epilogue
+																									g_ASC.PopNode();
+
+																									// Collect everything up till prologue
+																									done = false;
+																									do
+																									{
+																										SASTNode *n0 = g_ASC.PeekNode();
+																										done = n0->m_Type == EN_Prologue ? true:false;
+																										if (done)
+																											break;
+																										g_ASC.PopNode();
+																										ifblocknode->PushNode(n0);
+																									} while (1);
+
+																									// Remove prologue
+																									g_ASC.PopNode();
+
+																									std::string label = g_ASC.PushLabel("endif");
+																									std::string finallabel = g_ASC.PushLabel("exitif");
+																									SASTNode *branchcode = new SASTNode(EN_JumpNZ, label);
+																									branchcode->m_Opcode = OP_JUMPNZ;
+																									SASTNode *endlabel = new SASTNode(EN_Label, label);
+																									endlabel->m_Opcode = OP_LABEL;
+																									SASTNode *exitlabel = new SASTNode(EN_Label, finallabel);
+																									exitlabel->m_Opcode = OP_LABEL;
+																									g_ASC.PopLabel("endif");
+
+																									SASTNode *jumpnode = new SASTNode(EN_Jump, finallabel);
+																									jumpnode->m_Opcode = OP_JUMP;
+
+																									SASTNode *exprnode=g_ASC.PopNode();
+																									$$->PushNode(exprnode);
+																									$$->PushNode(branchcode);
+																									$$->PushNode(ifblocknode);
+																									$$->PushNode(ifcodeblockendnode);
+																									$$->PushNode(jumpnode);
+																									$$->PushNode(endlabel);
+																									$$->PushNode(elseblocknode);
+																									$$->PushNode(elsecodeblockendnode);
+																									$$->PushNode(exitlabel);
 																									$$->m_Opcode = OP_IF;
 																									g_ASC.PushNode($$);
 																								}

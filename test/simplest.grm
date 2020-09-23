@@ -28,4 +28,8 @@ def main()
     {
         DrawRect(0,0,512+3-cursorY,384);
     }
+    else
+    {
+        cursorY = 1;
+    }
 }

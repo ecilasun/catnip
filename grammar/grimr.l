@@ -37,6 +37,7 @@ void stripquotes(char *string);
 "def"						{ count();  return(FUNCTION); }
 
 "if"						{ count();  return(IF); }
+"else"						{ count();  return(ELSE); }
 
 "while"						{ count();  return(WHILE); }
 
