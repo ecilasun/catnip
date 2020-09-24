@@ -1104,7 +1104,7 @@ variable_declaration
 																									$$ = new SASTNode(EN_Decl, "");
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
-																									g_ASC.PushNode($$);
+																									g_ASC.PushNode($$); // Variable already added to var stack
 
 																									// Also store the variable in function list for later retreival
 																									SVariable *var = new SVariable();
