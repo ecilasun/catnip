@@ -1406,6 +1406,7 @@ void AssignRegisterNode(FILE *_fp, SASTNode *node)
 			std::string srcB = g_ASC.PopRegister();
 			std::string trg = g_ASC.PushRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " [" + trg + "], " + srcA + ", " + srcB;
+			g_ASC.PopRegister(); // We have no further use of the target register
 		}
 		break;
 

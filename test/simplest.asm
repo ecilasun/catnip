@@ -181,142 +181,142 @@ ld r2 [VRAM]
 ld r3 0x80000000
 st [r2], r3, r2
 decl 
-ld r3 [banana]
+ld r2 [banana]
 dim 0x00000010
 decl 
-ld r4 [tree]
+ld r3 [tree]
 dim 0x00000004
-ld r5 0x00000004
-ld r6 0x00000003
-ld r7 0x00000002
-ld r8 0x00000001
+ld r4 0x00000004
+ld r5 0x00000003
+ld r6 0x00000002
+ld r7 0x00000001
 dataarray 
 bulkassign 
 decl 
-ld r9 [sprite]
+ld r8 [sprite]
 dim 0x00000020
-ld r10 0xffedcafd
-ld r11 0xfffffffc
-ld r12 0xfffffffb
-ld r13 0xfffffffa
-ld r14 0xfffffffd
-ld r15 0xfffffffc
-ld r16 0xfffffffb
-ld r17 0xfffffffa
-ld r18 0xfffffffd
-ld r19 0xff222ffc
-ld r20 0xfffffffb
-ld r21 0xfffffffa
-ld r22 0xfffffffd
-ld r23 0xfffffffc
-ld r24 0xf00ffffb
-ld r25 0xfffffffa
-ld r26 0xfffffffd
-ld r27 0xfffffffc
-ld r28 0xfffffffb
-ld r29 0xfffffffa
-ld r30 0xfffffffd
-ld r31 0xfffffffc
-ld r32 0xfffffffb
-ld r33 0xfffffffa
-ld r34 0xffffff01
-ld r35 0xffffff00
-ld r36 0xffffffff
-ld r37 0xfffffffe
-ld r38 0xfffffffd
-ld r39 0xfffffffc
-ld r40 0xfffffffb
-ld r41 0xfffffffa
+ld r9 0xffedcafd
+ld r10 0xfffffffc
+ld r11 0xfffffffb
+ld r12 0xfffffffa
+ld r13 0xfffffffd
+ld r14 0xfffffffc
+ld r15 0xfffffffb
+ld r16 0xfffffffa
+ld r17 0xfffffffd
+ld r18 0xff222ffc
+ld r19 0xfffffffb
+ld r20 0xfffffffa
+ld r21 0xfffffffd
+ld r22 0xfffffffc
+ld r23 0xf00ffffb
+ld r24 0xfffffffa
+ld r25 0xfffffffd
+ld r26 0xfffffffc
+ld r27 0xfffffffb
+ld r28 0xfffffffa
+ld r29 0xfffffffd
+ld r30 0xfffffffc
+ld r31 0xfffffffb
+ld r32 0xfffffffa
+ld r33 0xffffff01
+ld r34 0xffffff00
+ld r35 0xffffffff
+ld r36 0xfffffffe
+ld r37 0xfffffffd
+ld r38 0xfffffffc
+ld r39 0xfffffffb
+ld r40 0xfffffffa
 dataarray 
 bulkassign 
 decl 
 @label test
 ret 
-ld r42 [height]
-ld r43 [width]
-ld r44 [posY]
-ld r45 [posX]
+ld r41 [height]
+ld r42 [width]
+ld r43 [posY]
+ld r44 [posX]
 @label DrawRect
 @label beginwhile2
+ld r45 [spanY]
+ld r46 [posY]
+ld r47 [height]
+add r46, r47, r46
+cmp.l r45, r46, r45
+jmpnz r45, endwhile3
+lea r45 spanY
 ld r46 [spanY]
-ld r47 [posY]
-ld r48 [height]
-add r47, r48, r47
-cmp.l r46, r47, r46
-jmpnz r46, endwhile3
-lea r46 spanY
-ld r47 [spanY]
-ld r48 0x00000001
-add r47, r48, r47
-st [r46], r47, r46
+ld r47 0x00000001
+add r46, r47, r46
+st [r45], r46, r45
 @label beginwhile0
-ld r47 [spanX]
-ld r48 [posX]
-ld r49 [width]
-add r48, r49, r48
-cmp.l r47, r48, r47
-jmpnz r47, endwhile1
-lea r47 spanX
+ld r45 [spanX]
+ld r46 [posX]
+ld r47 [width]
+add r46, r47, r46
+cmp.l r45, r46, r45
+jmpnz r45, endwhile1
+lea r45 spanX
+ld r46 [spanX]
+ld r47 0x00000001
+add r46, r47, r46
+st [r45], r46, r45
+lea r45 VRAM
+lea r46 spanX
+ld r47 0x00000140
+lea r48 spanY
+mul r47, r48, r47
+add r46, r47, r46
+add r45, r46, r45
+ld r46 [sprite]
+ld r47 0x00000004
 ld r48 [spanX]
-ld r49 0x00000001
-add r48, r49, r48
-st [r47], r48, r47
-lea r48 VRAM
-lea r49 spanX
-ld r50 0x00000140
-lea r51 spanY
-mul r50, r51, r50
-add r49, r50, r49
-add r48, r49, r48
-ld r49 [sprite]
-ld r50 0x00000004
-ld r51 [spanX]
-mod r50, r51, r50
-ld r51 0x00000004
-ld r52 0x00000008
-ld r53 [spanY]
-mod r52, r53, r52
-mul r51, r52, r51
-add r50, r51, r50
-add r49, r50, r49
-st [r48], r49, r48
+mod r47, r48, r47
+ld r48 0x00000004
+ld r49 0x00000008
+ld r50 [spanY]
+mod r49, r50, r49
+mul r48, r49, r48
+add r47, r48, r47
+add r46, r47, r46
+st [r45], r46, r45
 jmp beginwhile0
 @label endwhile1
-lea r49 spanX
-ld r50 [posX]
-st [r49], r50, r49
+lea r45 spanX
+ld r46 [posX]
+st [r45], r46, r45
 jmp beginwhile2
 @label endwhile3
-lea r50 spanY
-ld r51 [posY]
-st [r50], r51, r50
-ld r51 [spanY]
+lea r45 spanY
+ld r46 [posY]
+st [r45], r46, r45
+ld r45 [spanY]
 decl 
-ld r52 [spanX]
+ld r46 [spanX]
 decl 
 @label main
-ld r53 [cursorY]
-ld r54 0x00000002
-cmp.g r53, r54, r53
-jmpnz r53, endif4
-ld r53 0x00000180
-push r53
-ld r53 0x00000200
-ld r54 0x00000003
-add r53, r54, r53
-ld r54 [cursorY]
-sub r53, r54, r53
-push r53
-ld r53 0x00000000
-push r53
-ld r53 0x00000000
-push r53
+ld r47 [cursorY]
+ld r48 0x00000002
+cmp.g r47, r48, r47
+jmpnz r47, endif4
+ld r47 0x00000180
+push r47
+ld r47 0x00000200
+ld r48 0x00000003
+add r47, r48, r47
+ld r48 [cursorY]
+sub r47, r48, r47
+push r47
+ld r47 0x00000000
+push r47
+ld r47 0x00000000
+push r47
 call DrawRect
 jmp exitif5
 @label endif4
-lea r53 cursorY
-ld r54 0x00000001
-st [r53], r54, r53
+lea r47 cursorY
+ld r48 0x00000001
+st [r47], r48, r47
 @label exitif5
 
 -------------Symbol Table-------------
