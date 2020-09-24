@@ -176,7 +176,7 @@ enum EOpcode
 	OP_SUB,
 	OP_LEA,
 	OP_LOAD,
-	OP_ASSIGN,
+	OP_STORE,
 	OP_BULKASSIGN,
 	OP_DATAARRAY,
 	OP_RETURN,
@@ -807,7 +807,7 @@ assignment_expression
 																									VisitNodeHierarchy(rightnode, SetAsRightHandSideCallback);
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
-																									$$->m_Opcode = OP_ASSIGN;
+																									$$->m_Opcode = OP_STORE;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -1013,7 +1013,7 @@ variable_declaration_item
 																									SASTNode *namenode=g_ASC.PopNode();
 																									$$->PushNode(namenode);
 																									$$->PushNode(valnode);
-																									$$->m_Opcode = OP_ASSIGN;
+																									$$->m_Opcode = OP_STORE;
 																									g_ASC.PushNode($$);
 																								}
 	| simple_identifier '[' expression ']'														{
@@ -1400,7 +1400,7 @@ void AssignRegisterNode(FILE *_fp, SASTNode *node)
 		}
 		break;
 
-		case OP_ASSIGN:
+		case OP_STORE:
 		{
 			std::string srcA = g_ASC.PopRegister();
 			std::string srcB = g_ASC.PopRegister();
