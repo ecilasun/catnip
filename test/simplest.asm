@@ -79,7 +79,9 @@ sub r0, r0, r1
 push r0
 ld r0 0x00000180
 push r0
+pushregs r0
 call DrawRect
+popregs r0
 
 //-------------Symbol Table-------------
 

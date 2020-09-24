@@ -185,6 +185,8 @@ enum EOpcode
 	OP_RETURN,
 	OP_PUSHCONTEXT,
 	OP_POPCONTEXT,
+	OP_PUSHLOCALREGISTERS,
+	OP_POPLOCALREGISTERS,
 	OP_IF,
 	OP_WHILE,
 	OP_CALL,
@@ -230,6 +232,8 @@ const std::string Opcodes[]={
 	"ret",
 	"pushcontext",
 	"popcontext",
+	"pushregs",
+	"popregs",
 	"if",
 	"while",
 	"call",
@@ -1518,6 +1522,15 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
 			std::string srcA = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " [" + trg + "], " + srcA;
+		}
+		break;
+
+		case OP_CALL:
+		{
+			std::string reglimit = g_ASC.CurrentRegister();
+			node->m_Instructions = Opcodes[OP_PUSHLOCALREGISTERS] + " " + reglimit;
+			node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode] + " " + node->m_Value;
+			node->m_Instructions += std::string("\n") + Opcodes[OP_POPLOCALREGISTERS] + " " + reglimit;
 		}
 		break;
 
