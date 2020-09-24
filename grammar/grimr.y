@@ -434,6 +434,7 @@ struct SASTScanContext
 	uint32_t m_StringAddress{0};
 	int m_CurrentRegister{0};
 	int m_CurrentAutoLabel{0};
+	int m_InstructionCount{0};
 };
 
 typedef void (*FVisitCallback)(SASTNode *node);
@@ -1438,6 +1439,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_POP:
 		{
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
+			++g_ASC.m_InstructionCount;
 		}
 		break;
 
@@ -1445,12 +1447,14 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string src = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + src;
+			++g_ASC.m_InstructionCount;
 		}
 		break;
 
 		case OP_JUMP:
 		{
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
+			++g_ASC.m_InstructionCount;
 		}
 		break;
 
@@ -1459,6 +1463,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string src = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + src + ", " + node->m_Value;
+			++g_ASC.m_InstructionCount;
 		}
 		break;
 
@@ -1473,6 +1478,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string srcA = g_ASC.PopRegister();
 			std::string trg = g_ASC.PushRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + srcA + ", " + srcB;
+			++g_ASC.m_InstructionCount;
 		}
 		break;
 
@@ -1486,6 +1492,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string srcA = g_ASC.PopRegister();
 			std::string trg = g_ASC.PushRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + srcA + ", " + srcB;
+			++g_ASC.m_InstructionCount;
 		}
 		break;
 
@@ -1493,12 +1500,17 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string tgt = g_ASC.PushRegister();
 			node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + " " + node->m_Value;
+			++g_ASC.m_InstructionCount;
 			std::string srcA = g_ASC.PopRegister();
 			std::string srcB = g_ASC.PopRegister();
 			std::string trg2 = g_ASC.PushRegister();
 			node->m_Instructions += std::string("\n") + Opcodes[OP_ADD] + " " + trg2 + ", " + srcA + ", " + srcB;
+			++g_ASC.m_InstructionCount;
 			if (node->m_Side == RIGHT_HAND_SIDE)
+			{
 				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + " [" + trg2 + "], " + trg2;
+				++g_ASC.m_InstructionCount;
+			}
 		}
 		break;
 
@@ -1509,6 +1521,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				node->m_Instructions = Opcodes[OP_LOAD] + " " + trg + " [" + node->m_Value + "]";
 			else
 				node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + " " + node->m_Value;
+			++g_ASC.m_InstructionCount;
 		}
 		break;
 
@@ -1516,6 +1529,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string trg = g_ASC.PushRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + " " + node->m_Value;
+			++g_ASC.m_InstructionCount;
 		}
 		break;
 
@@ -1525,17 +1539,20 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
 			std::string srcA = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " [" + trg + "], " + srcA;
+			++g_ASC.m_InstructionCount;
 		}
 		break;
 
 		case OP_CALL:
 		{
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
+			++g_ASC.m_InstructionCount;
 		}
 		break;
 
 		default:
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
+			// ++g_ASC.m_InstructionCount; // Not considered an instruction, usually @label hits this one
 		break;
 	}
 
@@ -1562,6 +1579,7 @@ void DebugDump(const char *_filename)
 		AssignRegistersAndGenerateCode(fp, node);
 
 	//fprintf(fp, "\n//----------------Code------------------\n\n");
+	fprintf(fp, "// Instruction count: %d\n", g_ASC.m_InstructionCount);
 	for (auto &node : g_ASC.m_ASTNodes)
 		DumpCode(fp, node);
 

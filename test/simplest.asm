@@ -1,3 +1,4 @@
+// Instruction count: 80
 
 @label test
 ret 
