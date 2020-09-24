@@ -1337,8 +1337,10 @@ function_def
 
 																									// Remove prologue
 																									g_ASC.PopNode();
+
 																									// Collect call parameter nodes
 																									done = false;
+																									SASTNode *tmp = new SASTNode(EN_Default, "");
 																									do
 																									{
 																										SASTNode *n0 = g_ASC.PeekNode();
@@ -1346,9 +1348,12 @@ function_def
 																										if (done)
 																											break;
 																										n0->m_Type = EN_StackPop;
+																										n0->m_Opcode = OP_POP;
 																										g_ASC.PopNode();
+																										n0->m_Value = n0->m_ASTNodes[0]->m_Value;
+																										n0->m_ASTNodes.clear(); // Remove identifier
 																										// Add the input parameter to code block
-																										$$->PushNode(n0);
+																										tmp->PushNode(n0);
 																									} while (1);
 
 																									SASTNode *namenode = g_ASC.PopNode();
@@ -1356,6 +1361,11 @@ function_def
 																									SASTNode *labelnode = new SASTNode(EN_Label, namenode->m_Value);
 																									labelnode->m_Opcode = OP_LABEL;
 																									$$->PushNode(labelnode);
+
+																									// Copy the parameter pop instructions
+																									for (auto &P : tmp->m_ASTNodes)
+																										$$->PushNode(P);
+																									delete tmp;
 
 																									// Add the name after input parameters
 																									//$$->PushNode(namenode);
@@ -1392,8 +1402,8 @@ void AssignScopeNode(FILE *_fp, int scopeDepth, SASTNode *node)
 {
 	node->m_ScopeDepth = scopeDepth;
 
-	std::string spaces = ".................................................................................";
-	fprintf(_fp, "%s: %s%s(%d) %s\n", node->m_Side==NO_SIDE?"N":(node->m_Side==LEFT_HAND_SIDE?"L":"R"), spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
+	//std::string spaces = ".................................................................................";
+	//fprintf(_fp, "%s: %s%s(%d) %s\n", node->m_Side==NO_SIDE?"N":(node->m_Side==LEFT_HAND_SIDE?"L":"R"), spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
 
 	for (auto &subnode : node->m_ASTNodes)
 		AssignScopeNode(_fp, scopeDepth+1, subnode);
@@ -1405,7 +1415,11 @@ void DumpCode(FILE *_fp, SASTNode *node)
 		DumpCode(_fp, subnode);
 
 	if (node->m_Opcode != OP_EMPTY)
+	{
+		if (node->m_Type == EN_Label)
+			fprintf(_fp, "\n");
 		fprintf(_fp, "%s\n", node->m_Instructions.c_str());
+	}
 }
 
 void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
@@ -1415,6 +1429,12 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 
 	switch(node->m_Opcode)
 	{
+		case OP_POP:
+		{
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
+		}
+		break;
+
 		case OP_PUSH:
 		{
 			std::string src = g_ASC.PopRegister();
@@ -1506,41 +1526,40 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		break;
 	}
 
-	fprintf(_fp, "%s: %s (%s) %s\n",
+	/*fprintf(_fp, "%s: %s (%s) %s\n",
 		node->m_Side==NO_SIDE?"N":(node->m_Side==LEFT_HAND_SIDE?"L":"R"),
 		NodeTypes[node->m_Type],
 		node->m_Value.c_str(),
-		node->m_Instructions.c_str());
+		node->m_Instructions.c_str());*/
 }
 
 void DebugDump(const char *_filename)
 {
 	FILE *fp = fopen(_filename, "w");
 
-	fprintf(fp, "\n-------------Scope Depth--------------\n\n");
+	//fprintf(fp, "\n//-------------Scope Depth--------------\n\n");
 
 	int scopeDepth = 0;
 	for (auto &node : g_ASC.m_ASTNodes)
 		AssignScopeNode(fp, scopeDepth, node);
 
-	fprintf(fp, "\n--Assign Registers and generate code--\n\n");
+	//fprintf(fp, "\n//--Assign Registers and generate code--\n\n");
 
 	for (auto &node : g_ASC.m_ASTNodes)
 		AssignRegistersAndGenerateCode(fp, node);
 
-	fprintf(fp, "\n------------Compiled Code-------------\n\n");
+	//fprintf(fp, "\n//----------------Code------------------\n\n");
 	for (auto &node : g_ASC.m_ASTNodes)
 		DumpCode(fp, node);
 
-	fprintf(fp, "\n-------------Symbol Table-------------\n\n");
-
+	fprintf(fp, "\n//-------------Symbol Table-------------\n\n");
 	for (auto &func : g_ASC.m_Functions)
 		fprintf(fp, "// function '%s', hash: %.8X, refcount: %d\n", func->m_Name.c_str(), func->m_Hash, func->m_RefCount);
 
 	for (auto &var : g_ASC.m_Variables)
 	{
 		fprintf(fp, "@label %s\n", var->m_Name.c_str());
-		fprintf(fp, "@length %d\n", var->m_Dimension);
+		fprintf(fp, "// array length %d\n", var->m_Dimension);
 		for (auto &data : var->m_InitialValues)
 			fprintf(fp, "@dw %s\n", data.c_str());
 	}
