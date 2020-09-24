@@ -37,5 +37,8 @@ def DrawRect(posX, posY, width, height)
 def main()
 {
     DrawRect(0,0,512+3-cursorY,384);
-    DrawRect(64,64,128,96);
+    if (spanX>64)
+    {
+        DrawRect(64,64,128,96);
+    }
 }

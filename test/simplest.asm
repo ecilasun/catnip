@@ -17,7 +17,7 @@ ld r1 [posY]
 ld r2 [height]
 add r1, r1, r2
 cmp.l r0, r0, r1
-jmpnz r0, endwhile3
+jmpz r0, endwhile3
 ld r0 [posX]
 lea r1 spanX
 st [r1], r0
@@ -28,7 +28,7 @@ ld r1 [posX]
 ld r2 [width]
 add r1, r1, r2
 cmp.l r0, r0, r1
-jmpnz r0, endwhile1
+jmpz r0, endwhile1
 ld r0 0x00000004
 ld r1 [spanX]
 mod r0, r0, r1
@@ -79,9 +79,11 @@ sub r0, r0, r1
 push r0
 ld r0 0x00000180
 push r0
-pushregs r0
 call DrawRect
-popregs r0
+ld r0 [spanX]
+ld r1 0x00000040
+cmp.g r0, r0, r1
+jmpz r0, endif4
 ld r0 0x00000040
 push r0
 ld r0 0x00000040
@@ -90,9 +92,9 @@ ld r0 0x00000080
 push r0
 ld r0 0x00000060
 push r0
-pushregs r0
 call DrawRect
-popregs r0
+
+@label endif4
 
 //-------------Symbol Table-------------
 

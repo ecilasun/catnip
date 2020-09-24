@@ -193,6 +193,7 @@ enum EOpcode
 	OP_PUSH,
 	OP_POP,
 	OP_JUMP,
+	OP_JUMPZ,
 	OP_JUMPNZ,
 	OP_LABEL,
 	OP_DECL,
@@ -240,6 +241,7 @@ const std::string Opcodes[]={
 	"push",
 	"pop",
 	"jmp",
+	"jmpz",
 	"jmpnz",
 	"@label",
 	"decl",
@@ -872,7 +874,7 @@ if_statement
 
 																									std::string label = g_ASC.PushLabel("endif");
 																									SASTNode *branchcode = new SASTNode(EN_JumpNZ, label);
-																									branchcode->m_Opcode = OP_JUMPNZ;
+																									branchcode->m_Opcode = OP_JUMPZ;
 																									SASTNode *endlabel = new SASTNode(EN_Label, label);
 																									endlabel->m_Opcode = OP_LABEL;
 																									g_ASC.PopLabel("endif");
@@ -940,7 +942,7 @@ if_statement
 																									std::string label = g_ASC.PushLabel("endif");
 																									std::string finallabel = g_ASC.PushLabel("exitif");
 																									SASTNode *branchcode = new SASTNode(EN_JumpNZ, label);
-																									branchcode->m_Opcode = OP_JUMPNZ;
+																									branchcode->m_Opcode = OP_JUMPZ;
 																									SASTNode *endlabel = new SASTNode(EN_Label, label);
 																									endlabel->m_Opcode = OP_LABEL;
 																									SASTNode *exitlabel = new SASTNode(EN_Label, finallabel);
@@ -997,7 +999,7 @@ while_statement
 																									std::string startlabel = g_ASC.PushLabel("beginwhile");
 																									std::string label = g_ASC.PushLabel("endwhile");
 																									SASTNode *branchcode = new SASTNode(EN_JumpNZ, label);
-																									branchcode->m_Opcode = OP_JUMPNZ;
+																									branchcode->m_Opcode = OP_JUMPZ;
 																									SASTNode *branchcodeend = new SASTNode(EN_Jump, startlabel);
 																									branchcodeend->m_Opcode = OP_JUMP;
 																									SASTNode *beginlabel = new SASTNode(EN_Label, startlabel);
@@ -1452,6 +1454,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		}
 		break;
 
+		case OP_JUMPZ:
 		case OP_JUMPNZ:
 		{
 			std::string src = g_ASC.PopRegister();
@@ -1527,10 +1530,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 
 		case OP_CALL:
 		{
-			std::string reglimit = g_ASC.CurrentRegister();
-			node->m_Instructions = Opcodes[OP_PUSHLOCALREGISTERS] + " " + reglimit;
-			node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode] + " " + node->m_Value;
-			node->m_Instructions += std::string("\n") + Opcodes[OP_POPLOCALREGISTERS] + " " + reglimit;
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
 		}
 		break;
 
