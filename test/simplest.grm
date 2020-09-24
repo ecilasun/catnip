@@ -50,5 +50,8 @@ def main()
 
 def main()
 {
-    a = 1+3*a;
+    if (cursorY > 2)
+    {
+        DrawRect(0,0,512+3-cursorY,384);
+    }
 }

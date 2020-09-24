@@ -1177,9 +1177,9 @@ functioncall_statement
 																										++paramcount;
 																									} while (1);
 																									SASTNode *namenode = g_ASC.PopNode();
-																									$$->PushNode(namenode);
+																									//$$->PushNode(namenode); // No need to push name node, this is part of the 'call' opcode (as a target label)
 																									$$->m_Opcode = OP_CALL;
-																									$$->m_Value = std::string("(paramcount: ") + std::to_string(paramcount) + std::string(")");
+																									$$->m_Value = namenode->m_Value;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -1322,6 +1322,7 @@ void DebugDumpNodeOpcodes(FILE *_fp, int scopeDepth, SASTNode *node)
 
 	for (auto &subnode : node->m_ASTNodes)
 		DebugDumpNodeOpcodes(_fp, scopeDepth+1, subnode);
+
 	fprintf(_fp, "%s\n", node->m_Instructions.c_str());
 }
 
@@ -1332,6 +1333,34 @@ void AssignRegisterNode(FILE *_fp, SASTNode *node)
 
 	switch(node->m_Opcode)
 	{
+		case OP_PUSH:
+		{
+			std::string src = g_ASC.PopRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + src;
+		}
+		break;
+
+		case OP_JUMPNZ:
+		{
+			std::string src = g_ASC.PopRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + src + ", " + node->m_Value;
+		}
+		break;
+
+		case OP_CMPL:
+		case OP_CMPG:
+		case OP_CMPLE:
+		case OP_CMPGE:
+		case OP_CMPE:
+		case OP_CMPNE:
+		{
+			std::string srcA = g_ASC.PopRegister();
+			std::string srcB = g_ASC.PopRegister();
+			std::string trg = g_ASC.PushRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + srcA + ", " + srcB;
+		}
+		break;
+
 		case OP_MUL:
 		case OP_DIV:
 		case OP_MOD:
@@ -1372,7 +1401,7 @@ void AssignRegisterNode(FILE *_fp, SASTNode *node)
 		break;
 
 		default:
-			node->m_Instructions = Opcodes[node->m_Opcode];
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
 		break;
 	}
 }
