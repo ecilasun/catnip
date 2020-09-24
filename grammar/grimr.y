@@ -325,8 +325,6 @@ public:
 
 struct SASTScanContext
 {
-	std::vector<SASTNode*> m_ASTNodes;
-
 	void PushNode(SASTNode *_node)
 	{
 		m_ASTNodes.push_back(_node);
@@ -412,6 +410,7 @@ struct SASTScanContext
 		return nullptr;
 	}
 
+	std::vector<SASTNode*> m_ASTNodes;
 	std::string m_CurrentFunctionName;
 	std::vector<SVariable*> m_Variables;
 	std::vector<SFunction*> m_Functions;
@@ -805,8 +804,10 @@ assignment_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									VisitNodeHierarchy(leftnode, SetAsLeftHandSideCallback);
 																									VisitNodeHierarchy(rightnode, SetAsRightHandSideCallback);
-																									$$->PushNode(leftnode);
+																									// NOTE: Swap left and right nodes because we want to
+																									// evaluate LHS last
 																									$$->PushNode(rightnode);
+																									$$->PushNode(leftnode);
 																									$$->m_Opcode = OP_STORE;
 																									g_ASC.PushNode($$);
 																								}
@@ -850,7 +851,7 @@ if_statement
 																										if (done)
 																											break;
 																										g_ASC.PopNode();
-																										codeblocknode->PushNode(n0);
+																										codeblocknode->m_ASTNodes.emplace(codeblocknode->m_ASTNodes.begin(),n0);
 																									} while (1);
 
 																									// Remove prologue
@@ -899,7 +900,7 @@ if_statement
 																										if (done)
 																											break;
 																										g_ASC.PopNode();
-																										elseblocknode->PushNode(n0);
+																										elseblocknode->m_ASTNodes.emplace(elseblocknode->m_ASTNodes.begin(),n0);
 																									} while (1);
 
 																									// Remove prologue
@@ -974,7 +975,7 @@ while_statement
 																										if (done)
 																											break;
 																										g_ASC.PopNode();
-																										codeblocknode->PushNode(n0);
+																										codeblocknode->m_ASTNodes.emplace(codeblocknode->m_ASTNodes.begin(),n0);
 																									} while (1);
 
 																									// Remove prologue
@@ -1042,7 +1043,8 @@ variable_declaration_item
 																										if (done)
 																											break;
 																										g_ASC.PopNode();
-																										initarray->PushNode(n0->m_ASTNodes[0]); // Remove the EN_Expression
+																										// Remove the EN_Expression
+																										initarray->m_ASTNodes.emplace(initarray->m_ASTNodes.begin(),n0->m_ASTNodes[0]);
 																									} while (1);
 																									initarray->m_Opcode = OP_DATAARRAY;
 
@@ -1075,7 +1077,7 @@ variable_declaration_item
 																										if (done)
 																											break;
 																										g_ASC.PopNode();
-																										initarray->PushNode(n0->m_ASTNodes[0]); // Remove the EN_Expression
+																										initarray->m_ASTNodes.emplace(initarray->m_ASTNodes.begin(),n0->m_ASTNodes[0]);
 																									} while (1);
 																									initarray->m_Opcode = OP_DATAARRAY;
 
@@ -1239,7 +1241,7 @@ functioncall_statement
 																										// Replace EN_Expression with EN_StackPush
 																										paramnode->m_Type = EN_StackPush;
 																										paramnode->m_Opcode = OP_PUSH;
-																										$$->PushNode(paramnode);
+																										$$->m_ASTNodes.emplace($$->m_ASTNodes.begin(),paramnode);
 																										++paramcount;
 																									} while (1);
 																									SASTNode *namenode = g_ASC.PopNode();
@@ -1321,7 +1323,7 @@ function_def
 																										if (done)
 																											break;
 																										g_ASC.PopNode();
-																										codeblocknode->PushNode(n0);
+																										codeblocknode->m_ASTNodes.emplace(codeblocknode->m_ASTNodes.begin(),n0);
 																									} while (1);
 
 																									// Remove prologue
@@ -1377,7 +1379,7 @@ program
 	;
 %%
 
-void DebugDumpNode(FILE *_fp, int scopeDepth, SASTNode *node)
+void AssignScopeNode(FILE *_fp, int scopeDepth, SASTNode *node)
 {
 	node->m_ScopeDepth = scopeDepth;
 
@@ -1385,29 +1387,19 @@ void DebugDumpNode(FILE *_fp, int scopeDepth, SASTNode *node)
 	fprintf(_fp, "%s: %s%s(%d) %s\n", node->m_Side==NO_SIDE?"N":(node->m_Side==LEFT_HAND_SIDE?"L":"R"), spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
 
 	for (auto &subnode : node->m_ASTNodes)
-		DebugDumpNode(_fp, scopeDepth+1, subnode);
+		AssignScopeNode(_fp, scopeDepth+1, subnode);
 }
 
-void DebugDumpNodeOpcodes(FILE *_fp, int scopeDepth, SASTNode *node)
+void DebugDumpNodeOpcodes(FILE *_fp, SASTNode *node)
 {
-	node->m_ScopeDepth = scopeDepth;
-
-	auto rbeg = node->m_ASTNodes.rbegin();
-	auto rend = node->m_ASTNodes.rend();
-	while (rbeg != rend)
-	{
-		DebugDumpNodeOpcodes(_fp, scopeDepth+1, *rbeg);
-		++rbeg;
-	}
-
 	if (node->m_Opcode!=OP_EMPTY)
 		fprintf(_fp, "%s\n", node->m_Instructions.c_str());
 }
 
-void AssignRegisterNode(FILE *_fp, SASTNode *node)
+void AssignRegisterAndCompileNode(FILE *_fp, SASTNode *node)
 {
 	for (auto &subnode : node->m_ASTNodes)
-		AssignRegisterNode(_fp, subnode);
+		AssignRegisterAndCompileNode(_fp, subnode);
 
 	switch(node->m_Opcode)
 	{
@@ -1438,8 +1430,8 @@ void AssignRegisterNode(FILE *_fp, SASTNode *node)
 		case OP_CMPE:
 		case OP_CMPNE:
 		{
-			std::string srcA = g_ASC.PopRegister();
 			std::string srcB = g_ASC.PopRegister();
+			std::string srcA = g_ASC.PopRegister();
 			std::string trg = g_ASC.PushRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + srcA + ", " + srcB;
 		}
@@ -1451,8 +1443,8 @@ void AssignRegisterNode(FILE *_fp, SASTNode *node)
 		case OP_ADD:
 		case OP_SUB:
 		{
-			std::string srcA = g_ASC.PopRegister();
 			std::string srcB = g_ASC.PopRegister();
+			std::string srcA = g_ASC.PopRegister();
 			std::string trg = g_ASC.PushRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + srcA + ", " + srcB;
 		}
@@ -1477,8 +1469,9 @@ void AssignRegisterNode(FILE *_fp, SASTNode *node)
 
 		case OP_STORE:
 		{
-			std::string srcA = g_ASC.PopRegister();
+			// NOTE: target and source are swapped due to evaluation order
 			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
+			std::string srcA = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " [" + trg + "], " + srcA;
 		}
 		break;
@@ -1487,6 +1480,12 @@ void AssignRegisterNode(FILE *_fp, SASTNode *node)
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
 		break;
 	}
+
+	fprintf(_fp, "%s: %s (%s) %s\n",
+		node->m_Side==NO_SIDE?"N":(node->m_Side==LEFT_HAND_SIDE?"L":"R"),
+		NodeTypes[node->m_Type],
+		node->m_Value.c_str(),
+		node->m_Instructions.c_str());
 }
 
 void DebugDump(const char *_filename)
@@ -1497,22 +1496,12 @@ void DebugDump(const char *_filename)
 
 	int scopeDepth = 0;
 	for (auto &node : g_ASC.m_ASTNodes)
-		DebugDumpNode(fp, scopeDepth, node);
+		AssignScopeNode(fp, scopeDepth, node);
 
 	fprintf(fp, "\n---------Register Assignment----------\n\n");
 
 	for (auto &node : g_ASC.m_ASTNodes)
-		AssignRegisterNode(fp, node);
-
-	fprintf(fp, "\n-----------Generated Code-------------\n\n");
-
-	auto rbeg = g_ASC.m_ASTNodes.rbegin();
-	auto rend = g_ASC.m_ASTNodes.rend();
-	while (rbeg != rend)
-	{
-		DebugDumpNodeOpcodes(fp, scopeDepth, *rbeg);
-		++rbeg;
-	}
+		AssignRegisterAndCompileNode(fp, node);
 
 	fprintf(fp, "\n-------------Symbol Table-------------\n\n");
 
