@@ -99,7 +99,7 @@ R: ......EN_Constant                  (6) 0x00000001
 L: ......EN_Identifier                (6) cursorY
 R: ...EN_Label                     (3) exitif5
 
----------Register Assignment----------
+--Assign Registers and generate code--
 
 R: EN_Label                      (test) @label test
 R: EN_Return                     () ret 
@@ -198,6 +198,83 @@ R: EN_Label                      (exitif5) @label exitif5
 R: EN_If                         ()  
 R: EN_BeginCodeBlock             ()  
 R: EN_FuncDecl                   ()  
+
+------------Compiled Code-------------
+
+@label test
+ret 
+ld r0 [height]
+ld r1 [width]
+ld r2 [posY]
+ld r3 [posX]
+@label DrawRect
+ld r4 [posY]
+lea r5 spanY
+st [r5], r4
+@label beginwhile2
+ld r4 [spanY]
+ld r5 [posY]
+ld r6 [height]
+add r5, r5, r6
+cmp.l r4, r4, r5
+jmpnz r4, endwhile3
+ld r4 [posX]
+lea r5 spanX
+st [r5], r4
+@label beginwhile0
+ld r4 [spanX]
+ld r5 [posX]
+ld r6 [width]
+add r5, r5, r6
+cmp.l r4, r4, r5
+jmpnz r4, endwhile1
+ld r4 0x0000000c
+lea r5 VRAM
+lea r6 spanX
+ld r7 0x00000140
+lea r8 spanY
+mul r7, r7, r8
+add r6, r6, r7
+add r5, r5, r6
+st [r5], r4
+ld r4 [spanX]
+ld r5 0x00000001
+add r4, r4, r5
+lea r5 spanX
+st [r5], r4
+jmp beginwhile0
+@label endwhile1
+ld r4 [spanY]
+ld r5 0x00000001
+add r4, r4, r5
+lea r5 spanY
+st [r5], r4
+jmp beginwhile2
+@label endwhile3
+@label main
+ld r4 [cursorY]
+ld r5 0x00000002
+cmp.g r4, r4, r5
+jmpnz r4, endif4
+ld r4 0x00000000
+push r4
+ld r4 0x00000000
+push r4
+ld r4 0x00000200
+ld r5 0x00000003
+add r4, r4, r5
+ld r5 [cursorY]
+sub r4, r4, r5
+push r4
+ld r4 0x00000180
+push r4
+call DrawRect
+jmp exitif5
+@label endif4
+ld r4 0x00000001
+lea r5 cursorY
+st [r5], r4
+@label exitif5
 
 -------------Symbol Table-------------
 

@@ -1390,16 +1390,19 @@ void AssignScopeNode(FILE *_fp, int scopeDepth, SASTNode *node)
 		AssignScopeNode(_fp, scopeDepth+1, subnode);
 }
 
-void DebugDumpNodeOpcodes(FILE *_fp, SASTNode *node)
+void DumpCode(FILE *_fp, SASTNode *node)
 {
-	if (node->m_Opcode!=OP_EMPTY)
+	for (auto &subnode : node->m_ASTNodes)
+		DumpCode(_fp, subnode);
+
+	if (node->m_Opcode != OP_EMPTY)
 		fprintf(_fp, "%s\n", node->m_Instructions.c_str());
 }
 
-void AssignRegisterAndCompileNode(FILE *_fp, SASTNode *node)
+void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 {
 	for (auto &subnode : node->m_ASTNodes)
-		AssignRegisterAndCompileNode(_fp, subnode);
+		AssignRegistersAndGenerateCode(_fp, subnode);
 
 	switch(node->m_Opcode)
 	{
@@ -1498,10 +1501,14 @@ void DebugDump(const char *_filename)
 	for (auto &node : g_ASC.m_ASTNodes)
 		AssignScopeNode(fp, scopeDepth, node);
 
-	fprintf(fp, "\n---------Register Assignment----------\n\n");
+	fprintf(fp, "\n--Assign Registers and generate code--\n\n");
 
 	for (auto &node : g_ASC.m_ASTNodes)
-		AssignRegisterAndCompileNode(fp, node);
+		AssignRegistersAndGenerateCode(fp, node);
+
+	fprintf(fp, "\n------------Compiled Code-------------\n\n");
+	for (auto &node : g_ASC.m_ASTNodes)
+		DumpCode(fp, node);
 
 	fprintf(fp, "\n-------------Symbol Table-------------\n\n");
 
