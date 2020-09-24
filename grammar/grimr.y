@@ -42,6 +42,7 @@ enum EASTNodeType
 {
 	EN_Default,
 	EN_Identifier,
+	EN_ArrayIdentifier,
 	EN_Constant,
 	EN_String,
 	EN_PostfixArrayExpression,
@@ -103,6 +104,7 @@ const char* NodeTypes[]=
 {
 	"EN_Default                   ",
 	"EN_Identifier                ",
+	"EN_ArrayIdentifier           ",
 	"EN_Constant                  ",
 	"EN_String                    ",
 	"EN_PostfixArrayExpression    ",
@@ -174,6 +176,7 @@ enum EOpcode
 	OP_MOD,
 	OP_ADD,
 	OP_SUB,
+	OP_ARRAYINDEX,
 	OP_LEA,
 	OP_LOAD,
 	OP_STORE,
@@ -218,6 +221,7 @@ const std::string Opcodes[]={
 	"mod",
 	"add",
 	"sub",
+	"arrayindex",
 	"lea",
 	"ld",
 	"st",
@@ -370,6 +374,11 @@ struct SASTScanContext
 	{
 		uint32_t r = m_CurrentRegister++;
 		return std::string("r"+std::to_string(r));
+	}
+
+	std::string CurrentRegister()
+	{
+		return std::string("r"+std::to_string(m_CurrentRegister));
 	}
 
 	std::string PopRegister()
@@ -559,11 +568,11 @@ postfix_expression
 	| postfix_expression '[' expression ']'														{
 																									SASTNode *offsetexpressionnode = g_ASC.PopNode();
 																									SASTNode *exprnode = g_ASC.PopNode();
-
 																									$$ = new SASTNode(EN_PostfixArrayExpression, "");
-																									$$->PushNode(exprnode);
+																									// We need to evaluate offset first
 																									$$->PushNode(offsetexpressionnode);
-																									$$->m_Opcode = OP_ADD;
+																									$$->PushNode(exprnode);
+																									exprnode->m_Opcode = OP_ARRAYINDEX;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -1450,6 +1459,19 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string srcA = g_ASC.PopRegister();
 			std::string trg = g_ASC.PushRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + srcA + ", " + srcB;
+		}
+		break;
+
+		case OP_ARRAYINDEX:
+		{
+			std::string tgt = g_ASC.PushRegister();
+			node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + " " + node->m_Value;
+			std::string srcA = g_ASC.PopRegister();
+			std::string srcB = g_ASC.PopRegister();
+			std::string trg2 = g_ASC.PushRegister();
+			node->m_Instructions += std::string("\n") + Opcodes[OP_ADD] + " " + trg2 + ", " + srcA + ", " + srcB;
+			if (node->m_Side == RIGHT_HAND_SIDE)
+				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + " [" + trg2 + "], " + trg2;
 		}
 		break;
 

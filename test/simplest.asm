@@ -44,14 +44,24 @@ R: .....EN_JumpNZ                    (5) endwhile1
 R: .....EN_BeginCodeBlock            (5) 
 R: ......EN_Statement                 (6) 
 R: .......EN_AssignmentExpression      (7) 
-R: ........EN_Constant                  (8) 0x0000000c
+R: ........EN_PostfixArrayExpression    (8) 
+R: .........EN_Add                       (9) 
+R: ..........EN_Mod                       (10) 
+R: ...........EN_Constant                  (11) 0x00000004
+R: ...........EN_Identifier                (11) spanX
+R: ..........EN_Mul                       (10) 
+R: ...........EN_Constant                  (11) 0x00000004
+R: ...........EN_Mod                       (11) 
+R: ............EN_Constant                  (12) 0x00000008
+R: ............EN_Identifier                (12) spanY
+R: .........EN_Identifier                (9) sprite
 L: ........EN_PostfixArrayExpression    (8) 
-L: .........EN_Identifier                (9) VRAM
 L: .........EN_Add                       (9) 
 L: ..........EN_Identifier                (10) spanX
 L: ..........EN_Mul                       (10) 
 L: ...........EN_Constant                  (11) 0x00000140
 L: ...........EN_Identifier                (11) spanY
+L: .........EN_Identifier                (9) VRAM
 R: ......EN_Statement                 (6) 
 R: .......EN_AssignmentExpression      (7) 
 R: ........EN_Add                       (8) 
@@ -136,14 +146,27 @@ R: EN_Identifier                 (width) ld r6 [width]
 R: EN_Add                        () add r5, r5, r6
 R: EN_LessThan                   () cmp.l r4, r4, r5
 R: EN_JumpNZ                     (endwhile1) jmpnz r4, endwhile1
-R: EN_Constant                   (0x0000000c) ld r4 0x0000000c
-L: EN_Identifier                 (VRAM) lea r5 VRAM
-L: EN_Identifier                 (spanX) lea r6 spanX
-L: EN_Constant                   (0x00000140) ld r7 0x00000140
-L: EN_Identifier                 (spanY) lea r8 spanY
-L: EN_Mul                        () mul r7, r7, r8
-L: EN_Add                        () add r6, r6, r7
-L: EN_PostfixArrayExpression     () add r5, r5, r6
+R: EN_Constant                   (0x00000004) ld r4 0x00000004
+R: EN_Identifier                 (spanX) ld r5 [spanX]
+R: EN_Mod                        () mod r4, r4, r5
+R: EN_Constant                   (0x00000004) ld r5 0x00000004
+R: EN_Constant                   (0x00000008) ld r6 0x00000008
+R: EN_Identifier                 (spanY) ld r7 [spanY]
+R: EN_Mod                        () mod r6, r6, r7
+R: EN_Mul                        () mul r5, r5, r6
+R: EN_Add                        () add r4, r4, r5
+R: EN_Identifier                 (sprite) lea r5 sprite
+add r4, r5, r4
+ld [r4], r4
+R: EN_PostfixArrayExpression     ()  
+L: EN_Identifier                 (spanX) lea r5 spanX
+L: EN_Constant                   (0x00000140) ld r6 0x00000140
+L: EN_Identifier                 (spanY) lea r7 spanY
+L: EN_Mul                        () mul r6, r6, r7
+L: EN_Add                        () add r5, r5, r6
+L: EN_Identifier                 (VRAM) lea r6 VRAM
+add r5, r6, r5
+L: EN_PostfixArrayExpression     ()  
 R: EN_AssignmentExpression       () st [r5], r4
 R: EN_Statement                  ()  
 R: EN_Identifier                 (spanX) ld r4 [spanX]
@@ -228,14 +251,25 @@ ld r6 [width]
 add r5, r5, r6
 cmp.l r4, r4, r5
 jmpnz r4, endwhile1
-ld r4 0x0000000c
-lea r5 VRAM
-lea r6 spanX
-ld r7 0x00000140
-lea r8 spanY
-mul r7, r7, r8
-add r6, r6, r7
+ld r4 0x00000004
+ld r5 [spanX]
+mod r4, r4, r5
+ld r5 0x00000004
+ld r6 0x00000008
+ld r7 [spanY]
+mod r6, r6, r7
+mul r5, r5, r6
+add r4, r4, r5
+lea r5 sprite
+add r4, r5, r4
+ld [r4], r4
+lea r5 spanX
+ld r6 0x00000140
+lea r7 spanY
+mul r6, r6, r7
 add r5, r5, r6
+lea r6 VRAM
+add r5, r6, r5
 st [r5], r4
 ld r4 [spanX]
 ld r5 0x00000001
