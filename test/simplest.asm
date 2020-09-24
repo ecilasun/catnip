@@ -1,6 +1,15 @@
-// Instruction count: 80
+// Instruction count: 92
 
 @label test
+pop test:thing
+ld r0, 0x00000000
+lea r1, test:thing
+add r0, r1, r0
+ld [r0], r0
+ld r1, 0x00000001
+lea r2, test:thing
+add r1, r2, r1
+st [r1], r0
 ret 
 
 @label DrawRect
@@ -68,7 +77,10 @@ jmp beginwhile2
 @label endwhile3
 
 @label main
-ld r0, 0x00000000
+ld r0, 0x00000002
+lea r1, :banana
+add r0, r1, r0
+ld [r0], r0
 push r0
 ld r0, 0x00000000
 push r0
@@ -139,6 +151,9 @@ call DrawRect
 @dword 0xfffffffa 0xfffffffb 0xfffffffc 0xfffffffd 
 @dword 0xfffffffa 0xfffffffb 0xfffffffc 0xffedcafd 
 @dword 
+@label test:thing
+// reference count 0
+// array length 1
 @label DrawRect:spanX
 // reference count 0
 // array length 1

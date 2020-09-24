@@ -11,8 +11,9 @@ var sprite[32] = {
     0xFFFFFFFA,0xFFFFFFFB,0xFFFFFFFC,0xFFFFFFFD,
     0xFFFFFFFA,0xFFFFFFFB,0xFFFFFFFC,0xFFEDCAFD };
 
-def test()
+def test(thing)
 {
+    thing[1] = thing[0];
     return;
 }
 
