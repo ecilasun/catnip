@@ -78,7 +78,7 @@ jmp beginwhile2
 
 @label main
 ld r0, 0x00000002
-lea r1, :banana
+lea r1, :tree
 add r0, r1, r0
 ld [r0], r0
 push r0
