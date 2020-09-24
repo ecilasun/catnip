@@ -1392,8 +1392,13 @@ void DebugDumpNodeOpcodes(FILE *_fp, int scopeDepth, SASTNode *node)
 {
 	node->m_ScopeDepth = scopeDepth;
 
-	for (auto &subnode : node->m_ASTNodes)
-		DebugDumpNodeOpcodes(_fp, scopeDepth+1, subnode);
+	auto rbeg = node->m_ASTNodes.rbegin();
+	auto rend = node->m_ASTNodes.rend();
+	while (rbeg != rend)
+	{
+		DebugDumpNodeOpcodes(_fp, scopeDepth+1, *rbeg);
+		++rbeg;
+	}
 
 	if (node->m_Opcode!=OP_EMPTY)
 		fprintf(_fp, "%s\n", node->m_Instructions.c_str());
@@ -1473,10 +1478,8 @@ void AssignRegisterNode(FILE *_fp, SASTNode *node)
 		case OP_STORE:
 		{
 			std::string srcA = g_ASC.PopRegister();
-			std::string srcB = g_ASC.PopRegister();
-			std::string trg = g_ASC.PushRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " [" + trg + "], " + srcA + ", " + srcB;
-			g_ASC.PopRegister(); // We have no further use of the target register
+			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
+			node->m_Instructions = Opcodes[node->m_Opcode] + " [" + trg + "], " + srcA;
 		}
 		break;
 
@@ -1500,8 +1503,16 @@ void DebugDump(const char *_filename)
 
 	for (auto &node : g_ASC.m_ASTNodes)
 		AssignRegisterNode(fp, node);
-	for (auto &node : g_ASC.m_ASTNodes)
-		DebugDumpNodeOpcodes(fp, scopeDepth, node);
+
+	fprintf(fp, "\n-----------Generated Code-------------\n\n");
+
+	auto rbeg = g_ASC.m_ASTNodes.rbegin();
+	auto rend = g_ASC.m_ASTNodes.rend();
+	while (rbeg != rend)
+	{
+		DebugDumpNodeOpcodes(fp, scopeDepth, *rbeg);
+		++rbeg;
+	}
 
 	fprintf(fp, "\n-------------Symbol Table-------------\n\n");
 

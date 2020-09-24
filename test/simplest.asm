@@ -55,17 +55,7 @@ L: ..........EN_Identifier                (10) spanX
 L: ..........EN_Mul                       (10) 
 L: ...........EN_Constant                  (11) 0x00000140
 L: ...........EN_Identifier                (11) spanY
-R: ........EN_PostfixArrayExpression    (8) 
-R: .........EN_Identifier                (9) sprite
-R: .........EN_Add                       (9) 
-R: ..........EN_Mod                       (10) 
-R: ...........EN_Constant                  (11) 0x00000004
-R: ...........EN_Identifier                (11) spanX
-R: ..........EN_Mul                       (10) 
-R: ...........EN_Constant                  (11) 0x00000004
-R: ...........EN_Mod                       (11) 
-R: ............EN_Constant                  (12) 0x00000008
-R: ............EN_Identifier                (12) spanY
+R: ........EN_Constant                  (8) 0x0000000c
 R: .....EN_Jump                      (5) beginwhile0
 R: .....EN_Label                     (5) endwhile1
 R: ....EN_Statement                 (4) 
@@ -111,90 +101,83 @@ R: ...EN_Label                     (3) exitif5
 
 ---------Register Assignment----------
 
-@label test
-ret 
-ld r0 [height]
-ld r1 [width]
-ld r2 [posY]
-ld r3 [posX]
-@label DrawRect
-@label beginwhile2
-ld r4 [spanY]
-ld r5 [posY]
-ld r6 [height]
-add r5, r6, r5
-cmp.l r4, r5, r4
-jmpnz r4, endwhile3
-lea r4 spanY
-ld r5 [spanY]
-ld r6 0x00000001
-add r5, r6, r5
-st [r4], r5, r4
-@label beginwhile0
-ld r4 [spanX]
-ld r5 [posX]
-ld r6 [width]
-add r5, r6, r5
-cmp.l r4, r5, r4
-jmpnz r4, endwhile1
-lea r4 spanX
-ld r5 [spanX]
-ld r6 0x00000001
-add r5, r6, r5
-st [r4], r5, r4
-lea r4 VRAM
-lea r5 spanX
-ld r6 0x00000140
-lea r7 spanY
-mul r6, r7, r6
-add r5, r6, r5
-add r4, r5, r4
-ld r5 [sprite]
-ld r6 0x00000004
-ld r7 [spanX]
-mod r6, r7, r6
-ld r7 0x00000004
-ld r8 0x00000008
-ld r9 [spanY]
-mod r8, r9, r8
-mul r7, r8, r7
-add r6, r7, r6
-add r5, r6, r5
-st [r4], r5, r4
-jmp beginwhile0
-@label endwhile1
-lea r4 spanX
-ld r5 [posX]
-st [r4], r5, r4
-jmp beginwhile2
-@label endwhile3
-lea r4 spanY
-ld r5 [posY]
-st [r4], r5, r4
-@label main
-ld r4 [cursorY]
-ld r5 0x00000002
-cmp.g r4, r5, r4
-jmpnz r4, endif4
-ld r4 0x00000180
-push r4
-ld r4 0x00000200
-ld r5 0x00000003
-add r4, r5, r4
-ld r5 [cursorY]
-sub r4, r5, r4
-push r4
-ld r4 0x00000000
-push r4
-ld r4 0x00000000
-push r4
-call DrawRect
-jmp exitif5
-@label endif4
-lea r4 cursorY
-ld r5 0x00000001
-st [r4], r5, r4
+
+-----------Generated Code-------------
+
 @label exitif5
+ld r0 0x00000001
+lea r4294967295 cursorY
+st [r4294967295], r4294967294
+@label endif4
+jmp exitif5
+ld r4294967295 0x00000000
+push r4294967295
+ld r4294967295 0x00000000
+push r4294967295
+ld r0 [cursorY]
+ld r0 0x00000003
+ld r4294967295 0x00000200
+add r4294967295, r0, r4294967295
+sub r4294967295, r0, r4294967295
+push r4294967295
+ld r4294967295 0x00000180
+push r4294967295
+call DrawRect
+jmpnz r4294967295, endif4
+ld r0 0x00000002
+ld r4294967295 [cursorY]
+cmp.g r4294967295, r0, r4294967295
+@label main
+ld r1 [posY]
+lea r0 spanY
+st [r0], r4294967295
+@label endwhile3
+jmp beginwhile2
+ld r2 [posX]
+lea r1 spanX
+st [r1], r0
+@label endwhile1
+jmp beginwhile0
+ld r3 0x0000000c
+lea r5 spanY
+ld r4 0x00000140
+mul r4, r5, r4
+lea r3 spanX
+add r3, r4, r3
+lea r2 VRAM
+add r2, r3, r2
+st [r2], r1
+ld r5 0x00000001
+ld r4 [spanX]
+add r4, r5, r4
+lea r3 spanX
+st [r3], r2
+jmpnz r3, endwhile1
+ld r5 [width]
+ld r4 [posX]
+add r4, r5, r4
+ld r3 [spanX]
+cmp.l r3, r4, r3
+@label beginwhile0
+ld r6 0x00000001
+ld r5 [spanY]
+add r5, r6, r5
+lea r4 spanY
+st [r4], r3
+jmpnz r4, endwhile3
+ld r6 [height]
+ld r5 [posY]
+add r5, r6, r5
+ld r4 [spanY]
+cmp.l r4, r5, r4
+@label beginwhile2
+@label DrawRect
+ld r3 [posX]
+ld r2 [posY]
+ld r1 [width]
+ld r0 [height]
+ret 
+@label test
 
 -------------Symbol Table-------------
 
