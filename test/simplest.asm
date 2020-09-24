@@ -81,7 +81,7 @@ push r0
 ld r0, 0x00000180
 push r0
 call DrawRect
-ld r0, [:cursorX]
+ld r0, [DrawRect:spanX]
 ld r1, 0x00000040
 cmp.g r0, r0, r1
 jmpz r0, endif4

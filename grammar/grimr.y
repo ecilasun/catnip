@@ -281,6 +281,7 @@ struct SVariable
 	std::string m_Scope;
 	uint32_t m_NameHash{0};
 	uint32_t m_ScopeHash{0};
+	uint32_t m_CombinedHash{0};
 	uint32_t m_Dimension{1};
 	int m_RefCount{0};
 	std::string m_Value;
@@ -417,6 +418,14 @@ struct SASTScanContext
 	{
 		for(auto &var : m_Variables)
 			if (var->m_NameHash == namehash && var->m_ScopeHash == scopehash)
+				return var;
+		return nullptr;
+	}
+
+	SVariable *FindVariableMergedScope(uint32_t namehash)
+	{
+		for(auto &var : m_Variables)
+			if (var->m_CombinedHash == namehash)
 				return var;
 		return nullptr;
 	}
@@ -1133,6 +1142,7 @@ variable_declaration
 																									var->m_Scope = g_ASC.m_CurrentFunctionName;
 																									var->m_NameHash = HashString(var->m_Name.c_str());
 																									var->m_ScopeHash = HashString(var->m_Scope.c_str());
+																									var->m_CombinedHash = HashString((var->m_Scope+":"+var->m_Name).c_str());
 																									var->m_RootNode = $$;
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
@@ -1183,6 +1193,7 @@ variable_declaration
 																									var->m_Scope = g_ASC.m_CurrentFunctionName;
 																									var->m_NameHash = HashString(var->m_Name.c_str());
 																									var->m_ScopeHash = HashString(var->m_Scope.c_str());
+																									var->m_CombinedHash = HashString((var->m_Scope+":"+var->m_Name).c_str());
 																									var->m_RootNode = $$;
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
@@ -1387,6 +1398,7 @@ function_def
 																										var->m_Scope = g_ASC.m_CurrentFunctionName;
 																										var->m_NameHash = HashString(var->m_Name.c_str());
 																										var->m_ScopeHash = HashString(var->m_Scope.c_str());
+																										var->m_CombinedHash = HashString((var->m_Scope+":"+var->m_Name).c_str());
 																										var->m_RootNode = n0;
 																										var->m_Dimension = 1;
 																										var->m_RefCount = 0;
@@ -1476,7 +1488,11 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			uint32_t emptyhash = HashString("");
 			SVariable *var = g_ASC.FindVariable(namehash, scopehash);
 			if (!var)
+			{
 				var = g_ASC.FindVariable(namehash, emptyhash);
+				if(!var)
+					var = g_ASC.FindVariableMergedScope(namehash);
+			}
 
 			if (var)
 				node->m_Instructions = Opcodes[node->m_Opcode] + " " + var->m_Scope + ":" + var->m_Name;
@@ -1548,7 +1564,11 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			uint32_t emptyhash = HashString("");
 			SVariable *var = g_ASC.FindVariable(namehash, scopehash);
 			if (!var)
+			{
 				var = g_ASC.FindVariable(namehash, emptyhash);
+				if(!var)
+					var = g_ASC.FindVariableMergedScope(namehash);
+			}
 
 			if (var)
 				node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + ", " + var->m_Scope + ":" + var->m_Name;
@@ -1578,7 +1598,11 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			uint32_t emptyhash = HashString("");
 			SVariable *var = g_ASC.FindVariable(namehash, scopehash);
 			if (!var)
+			{
 				var = g_ASC.FindVariable(namehash, emptyhash);
+				if(!var)
+					var = g_ASC.FindVariableMergedScope(namehash);
+			}
 
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
