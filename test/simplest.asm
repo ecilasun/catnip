@@ -1,23 +1,34 @@
 
-------------Code----------------------
-R: EN_FuncDecl                  (0) nop ,,,
-R: .EN_Label                     (1) @label ,,,main
-R: .EN_BeginCodeBlock            (1) pushcontext ,,,
-R: ..EN_Statement                 (2) nop ,,,
-R: ...EN_AssignmentExpression      (3) st ,,,
-L: ....EN_PostfixArrayExpression    (4) add ,,,
-L: .....EN_Identifier                (5) lea ,,,a
-L: .....EN_Add                       (5) add ,,,
-L: ......EN_PostfixArrayExpression    (6) add ,,,
-L: .......EN_Identifier                (7) lea ,,,c
-L: .......EN_Sub                       (7) sub ,,,
-L: ........EN_Constant                  (8) ld ,,,0x00000004
-L: ........EN_Identifier                (8) lea ,,,d
-L: ......EN_Constant                  (6) ld ,,,0x00000017
-R: ....EN_PostfixArrayExpression    (4) add ,,,
-R: .....EN_Identifier                (5) lea ,,,b
-R: .....EN_Constant                  (5) ld ,,,0x00000001
-R: .EN_EndCodeBlock              (1) popcontext ,,,
+-------------Scope Depth--------------
 
-------------Symbol table--------------
+R: EN_FuncDecl                  (0) 
+R: .EN_Label                     (1) main
+R: .EN_BeginCodeBlock            (1) 
+R: ..EN_Statement                 (2) 
+R: ...EN_AssignmentExpression      (3) 
+L: ....EN_Identifier                (4) a
+R: ....EN_Add                       (4) 
+R: .....EN_Constant                  (5) 0x00000001
+R: .....EN_Mul                       (5) 
+R: ......EN_Identifier                (6) a
+R: ......EN_Constant                  (6) 0x00000003
+R: .EN_EndCodeBlock              (1) 
+
+---------Register Assignment----------
+
+@label
+lea r0 a
+ld r1 0x00000001
+ld r2 [a]
+ld r3 0x00000003
+mul r2, r3, r2
+add r1, r2, r1
+st [r0], r1, r0
+nop
+pushcontext
+popcontext
+nop
+
+-------------Symbol Table-------------
+
 Function 'main', hash BC76E6BA

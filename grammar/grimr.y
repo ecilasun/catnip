@@ -204,7 +204,7 @@ enum EOpcode
 	OP_LOGICOR,
 };
 
-const char *Opcodes[]={
+const std::string Opcodes[]={
 	"nop",
 	"addrof",
 	"valof",
@@ -249,6 +249,7 @@ const char *Opcodes[]={
 
 enum ENodeSide
 {
+	NO_SIDE,
 	RIGHT_HAND_SIDE,
 	LEFT_HAND_SIDE
 };
@@ -317,9 +318,7 @@ public:
 	SString *m_String{nullptr};
 	std::string m_Value;
 	std::vector<SASTNode*> m_ASTNodes;
-	std::string m_TargetRegister;
-	std::string m_SourceRegisterA;
-	std::string m_SourceRegisterB;
+	std::string m_Instructions;
 };
 
 struct SASTScanContext
@@ -437,6 +436,11 @@ void VisitNode(SASTNode *node, FVisitCallback callback)
 void VisitNodeHierarchy(SASTNode *rootNode, FVisitCallback callback)
 {
 	VisitNode(rootNode, callback);
+}
+
+void SetAsRightHandSideCallback(SASTNode *node)
+{
+	node->m_Side = RIGHT_HAND_SIDE;
 }
 
 void SetAsLeftHandSideCallback(SASTNode *node)
@@ -798,6 +802,7 @@ assignment_expression
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									VisitNodeHierarchy(leftnode, SetAsLeftHandSideCallback);
+																									VisitNodeHierarchy(rightnode, SetAsRightHandSideCallback);
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
 																									$$->m_Opcode = OP_ASSIGN;
@@ -1305,23 +1310,91 @@ void DebugDumpNode(FILE *_fp, int scopeDepth, SASTNode *node)
 	node->m_ScopeDepth = scopeDepth;
 
 	std::string spaces = ".................................................................................";
-	fprintf(_fp, "%s: %s%s(%d) %s %s,%s,%s,%s\n", node->m_Side==LEFT_HAND_SIDE?"L":"R", spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeDepth, Opcodes[node->m_Opcode], node->m_TargetRegister.c_str(), node->m_SourceRegisterA.c_str(), node->m_SourceRegisterB.c_str(), node->m_Value.c_str());
+	fprintf(_fp, "%s: %s%s(%d) %s\n", node->m_Side==NO_SIDE?"N":(node->m_Side==LEFT_HAND_SIDE?"L":"R"), spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
 
 	for (auto &subnode : node->m_ASTNodes)
 		DebugDumpNode(_fp, scopeDepth+1, subnode);
+}
+
+void DebugDumpNodeOpcodes(FILE *_fp, int scopeDepth, SASTNode *node)
+{
+	node->m_ScopeDepth = scopeDepth;
+
+	for (auto &subnode : node->m_ASTNodes)
+		DebugDumpNodeOpcodes(_fp, scopeDepth+1, subnode);
+	fprintf(_fp, "%s\n", node->m_Instructions.c_str());
+}
+
+void AssignRegisterNode(FILE *_fp, SASTNode *node)
+{
+	for (auto &subnode : node->m_ASTNodes)
+		AssignRegisterNode(_fp, subnode);
+
+	switch(node->m_Opcode)
+	{
+		case OP_MUL:
+		case OP_DIV:
+		case OP_MOD:
+		case OP_ADD:
+		case OP_SUB:
+		{
+			std::string srcA = g_ASC.PopRegister();
+			std::string srcB = g_ASC.PopRegister();
+			std::string trg = g_ASC.PushRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + srcA + ", " + srcB;
+		}
+		break;
+
+		case OP_LEA:
+		{
+			std::string trg = g_ASC.PushRegister();
+			if (node->m_Side == RIGHT_HAND_SIDE)
+				node->m_Instructions = Opcodes[OP_LOAD] + " " + trg + " [" + node->m_Value + "]";
+			else
+				node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + " " + node->m_Value;
+		}
+		break;
+
+		case OP_LOAD:
+		{
+			std::string trg = g_ASC.PushRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + " " + node->m_Value;
+		}
+		break;
+
+		case OP_ASSIGN:
+		{
+			std::string srcA = g_ASC.PopRegister();
+			std::string srcB = g_ASC.PopRegister();
+			std::string trg = g_ASC.PushRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " [" + trg + "], " + srcA + ", " + srcB;
+		}
+		break;
+
+		default:
+			node->m_Instructions = Opcodes[node->m_Opcode];
+		break;
+	}
 }
 
 void DebugDump(const char *_filename)
 {
 	FILE *fp = fopen(_filename, "w");
 
-	fprintf(fp, "\n------------Code----------------------\n");
+	fprintf(fp, "\n-------------Scope Depth--------------\n\n");
 
 	int scopeDepth = 0;
 	for (auto &node : g_ASC.m_ASTNodes)
 		DebugDumpNode(fp, scopeDepth, node);
 
-	fprintf(fp, "\n------------Symbol table--------------\n");
+	fprintf(fp, "\n---------Register Assignment----------\n\n");
+
+	for (auto &node : g_ASC.m_ASTNodes)
+		AssignRegisterNode(fp, node);
+	for (auto &node : g_ASC.m_ASTNodes)
+		DebugDumpNodeOpcodes(fp, scopeDepth, node);
+
+	fprintf(fp, "\n-------------Symbol Table-------------\n\n");
 
 	for (auto &func : g_ASC.m_Functions)
 		fprintf(fp, "Function '%s', hash %.8X\n", func->m_Name.c_str(), func->m_Hash);
