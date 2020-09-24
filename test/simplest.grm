@@ -1,5 +1,4 @@
 // GrimR language test file
-/*
 var cursorX, cursorY, VRAM=0x80000000;
 var banana[16], tree[] = {1,2,3,4};
 var sprite[32] = {
@@ -44,18 +43,5 @@ def main()
     else
     {
         cursorY = 1;
-    }
-}
-*/
-
-def main()
-{
-    if (cursorY <= 2*2)
-    {
-        DrawRect(0,0,512+3-cursorY,384);
-    }
-    else
-    {
-        cursorY = 2-1;
     }
 }
