@@ -162,6 +162,7 @@ const char* NodeTypes[]=
 
 enum EOpcode
 {
+	OP_EMPTY,
 	OP_NOOP,
 	OP_ADDRESSOF,
 	OP_VALUEOF,
@@ -205,6 +206,7 @@ enum EOpcode
 };
 
 const std::string Opcodes[]={
+	"",
 	"nop",
 	"addrof",
 	"valof",
@@ -310,7 +312,7 @@ public:
 		return node;
 	}
 
-	EOpcode m_Opcode{OP_NOOP};
+	EOpcode m_Opcode{OP_EMPTY};
 	EASTNodeType m_Type{EN_Default};
 	ENodeSide m_Side{RIGHT_HAND_SIDE};
 	int m_ScopeDepth{0};
@@ -834,10 +836,10 @@ if_statement
 
 																									// Create code block node
 																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
-																									codeblocknode->m_Opcode = OP_PUSHCONTEXT;
+																									//codeblocknode->m_Opcode = OP_PUSHCONTEXT;
 
-																									SASTNode *endcodeblocknode = new SASTNode(EN_EndCodeBlock, "");
-																									endcodeblocknode->m_Opcode = OP_POPCONTEXT;
+																									//SASTNode *endcodeblocknode = new SASTNode(EN_EndCodeBlock, "");
+																									//endcodeblocknode->m_Opcode = OP_POPCONTEXT;
 
 																									// Collect everything up till prologue
 																									bool done = false;
@@ -865,9 +867,9 @@ if_statement
 																									$$->PushNode(exprnode);
 																									$$->PushNode(branchcode);
 																									$$->PushNode(codeblocknode);
-																									$$->PushNode(endcodeblocknode);
+																									//$$->PushNode(endcodeblocknode);
 																									$$->PushNode(endlabel);
-																									$$->m_Opcode = OP_IF;
+																									//$$->m_Opcode = OP_IF;
 																									g_ASC.PushNode($$);
 																								}
 	| IF '(' expression ')' code_block_start code_block_body code_block_end ELSE code_block_start code_block_body code_block_end	{
@@ -878,15 +880,15 @@ if_statement
 
 																									// Create code block node
 																									SASTNode *elseblocknode = new SASTNode(EN_BeginCodeBlock, "");
-																									elseblocknode->m_Opcode = OP_PUSHCONTEXT;
+																									//elseblocknode->m_Opcode = OP_PUSHCONTEXT;
 
 																									SASTNode *ifblocknode = new SASTNode(EN_BeginCodeBlock, "");
-																									ifblocknode->m_Opcode = OP_PUSHCONTEXT;
+																									//ifblocknode->m_Opcode = OP_PUSHCONTEXT;
 
-																									SASTNode *ifcodeblockendnode = new SASTNode(EN_EndCodeBlock, "");
-																									ifcodeblockendnode->m_Opcode = OP_POPCONTEXT;
-																									SASTNode *elsecodeblockendnode = new SASTNode(EN_EndCodeBlock, "");
-																									elsecodeblockendnode->m_Opcode = OP_POPCONTEXT;
+																									//SASTNode *ifcodeblockendnode = new SASTNode(EN_EndCodeBlock, "");
+																									//ifcodeblockendnode->m_Opcode = OP_POPCONTEXT;
+																									//SASTNode *elsecodeblockendnode = new SASTNode(EN_EndCodeBlock, "");
+																									//elsecodeblockendnode->m_Opcode = OP_POPCONTEXT;
 
 																									// Collect everything up till prologue
 																									bool done = false;
@@ -938,13 +940,13 @@ if_statement
 																									$$->PushNode(exprnode);
 																									$$->PushNode(branchcode);
 																									$$->PushNode(ifblocknode);
-																									$$->PushNode(ifcodeblockendnode);
+																									//$$->PushNode(ifcodeblockendnode);
 																									$$->PushNode(jumpnode);
 																									$$->PushNode(endlabel);
 																									$$->PushNode(elseblocknode);
-																									$$->PushNode(elsecodeblockendnode);
+																									//$$->PushNode(elsecodeblockendnode);
 																									$$->PushNode(exitlabel);
-																									$$->m_Opcode = OP_IF;
+																									//$$->m_Opcode = OP_IF;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -958,10 +960,10 @@ while_statement
 
 																									// Create code block node
 																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
-																									codeblocknode->m_Opcode = OP_PUSHCONTEXT;
+																									//codeblocknode->m_Opcode = OP_PUSHCONTEXT;
 
-																									SASTNode *endcodeblocknode = new SASTNode(EN_EndCodeBlock, "");
-																									endcodeblocknode->m_Opcode = OP_POPCONTEXT;
+																									//SASTNode *endcodeblocknode = new SASTNode(EN_EndCodeBlock, "");
+																									//endcodeblocknode->m_Opcode = OP_POPCONTEXT;
 
 																									// Collect everything up till prologue
 																									bool done = false;
@@ -994,10 +996,10 @@ while_statement
 																									$$->PushNode(exprnode);
 																									$$->PushNode(branchcode);
 																									$$->PushNode(codeblocknode);
-																									$$->PushNode(endcodeblocknode);
+																									//$$->PushNode(endcodeblocknode);
 																									$$->PushNode(branchcodeend);
 																									$$->PushNode(endlabel);
-																									$$->m_Opcode = OP_WHILE;
+																									//$$->m_Opcode = OP_WHILE;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -1235,10 +1237,10 @@ function_def
 
 																									// Create code block node
 																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
-																									codeblocknode->m_Opcode = OP_PUSHCONTEXT;
+																									//codeblocknode->m_Opcode = OP_PUSHCONTEXT;
 
-																									SASTNode *endcodeblocknode = new SASTNode(EN_EndCodeBlock, "");
-																									endcodeblocknode->m_Opcode = OP_POPCONTEXT;
+																									//SASTNode *endcodeblocknode = new SASTNode(EN_EndCodeBlock, "");
+																									//endcodeblocknode->m_Opcode = OP_POPCONTEXT;
 
 																									// Collect everything up till prologue
 																									bool done = false;
@@ -1279,7 +1281,7 @@ function_def
 
 																									// Add the code block after name
 																									$$->PushNode(codeblocknode);
-																									$$->PushNode(endcodeblocknode);
+																									//$$->PushNode(endcodeblocknode);
 
 																									g_ASC.PushNode($$);
 
@@ -1323,7 +1325,8 @@ void DebugDumpNodeOpcodes(FILE *_fp, int scopeDepth, SASTNode *node)
 	for (auto &subnode : node->m_ASTNodes)
 		DebugDumpNodeOpcodes(_fp, scopeDepth+1, subnode);
 
-	fprintf(_fp, "%s\n", node->m_Instructions.c_str());
+	if (node->m_Opcode!=OP_EMPTY)
+		fprintf(_fp, "%s\n", node->m_Instructions.c_str());
 }
 
 void AssignRegisterNode(FILE *_fp, SASTNode *node)
@@ -1337,6 +1340,12 @@ void AssignRegisterNode(FILE *_fp, SASTNode *node)
 		{
 			std::string src = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + src;
+		}
+		break;
+
+		case OP_JUMP:
+		{
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
 		}
 		break;
 
