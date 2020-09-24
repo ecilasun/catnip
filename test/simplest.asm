@@ -82,11 +82,22 @@ push r0
 pushregs r0
 call DrawRect
 popregs r0
+ld r0 0x00000040
+push r0
+ld r0 0x00000040
+push r0
+ld r0 0x00000080
+push r0
+ld r0 0x00000060
+push r0
+pushregs r0
+call DrawRect
+popregs r0
 
 //-------------Symbol Table-------------
 
 // function 'test', hash: BC2C0BE9, refcount: 0
-// function 'DrawRect', hash: 032D1965, refcount: 1
+// function 'DrawRect', hash: 032D1965, refcount: 2
 // function 'main', hash: BC76E6BA, refcount: 0
 @label cursorX
 // array length 1
