@@ -105,65 +105,65 @@ R: ...EN_Label                     (3) exitif5
 -----------Generated Code-------------
 
 @label exitif5
-ld r0 0x00000001
-lea r4294967295 cursorY
-st [r4294967295], r4294967294
+ld r5 0x00000001
+lea r4 cursorY
+st [r4], r5
 @label endif4
 jmp exitif5
-ld r4294967295 0x00000000
-push r4294967295
-ld r4294967295 0x00000000
-push r4294967295
-ld r0 [cursorY]
-ld r0 0x00000003
-ld r4294967295 0x00000200
-add r4294967295, r0, r4294967295
-sub r4294967295, r0, r4294967295
-push r4294967295
-ld r4294967295 0x00000180
-push r4294967295
+ld r4 0x00000000
+push r4
+ld r4 0x00000000
+push r4
+ld r5 [cursorY]
+ld r5 0x00000003
+ld r4 0x00000200
+add r4, r5, r4
+sub r4, r5, r4
+push r4
+ld r4 0x00000180
+push r4
 call DrawRect
-jmpnz r4294967295, endif4
-ld r0 0x00000002
-ld r4294967295 [cursorY]
-cmp.g r4294967295, r0, r4294967295
+jmpnz r4, endif4
+ld r5 0x00000002
+ld r4 [cursorY]
+cmp.g r4, r5, r4
 @label main
-ld r1 [posY]
-lea r0 spanY
-st [r0], r4294967295
+ld r5 [posY]
+lea r4 spanY
+st [r4], r5
 @label endwhile3
 jmp beginwhile2
-ld r2 [posX]
-lea r1 spanX
-st [r1], r0
+ld r5 [posX]
+lea r4 spanX
+st [r4], r5
 @label endwhile1
 jmp beginwhile0
-ld r3 0x0000000c
-lea r5 spanY
-ld r4 0x00000140
-mul r4, r5, r4
-lea r3 spanX
-add r3, r4, r3
-lea r2 VRAM
-add r2, r3, r2
-st [r2], r1
-ld r5 0x00000001
+ld r5 0x0000000c
+lea r7 spanY
+ld r6 0x00000140
+mul r6, r7, r6
+lea r5 spanX
+add r5, r6, r5
+lea r4 VRAM
+add r4, r5, r4
+st [r4], r5
+ld r6 0x00000001
+ld r5 [spanX]
+add r5, r6, r5
+lea r4 spanX
+st [r4], r5
+jmpnz r4, endwhile1
+ld r6 [width]
+ld r5 [posX]
+add r5, r6, r5
 ld r4 [spanX]
-add r4, r5, r4
-lea r3 spanX
-st [r3], r2
-jmpnz r3, endwhile1
-ld r5 [width]
-ld r4 [posX]
-add r4, r5, r4
-ld r3 [spanX]
-cmp.l r3, r4, r3
+cmp.l r4, r5, r4
 @label beginwhile0
 ld r6 0x00000001
 ld r5 [spanY]
 add r5, r6, r5
 lea r4 spanY
-st [r4], r3
+st [r4], r5
 jmpnz r4, endwhile3
 ld r6 [height]
 ld r5 [posY]
