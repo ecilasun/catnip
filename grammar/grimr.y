@@ -91,6 +91,7 @@ enum EASTNodeType
 	EN_DeclArray,
 	EN_ArrayJunction,
 	EN_ArrayWithDataJunction,
+	EN_FuncHeader,
 	EN_FuncDecl,
 	EN_InputParamList,
 	EN_InputParam,
@@ -153,6 +154,7 @@ const char* NodeTypes[]=
 	"EN_DeclArray                 ",
 	"EN_ArrayJunction             ",
 	"EN_ArrayWithDataJunction     ",
+	"EN_FuncHeader                ",
 	"EN_FuncDecl                  ",
 	"EN_InputParamList            ",
 	"EN_InputParam                ",
@@ -276,7 +278,9 @@ struct SString
 struct SVariable
 {
 	std::string m_Name;
-	uint32_t m_Hash{0};
+	std::string m_Scope;
+	uint32_t m_NameHash{0};
+	uint32_t m_ScopeHash{0};
 	uint32_t m_Dimension{1};
 	int m_RefCount{0};
 	std::string m_Value;
@@ -409,15 +413,15 @@ struct SASTScanContext
 		return std::string(labelname+std::to_string(m_CurrentAutoLabel--));
 	}
 
-	SVariable *FindSymbolInSymbolTable(uint32_t hash)
+	SVariable *FindVariable(uint32_t namehash, uint32_t scopehash)
 	{
 		for(auto &var : m_Variables)
-			if (var->m_Hash == hash)
+			if (var->m_NameHash == namehash && var->m_ScopeHash == scopehash)
 				return var;
 		return nullptr;
 	}
 
-	SFunction *FindFunctionInFunctionTable(uint32_t hash)
+	SFunction *FindFunction(uint32_t hash)
 	{
 		for(auto &fun : m_Functions)
 			if (fun->m_Hash == hash)
@@ -505,6 +509,7 @@ SASTScanContext g_ASC;
 
 %type <astnode> variable_declaration_item
 %type <astnode> variable_declaration
+%type <astnode> function_header
 %type <astnode> function_def
 
 %type <astnode> parameter_list
@@ -531,7 +536,6 @@ SASTScanContext g_ASC;
 
 simple_identifier
 	: IDENTIFIER																				{
-																									uint32_t hash = HashString($1);
 																									$$ = new SASTNode(EN_Identifier, std::string($1));
 																									$$->m_Opcode = OP_LEA;
 																									g_ASC.PushNode($$);
@@ -1126,7 +1130,9 @@ variable_declaration
 																									// Also store the variable in function list for later retreival
 																									SVariable *var = new SVariable();
 																									var->m_Name = (n0->m_Type==EN_DeclInitJunction || n0->m_Type==EN_DeclArray) ? n0->m_ASTNodes[0]->m_Value : n0->m_Value;
-																									var->m_Hash = HashString(var->m_Name.c_str());
+																									var->m_Scope = g_ASC.m_CurrentFunctionName;
+																									var->m_NameHash = HashString(var->m_Name.c_str());
+																									var->m_ScopeHash = HashString(var->m_Scope.c_str());
 																									var->m_RootNode = $$;
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
@@ -1174,7 +1180,9 @@ variable_declaration
 																									// Also store the variable in function list for later retreival
 																									SVariable *var = new SVariable();
 																									var->m_Name = (n0->m_Type==EN_DeclInitJunction || n0->m_Type==EN_DeclArray) ? n0->m_ASTNodes[0]->m_Value : n0->m_Value;
-																									var->m_Hash = HashString(var->m_Name.c_str());
+																									var->m_Scope = g_ASC.m_CurrentFunctionName;
+																									var->m_NameHash = HashString(var->m_Name.c_str());
+																									var->m_ScopeHash = HashString(var->m_Scope.c_str());
 																									var->m_RootNode = $$;
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
@@ -1262,7 +1270,7 @@ functioncall_statement
 																									} while (1);
 																									SASTNode *namenode = g_ASC.PopNode();
 																									uint32_t hash = HashString(namenode->m_Value.c_str());
-																									SFunction *func = g_ASC.FindFunctionInFunctionTable(hash);
+																									SFunction *func = g_ASC.FindFunction(hash);
 																									if (func)
 																										func->m_RefCount++;
 																									else
@@ -1316,8 +1324,19 @@ code_block_body
 	| code_block_body any_statement
 	;
 
+function_header
+	: FUNCTION simple_identifier																{
+																									SASTNode *namenode = g_ASC.PopNode();
+																									$$ = new SASTNode(EN_FuncHeader, "");
+																									$$->PushNode(namenode);
+																									printf("Current function: %s\n", namenode->m_Value.c_str());
+																									g_ASC.m_CurrentFunctionName = namenode->m_Value;
+																									g_ASC.PushNode($$);
+																								}
+	;
+
 function_def
-	: FUNCTION simple_identifier parameter_list code_block_start code_block_body code_block_end	{
+	: function_header parameter_list code_block_start code_block_body code_block_end			{
 																									$$ = new SASTNode(EN_FuncDecl, "");
 
 																									// Remove epilogue
@@ -1361,11 +1380,25 @@ function_def
 																										n0->m_ASTNodes.clear(); // Remove identifier
 																										// Add the input parameter to code block
 																										tmp->PushNode(n0);
+
+																										// Create function-local variable
+																										SVariable *var = new SVariable();
+																										var->m_Name = n0->m_Value;
+																										var->m_Scope = g_ASC.m_CurrentFunctionName;
+																										var->m_NameHash = HashString(var->m_Name.c_str());
+																										var->m_ScopeHash = HashString(var->m_Scope.c_str());
+																										var->m_RootNode = n0;
+																										var->m_Dimension = 1;
+																										var->m_RefCount = 0;
+																										var->m_Value = "";
+																										g_ASC.m_Variables.push_back(var);
+
 																									} while (1);
 
-																									SASTNode *namenode = g_ASC.PopNode();
+																									// Remove function header (contains name as subnode)
+																									g_ASC.PopNode();
 
-																									SASTNode *labelnode = new SASTNode(EN_Label, namenode->m_Value);
+																									SASTNode *labelnode = new SASTNode(EN_Label, g_ASC.m_CurrentFunctionName);
 																									labelnode->m_Opcode = OP_LABEL;
 																									$$->PushNode(labelnode);
 
@@ -1373,9 +1406,6 @@ function_def
 																									for (auto &P : tmp->m_ASTNodes)
 																										$$->PushNode(P);
 																									delete tmp;
-
-																									// Add the name after input parameters
-																									//$$->PushNode(namenode);
 
 																									// Add the code block after name
 																									$$->PushNode(codeblocknode);
@@ -1385,7 +1415,7 @@ function_def
 
 																									// Also store the function in function list for later retreival
 																									SFunction *func = new SFunction();
-																									func->m_Name = namenode->m_Value;
+																									func->m_Name = g_ASC.m_CurrentFunctionName;
 																									func->m_Hash = HashString(func->m_Name.c_str());
 																									func->m_RootNode = $$;
 																									g_ASC.m_Functions.push_back(func);
@@ -1431,6 +1461,9 @@ void DumpCode(FILE *_fp, SASTNode *node)
 
 void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 {
+	if (node->m_Type == EN_FuncDecl)
+		g_ASC.m_CurrentFunctionName = node->m_ASTNodes[0]->m_Value;
+
 	for (auto &subnode : node->m_ASTNodes)
 		AssignRegistersAndGenerateCode(_fp, subnode);
 
@@ -1438,7 +1471,17 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 	{
 		case OP_POP:
 		{
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
+			uint32_t namehash = HashString(node->m_Value.c_str());
+			uint32_t scopehash = HashString(g_ASC.m_CurrentFunctionName.c_str());
+			uint32_t emptyhash = HashString("");
+			SVariable *var = g_ASC.FindVariable(namehash, scopehash);
+			if (!var)
+				var = g_ASC.FindVariable(namehash, emptyhash);
+
+			if (var)
+				node->m_Instructions = Opcodes[node->m_Opcode] + " " + var->m_Scope + ":" + var->m_Name;
+			else
+				node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
 			++g_ASC.m_InstructionCount;
 		}
 		break;
@@ -1499,8 +1542,20 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_ARRAYINDEX:
 		{
 			std::string tgt = g_ASC.PushRegister();
-			node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + " " + node->m_Value;
+
+			uint32_t namehash = HashString(node->m_Value.c_str());
+			uint32_t scopehash = HashString(g_ASC.m_CurrentFunctionName.c_str());
+			uint32_t emptyhash = HashString("");
+			SVariable *var = g_ASC.FindVariable(namehash, scopehash);
+			if (!var)
+				var = g_ASC.FindVariable(namehash, emptyhash);
+
+			if (var)
+				node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + ", " + var->m_Scope + ":" + var->m_Name;
+			else
+				node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;//Opcodes[OP_LEA] + " " + tgt + ", " + node->m_Value;
 			++g_ASC.m_InstructionCount;
+
 			std::string srcA = g_ASC.PopRegister();
 			std::string srcB = g_ASC.PopRegister();
 			std::string trg2 = g_ASC.PushRegister();
@@ -1517,10 +1572,25 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_LEA:
 		{
 			std::string trg = g_ASC.PushRegister();
+
+			uint32_t namehash = HashString(node->m_Value.c_str());
+			uint32_t scopehash = HashString(g_ASC.m_CurrentFunctionName.c_str());
+			uint32_t emptyhash = HashString("");
+			SVariable *var = g_ASC.FindVariable(namehash, scopehash);
+			if (!var)
+				var = g_ASC.FindVariable(namehash, emptyhash);
+
 			if (node->m_Side == RIGHT_HAND_SIDE)
-				node->m_Instructions = Opcodes[OP_LOAD] + " " + trg + " [" + node->m_Value + "]";
+			{
+				if (var)
+					node->m_Instructions = Opcodes[OP_LOAD] + " " + trg + ", [" + var->m_Scope + ":" + var->m_Name + "]";
+				else
+					node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
+					//node->m_Instructions = Opcodes[OP_LOAD] + " " + trg + ", [" + node->m_Value + "]";
+			}
 			else
 				node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + " " + node->m_Value;
+
 			++g_ASC.m_InstructionCount;
 		}
 		break;
@@ -1528,7 +1598,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_LOAD:
 		{
 			std::string trg = g_ASC.PushRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + " " + node->m_Value;
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + node->m_Value;
 			++g_ASC.m_InstructionCount;
 		}
 		break;
@@ -1563,7 +1633,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		node->m_Instructions.c_str());*/
 }
 
-void DebugDump(const char *_filename)
+void CompileGrimR(const char *_filename)
 {
 	FILE *fp = fopen(_filename, "w");
 
@@ -1589,7 +1659,10 @@ void DebugDump(const char *_filename)
 
 	for (auto &var : g_ASC.m_Variables)
 	{
-		fprintf(fp, "@label %s\n", var->m_Name.c_str());
+		/*if (var->m_RefCount == 0)
+			continue;*/
+		fprintf(fp, "@label %s:%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
+		fprintf(fp, "// reference count %d\n", var->m_RefCount);
 		fprintf(fp, "// array length %d\n", var->m_Dimension);
 		if (var->m_InitialValues.size())
 		{

@@ -2,7 +2,7 @@
 
 // GrimR : Person Wearing A Mask / Helmet / The Fierce One
 #include "../grammar/grimr.y.hpp"
-extern void DebugDump(const char *_filename);
+extern void CompileGrimR(const char *_filename);
 
 int CompileCode(char *_inputname, char *_outputname)
 {
@@ -13,14 +13,7 @@ int CompileCode(char *_inputname, char *_outputname)
 	int result = yyparse();
 	fclose(yyin);
 
-	/*
-	GatherSymbols();
-	ScanSymbolAccessErrors();
-	CompilePass();
-
-	SaveAsm(_outputname);*/
-
-	DebugDump(_outputname);
+	CompileGrimR(_outputname);
 
 	return 0;
 }
