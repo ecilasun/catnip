@@ -1340,7 +1340,7 @@ function_header
 																									SASTNode *namenode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_FuncHeader, "");
 																									$$->PushNode(namenode);
-																									printf("Current function: %s\n", namenode->m_Value.c_str());
+																									//printf("Current function: %s\n", namenode->m_Value.c_str());
 																									g_ASC.m_CurrentFunctionName = namenode->m_Value;
 																									g_ASC.PushNode($$);
 																								}
