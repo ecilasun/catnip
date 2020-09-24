@@ -1575,7 +1575,7 @@ void DebugDump(const char *_filename)
 		fprintf(fp, "// array length %d\n", var->m_Dimension);
 		if (var->m_InitialValues.size())
 		{
-			fprintf(fp, "@dw ");
+			fprintf(fp, "@dword ");
 			int cnt = 0;
 			for (auto &data : var->m_InitialValues)
 			{
@@ -1584,7 +1584,7 @@ void DebugDump(const char *_filename)
 				if (cnt==4)
 				{
 					cnt = 0;
-					fprintf(fp, "\n@dw ");
+					fprintf(fp, "\n@dword ");
 				}
 			}
 			fprintf(fp, "\n");
