@@ -1573,8 +1573,22 @@ void DebugDump(const char *_filename)
 	{
 		fprintf(fp, "@label %s\n", var->m_Name.c_str());
 		fprintf(fp, "// array length %d\n", var->m_Dimension);
-		for (auto &data : var->m_InitialValues)
-			fprintf(fp, "@dw %s\n", data.c_str());
+		if (var->m_InitialValues.size())
+		{
+			fprintf(fp, "@dw ");
+			int cnt = 0;
+			for (auto &data : var->m_InitialValues)
+			{
+				fprintf(fp, "%s ", data.c_str());
+				cnt++;
+				if (cnt==4)
+				{
+					cnt = 0;
+					fprintf(fp, "\n@dw ");
+				}
+			}
+			fprintf(fp, "\n");
+		}
 	}
 	fclose(fp);
 }
