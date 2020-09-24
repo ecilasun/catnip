@@ -103,19 +103,19 @@ call DrawRect
 // function 'main', hash: BC76E6BA, refcount: 0
 @label cursorX
 // array length 1
-@dw 0x00000000 
+@dw 0xCDCDCDCD 
 @label cursorY
 // array length 1
-@dw 0x00000000 
+@dw 0xCDCDCDCD 
 @label VRAM
 // array length 1
 @dw 0x80000000 
 @label banana
 // array length 16
-@dw 0x00000000 0x00000000 0x00000000 0x00000000 
-@dw 0x00000000 0x00000000 0x00000000 0x00000000 
-@dw 0x00000000 0x00000000 0x00000000 0x00000000 
-@dw 0x00000000 0x00000000 0x00000000 0x00000000 
+@dw 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 
+@dw 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 
+@dw 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 
+@dw 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 
 @dw 
 @label tree
 // array length 4
@@ -134,7 +134,7 @@ call DrawRect
 @dw 
 @label spanX
 // array length 1
-@dw 0x00000000 
+@dw 0xCDCDCDCD 
 @label spanY
 // array length 1
-@dw 0x00000000 
+@dw 0xCDCDCDCD 

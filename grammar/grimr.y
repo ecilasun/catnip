@@ -1137,7 +1137,7 @@ variable_declaration
 																										{
 																											var->m_Dimension = strtol(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
 																											for (int i=0;i<var->m_Dimension;++i)
-																												var->m_InitialValues.push_back("0x00000000");
+																												var->m_InitialValues.push_back("0xCDCDCDCD");
 																										}
 																										else if (n0->m_Type == EN_DeclInitJunction)
 																										{
@@ -1159,7 +1159,7 @@ variable_declaration
 																										}
 																									}
 																									else
-																										var->m_InitialValues.push_back("0x00000000");
+																										var->m_InitialValues.push_back("0xCDCDCDCD");
 
 																									$$->m_Opcode = OP_DECL;
 																									//g_ASC.PushNode($$); // Variable already added to var stack
@@ -1181,7 +1181,7 @@ variable_declaration
 
 																									if (n0->m_Type == EN_Identifier)
 																									{
-																										var->m_InitialValues.push_back("0x00000000");
+																										var->m_InitialValues.push_back("0xCDCDCDCD");
 																									}
 																									else
 																									{
@@ -1189,7 +1189,7 @@ variable_declaration
 																										{
 																											var->m_Dimension = strtol(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
 																											for (int i=0;i<var->m_Dimension;++i)
-																												var->m_InitialValues.push_back("0x00000000");
+																												var->m_InitialValues.push_back("0xCDCDCDCD");
 																										}
 																										else if (n0->m_Type == EN_DeclInitJunction)
 																										{
