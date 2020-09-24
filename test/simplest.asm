@@ -1,64 +1,6 @@
 
 -------------Scope Depth--------------
 
-R: EN_Decl                      (0) 
-R: .EN_Identifier                (1) cursorX
-R: EN_Decl                      (0) 
-R: .EN_Identifier                (1) cursorY
-R: EN_Decl                      (0) 
-R: .EN_DeclInitJunction          (1) 
-R: ..EN_Identifier                (2) VRAM
-R: ..EN_Constant                  (2) 0x80000000
-R: EN_Decl                      (0) 
-R: .EN_DeclArray                 (1) 
-R: ..EN_Identifier                (2) banana
-R: ..EN_Constant                  (2) 0x00000010
-R: EN_Decl                      (0) 
-R: .EN_DeclInitJunction          (1) 
-R: ..EN_Identifier                (2) tree
-R: ..EN_Constant                  (2) 0x00000004
-R: ..EN_ArrayWithDataJunction     (2) 
-R: ...EN_Constant                  (3) 0x00000004
-R: ...EN_Constant                  (3) 0x00000003
-R: ...EN_Constant                  (3) 0x00000002
-R: ...EN_Constant                  (3) 0x00000001
-R: EN_Decl                      (0) 
-R: .EN_DeclInitJunction          (1) 
-R: ..EN_Identifier                (2) sprite
-R: ..EN_Constant                  (2) 0x00000020
-R: ..EN_ArrayWithDataJunction     (2) 
-R: ...EN_Constant                  (3) 0xffedcafd
-R: ...EN_Constant                  (3) 0xfffffffc
-R: ...EN_Constant                  (3) 0xfffffffb
-R: ...EN_Constant                  (3) 0xfffffffa
-R: ...EN_Constant                  (3) 0xfffffffd
-R: ...EN_Constant                  (3) 0xfffffffc
-R: ...EN_Constant                  (3) 0xfffffffb
-R: ...EN_Constant                  (3) 0xfffffffa
-R: ...EN_Constant                  (3) 0xfffffffd
-R: ...EN_Constant                  (3) 0xff222ffc
-R: ...EN_Constant                  (3) 0xfffffffb
-R: ...EN_Constant                  (3) 0xfffffffa
-R: ...EN_Constant                  (3) 0xfffffffd
-R: ...EN_Constant                  (3) 0xfffffffc
-R: ...EN_Constant                  (3) 0xf00ffffb
-R: ...EN_Constant                  (3) 0xfffffffa
-R: ...EN_Constant                  (3) 0xfffffffd
-R: ...EN_Constant                  (3) 0xfffffffc
-R: ...EN_Constant                  (3) 0xfffffffb
-R: ...EN_Constant                  (3) 0xfffffffa
-R: ...EN_Constant                  (3) 0xfffffffd
-R: ...EN_Constant                  (3) 0xfffffffc
-R: ...EN_Constant                  (3) 0xfffffffb
-R: ...EN_Constant                  (3) 0xfffffffa
-R: ...EN_Constant                  (3) 0xffffff01
-R: ...EN_Constant                  (3) 0xffffff00
-R: ...EN_Constant                  (3) 0xffffffff
-R: ...EN_Constant                  (3) 0xfffffffe
-R: ...EN_Constant                  (3) 0xfffffffd
-R: ...EN_Constant                  (3) 0xfffffffc
-R: ...EN_Constant                  (3) 0xfffffffb
-R: ...EN_Constant                  (3) 0xfffffffa
 R: EN_FuncDecl                  (0) 
 R: .EN_Label                     (1) test
 R: .EN_BeginCodeBlock            (1) 
@@ -136,10 +78,6 @@ R: ..EN_Statement                 (2)
 R: ...EN_AssignmentExpression      (3) 
 L: ....EN_Identifier                (4) spanY
 R: ....EN_Identifier                (4) posY
-R: ..EN_Decl                      (2) 
-R: ...EN_Identifier                (3) spanY
-R: ..EN_Decl                      (2) 
-R: ...EN_Identifier                (3) spanX
 R: EN_FuncDecl                  (0) 
 R: .EN_Label                     (1) main
 R: .EN_BeginCodeBlock            (1) 
@@ -173,162 +111,166 @@ R: ...EN_Label                     (3) exitif5
 
 ---------Register Assignment----------
 
-ld r0 [cursorX]
-decl 
-ld r1 [cursorY]
-decl 
-ld r2 [VRAM]
-ld r3 0x80000000
-st [r2], r3, r2
-decl 
-ld r2 [banana]
-dim 0x00000010
-decl 
-ld r3 [tree]
-dim 0x00000004
-ld r4 0x00000004
-ld r5 0x00000003
-ld r6 0x00000002
-ld r7 0x00000001
-dataarray 
-bulkassign 
-decl 
-ld r8 [sprite]
-dim 0x00000020
-ld r9 0xffedcafd
-ld r10 0xfffffffc
-ld r11 0xfffffffb
-ld r12 0xfffffffa
-ld r13 0xfffffffd
-ld r14 0xfffffffc
-ld r15 0xfffffffb
-ld r16 0xfffffffa
-ld r17 0xfffffffd
-ld r18 0xff222ffc
-ld r19 0xfffffffb
-ld r20 0xfffffffa
-ld r21 0xfffffffd
-ld r22 0xfffffffc
-ld r23 0xf00ffffb
-ld r24 0xfffffffa
-ld r25 0xfffffffd
-ld r26 0xfffffffc
-ld r27 0xfffffffb
-ld r28 0xfffffffa
-ld r29 0xfffffffd
-ld r30 0xfffffffc
-ld r31 0xfffffffb
-ld r32 0xfffffffa
-ld r33 0xffffff01
-ld r34 0xffffff00
-ld r35 0xffffffff
-ld r36 0xfffffffe
-ld r37 0xfffffffd
-ld r38 0xfffffffc
-ld r39 0xfffffffb
-ld r40 0xfffffffa
-dataarray 
-bulkassign 
-decl 
 @label test
 ret 
-ld r41 [height]
-ld r42 [width]
-ld r43 [posY]
-ld r44 [posX]
+ld r0 [height]
+ld r1 [width]
+ld r2 [posY]
+ld r3 [posX]
 @label DrawRect
 @label beginwhile2
-ld r45 [spanY]
-ld r46 [posY]
-ld r47 [height]
-add r46, r47, r46
-cmp.l r45, r46, r45
-jmpnz r45, endwhile3
-lea r45 spanY
-ld r46 [spanY]
-ld r47 0x00000001
-add r46, r47, r46
-st [r45], r46, r45
+ld r4 [spanY]
+ld r5 [posY]
+ld r6 [height]
+add r5, r6, r5
+cmp.l r4, r5, r4
+jmpnz r4, endwhile3
+lea r4 spanY
+ld r5 [spanY]
+ld r6 0x00000001
+add r5, r6, r5
+st [r4], r5, r4
 @label beginwhile0
-ld r45 [spanX]
-ld r46 [posX]
-ld r47 [width]
-add r46, r47, r46
-cmp.l r45, r46, r45
-jmpnz r45, endwhile1
-lea r45 spanX
-ld r46 [spanX]
-ld r47 0x00000001
-add r46, r47, r46
-st [r45], r46, r45
-lea r45 VRAM
-lea r46 spanX
-ld r47 0x00000140
-lea r48 spanY
-mul r47, r48, r47
-add r46, r47, r46
-add r45, r46, r45
-ld r46 [sprite]
-ld r47 0x00000004
-ld r48 [spanX]
-mod r47, r48, r47
-ld r48 0x00000004
-ld r49 0x00000008
-ld r50 [spanY]
-mod r49, r50, r49
-mul r48, r49, r48
-add r47, r48, r47
-add r46, r47, r46
-st [r45], r46, r45
+ld r4 [spanX]
+ld r5 [posX]
+ld r6 [width]
+add r5, r6, r5
+cmp.l r4, r5, r4
+jmpnz r4, endwhile1
+lea r4 spanX
+ld r5 [spanX]
+ld r6 0x00000001
+add r5, r6, r5
+st [r4], r5, r4
+lea r4 VRAM
+lea r5 spanX
+ld r6 0x00000140
+lea r7 spanY
+mul r6, r7, r6
+add r5, r6, r5
+add r4, r5, r4
+ld r5 [sprite]
+ld r6 0x00000004
+ld r7 [spanX]
+mod r6, r7, r6
+ld r7 0x00000004
+ld r8 0x00000008
+ld r9 [spanY]
+mod r8, r9, r8
+mul r7, r8, r7
+add r6, r7, r6
+add r5, r6, r5
+st [r4], r5, r4
 jmp beginwhile0
 @label endwhile1
-lea r45 spanX
-ld r46 [posX]
-st [r45], r46, r45
+lea r4 spanX
+ld r5 [posX]
+st [r4], r5, r4
 jmp beginwhile2
 @label endwhile3
-lea r45 spanY
-ld r46 [posY]
-st [r45], r46, r45
-ld r45 [spanY]
-decl 
-ld r46 [spanX]
-decl 
+lea r4 spanY
+ld r5 [posY]
+st [r4], r5, r4
 @label main
-ld r47 [cursorY]
-ld r48 0x00000002
-cmp.g r47, r48, r47
-jmpnz r47, endif4
-ld r47 0x00000180
-push r47
-ld r47 0x00000200
-ld r48 0x00000003
-add r47, r48, r47
-ld r48 [cursorY]
-sub r47, r48, r47
-push r47
-ld r47 0x00000000
-push r47
-ld r47 0x00000000
-push r47
+ld r4 [cursorY]
+ld r5 0x00000002
+cmp.g r4, r5, r4
+jmpnz r4, endif4
+ld r4 0x00000180
+push r4
+ld r4 0x00000200
+ld r5 0x00000003
+add r4, r5, r4
+ld r5 [cursorY]
+sub r4, r5, r4
+push r4
+ld r4 0x00000000
+push r4
+ld r4 0x00000000
+push r4
 call DrawRect
 jmp exitif5
 @label endif4
-lea r47 cursorY
-ld r48 0x00000001
-st [r47], r48, r47
+lea r4 cursorY
+ld r5 0x00000001
+st [r4], r5, r4
 @label exitif5
 
 -------------Symbol Table-------------
 
-Function 'test', hash BC2C0BE9
-Function 'DrawRect', hash 032D1965
-Function 'main', hash BC76E6BA
-Variable 'cursorX', hash 2AB08A05
-Variable 'cursorY', hash 2AB08A04
-Variable 'VRAM', hash 6FF3DA43
-Variable 'banana', hash EA716BD2
-Variable 'tree', hash C602CD31
-Variable 'sprite', hash 43466C92
-Variable 'spanX', hash FD3E6BD3
-Variable 'spanY', hash FD3E6BD2
+// function 'test', hash: BC2C0BE9, refcount: 0
+// function 'DrawRect', hash: 032D1965, refcount: 1
+// function 'main', hash: BC76E6BA, refcount: 0
+@label cursorX
+@length 1
+@dw 0x00000000
+@label cursorY
+@length 1
+@dw 0x00000000
+@label VRAM
+@length 1
+@dw 0x80000000
+@label banana
+@length 16
+@dw 0x00000000
+@dw 0x00000000
+@dw 0x00000000
+@dw 0x00000000
+@dw 0x00000000
+@dw 0x00000000
+@dw 0x00000000
+@dw 0x00000000
+@dw 0x00000000
+@dw 0x00000000
+@dw 0x00000000
+@dw 0x00000000
+@dw 0x00000000
+@dw 0x00000000
+@dw 0x00000000
+@dw 0x00000000
+@label tree
+@length 4
+@dw 0x00000004
+@dw 0x00000003
+@dw 0x00000002
+@dw 0x00000001
+@label sprite
+@length 32
+@dw 0xffedcafd
+@dw 0xfffffffc
+@dw 0xfffffffb
+@dw 0xfffffffa
+@dw 0xfffffffd
+@dw 0xfffffffc
+@dw 0xfffffffb
+@dw 0xfffffffa
+@dw 0xfffffffd
+@dw 0xff222ffc
+@dw 0xfffffffb
+@dw 0xfffffffa
+@dw 0xfffffffd
+@dw 0xfffffffc
+@dw 0xf00ffffb
+@dw 0xfffffffa
+@dw 0xfffffffd
+@dw 0xfffffffc
+@dw 0xfffffffb
+@dw 0xfffffffa
+@dw 0xfffffffd
+@dw 0xfffffffc
+@dw 0xfffffffb
+@dw 0xfffffffa
+@dw 0xffffff01
+@dw 0xffffff00
+@dw 0xffffffff
+@dw 0xfffffffe
+@dw 0xfffffffd
+@dw 0xfffffffc
+@dw 0xfffffffb
+@dw 0xfffffffa
+@label spanX
+@length 1
+@dw 0x00000000
+@label spanY
+@length 1
+@dw 0x00000000

@@ -1104,7 +1104,6 @@ variable_declaration
 																									$$ = new SASTNode(EN_Decl, "");
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
-																									g_ASC.PushNode($$); // Variable already added to var stack
 
 																									// Also store the variable in function list for later retreival
 																									SVariable *var = new SVariable();
@@ -1114,14 +1113,45 @@ variable_declaration
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
 																									var->m_Value = "";
+
+																									if (n0->m_ASTNodes.size())
+																									{
+																										if (n0->m_Type == EN_DeclArray)
+																										{
+																											var->m_Dimension = strtol(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
+																											for (int i=0;i<var->m_Dimension;++i)
+																												var->m_InitialValues.push_back("0x00000000");
+																										}
+																										else if (n0->m_Type == EN_DeclInitJunction)
+																										{
+																											if (n0->m_ASTNodes.size()>=3 && n0->m_ASTNodes[2]->m_Type == EN_ArrayWithDataJunction)
+																											{
+																												var->m_Dimension = strtol(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
+																												for (auto &val : n0->m_ASTNodes[2]->m_ASTNodes)
+																													var->m_InitialValues.push_back(val->m_Value);
+																											}
+																											else
+																											{
+																												var->m_InitialValues.push_back(n0->m_ASTNodes[1]->m_Value);
+																											}
+																										}
+																										else if (n0->m_Type == EN_ArrayWithDataJunction)
+																										{
+																											for (auto &val : n0->m_ASTNodes)
+																												var->m_InitialValues.push_back(val->m_Value);
+																										}
+																									}
+																									else
+																										var->m_InitialValues.push_back("0x00000000");
+
 																									$$->m_Opcode = OP_DECL;
+																									//g_ASC.PushNode($$); // Variable already added to var stack
 																									g_ASC.m_Variables.push_back(var);
 																								}
 	| variable_declaration ',' variable_declaration_item										{
 																									$$ = new SASTNode(EN_Decl, "");
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
-																									g_ASC.PushNode($$);
 
 																									// Also store the variable in function list for later retreival
 																									SVariable *var = new SVariable();
@@ -1131,7 +1161,41 @@ variable_declaration
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
 																									var->m_Value = "";
+
+																									if (n0->m_Type == EN_Identifier)
+																									{
+																										var->m_InitialValues.push_back("0x00000000");
+																									}
+																									else
+																									{
+																										if (n0->m_Type == EN_DeclArray)
+																										{
+																											var->m_Dimension = strtol(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
+																											for (int i=0;i<var->m_Dimension;++i)
+																												var->m_InitialValues.push_back("0x00000000");
+																										}
+																										else if (n0->m_Type == EN_DeclInitJunction)
+																										{
+																											if (n0->m_ASTNodes.size()>=3 && n0->m_ASTNodes[2]->m_Type == EN_ArrayWithDataJunction)
+																											{
+																												var->m_Dimension = strtol(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
+																												for (auto &val : n0->m_ASTNodes[2]->m_ASTNodes)
+																													var->m_InitialValues.push_back(val->m_Value);
+																											}
+																											else
+																											{
+																												var->m_InitialValues.push_back(n0->m_ASTNodes[1]->m_Value);
+																											}
+																										}
+																										else if (n0->m_Type == EN_ArrayWithDataJunction)
+																										{
+																											for (auto &val : n0->m_ASTNodes)
+																												var->m_InitialValues.push_back(val->m_Value);
+																										}
+																									}
+
 																									$$->m_Opcode = OP_DECL;
+																									//g_ASC.PushNode($$); // Variable already added to var stack
 																									g_ASC.m_Variables.push_back(var);
 																								}
 	;
@@ -1179,6 +1243,12 @@ functioncall_statement
 																										++paramcount;
 																									} while (1);
 																									SASTNode *namenode = g_ASC.PopNode();
+																									uint32_t hash = HashString(namenode->m_Value.c_str());
+																									SFunction *func = g_ASC.FindFunctionInFunctionTable(hash);
+																									if (func)
+																										func->m_RefCount++;
+																									else
+																										printf("ERROR: Function %s not declared before use\n", namenode->m_Value.c_str());
 																									//$$->PushNode(namenode); // No need to push name node, this is part of the 'call' opcode (as a target label)
 																									$$->m_Opcode = OP_CALL;
 																									$$->m_Value = namenode->m_Value;
@@ -1436,10 +1506,15 @@ void DebugDump(const char *_filename)
 	fprintf(fp, "\n-------------Symbol Table-------------\n\n");
 
 	for (auto &func : g_ASC.m_Functions)
-		fprintf(fp, "Function '%s', hash %.8X\n", func->m_Name.c_str(), func->m_Hash);
+		fprintf(fp, "// function '%s', hash: %.8X, refcount: %d\n", func->m_Name.c_str(), func->m_Hash, func->m_RefCount);
 
 	for (auto &var : g_ASC.m_Variables)
-		fprintf(fp, "Variable '%s', hash %.8X\n", var->m_Name.c_str(), var->m_Hash);
+	{
+		fprintf(fp, "@label %s\n", var->m_Name.c_str());
+		fprintf(fp, "@length %d\n", var->m_Dimension);
+		for (auto &data : var->m_InitialValues)
+			fprintf(fp, "@dw %s\n", data.c_str());
+	}
 	fclose(fp);
 }
 
