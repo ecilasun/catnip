@@ -27,8 +27,8 @@ byte sprite[32] = {
 
 def test(dword thing)
 {
-    thing[1] = thing[0];
-    return;
+    dword result;
+    result = thing[0] + thing[1];
 }
 
 def DrawRect(word posX, word posY, word width, word height)
@@ -59,6 +59,8 @@ def main()
     // GrimR: Snoop a function's local variable
     if (DrawRect:spanX > 64)
     {   // GrimR: if/while always expects { }
-        DrawRect(64,64,128,96);
+        dword A,B;
+        test(1);
+        A = test:result*2;
     }
 }

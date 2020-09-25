@@ -1645,7 +1645,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
 				std::string width = g_ASC.m_CurrentTypeName == TN_DWORD ? ".d" : (g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b");
-				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " [" + trg2 + "], " + trg2;
+				node->m_Instructions = Opcodes[OP_LOAD] + width + " " + trg2 + ", [" + trg2 + "]";
 				++g_ASC.m_InstructionCount;
 			}
 		}
@@ -1672,6 +1672,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				{
 					std::string width = g_ASC.m_CurrentTypeName == TN_DWORD ? ".d" : (g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b");
 					node->m_Instructions = Opcodes[OP_LOAD] + width + " " + trg + ", [" + var->m_Scope + ":" + var->m_Name + "]";
+					++g_ASC.m_InstructionCount;
 				}
 				else
 					node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
@@ -1684,8 +1685,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				}
 				else
 					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + node->m_Value;
+				++g_ASC.m_InstructionCount;
 			}
-			++g_ASC.m_InstructionCount;
 		}
 		break;
 
@@ -1707,7 +1708,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
 			std::string srcA = g_ASC.PopRegister();
 			std::string width = g_ASC.m_CurrentTypeName == TN_DWORD ? ".d" : (g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b");
-			node->m_Instructions = Opcodes[node->m_Opcode] + width + " [" + trg + "], " + srcA;
+			node->m_Instructions = Opcodes[node->m_Opcode] + width + " " + trg + ", " + srcA;
 			++g_ASC.m_InstructionCount;
 		}
 		break;
