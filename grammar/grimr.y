@@ -191,8 +191,8 @@ enum EOpcode
 	OP_PUSH,
 	OP_POP,
 	OP_JUMP,
-	OP_JUMPZ,
-	OP_JUMPNZ,
+	OP_JUMPIF,
+	OP_JUMPIFNOT,
 	OP_LABEL,
 	OP_DECL,
 	OP_DIM,
@@ -202,6 +202,7 @@ enum EOpcode
 	OP_CMPGE,
 	OP_CMPE,
 	OP_CMPNE,
+	OP_TEST,
 	OP_BITAND,
 	OP_BITXOR,
 	OP_BITOR,
@@ -217,11 +218,11 @@ const std::string Opcodes[]={
 	"bnot",
 	"neg",
 	"lnot",
-	"mul",
-	"div",
-	"mod",
-	"add",
-	"sub",
+	"imul",
+	"idiv",
+	"imod",
+	"iadd",
+	"isub",
 	"arrayindex",
 	"lea",
 	"ld",
@@ -235,21 +236,22 @@ const std::string Opcodes[]={
 	"popregs",
 	"if",
 	"while",
-	"call",
+	"branch",
 	"push",
 	"pop",
 	"jmp",
-	"jmpz",
-	"jmpnz",
-	"@label",
+	"jmpif",
+	"jmpifnot",
+	"@LABEL",
 	"decl",
 	"dim",
-	"cmp.l",
-	"cmp.g",
-	"cmp.le",
-	"cmp.ge",
-	"cmp.e",
-	"cmp.ne",
+	"cmp",
+	"cmp",
+	"cmp",
+	"cmp",
+	"cmp",
+	"cmp",
+	"test",
 	"bitand",
 	"bitxor",
 	"bitor",
@@ -903,7 +905,7 @@ if_statement
 
 																									std::string label = g_ASC.PushLabel("endif");
 																									SASTNode *branchcode = new SASTNode(EN_JumpNZ, label);
-																									branchcode->m_Opcode = OP_JUMPZ;
+																									branchcode->m_Opcode = OP_JUMPIFNOT;
 																									SASTNode *endlabel = new SASTNode(EN_Label, label);
 																									endlabel->m_Opcode = OP_LABEL;
 																									g_ASC.PopLabel("endif");
@@ -971,7 +973,7 @@ if_statement
 																									std::string label = g_ASC.PushLabel("endif");
 																									std::string finallabel = g_ASC.PushLabel("exitif");
 																									SASTNode *branchcode = new SASTNode(EN_JumpNZ, label);
-																									branchcode->m_Opcode = OP_JUMPZ;
+																									branchcode->m_Opcode = OP_JUMPIFNOT;
 																									SASTNode *endlabel = new SASTNode(EN_Label, label);
 																									endlabel->m_Opcode = OP_LABEL;
 																									SASTNode *exitlabel = new SASTNode(EN_Label, finallabel);
@@ -1028,7 +1030,7 @@ while_statement
 																									std::string startlabel = g_ASC.PushLabel("beginwhile");
 																									std::string label = g_ASC.PushLabel("endwhile");
 																									SASTNode *branchcode = new SASTNode(EN_JumpNZ, label);
-																									branchcode->m_Opcode = OP_JUMPZ;
+																									branchcode->m_Opcode = OP_JUMPIFNOT;
 																									SASTNode *branchcodeend = new SASTNode(EN_Jump, startlabel);
 																									branchcodeend->m_Opcode = OP_JUMP;
 																									SASTNode *beginlabel = new SASTNode(EN_Label, startlabel);
@@ -1556,10 +1558,19 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			}
 
 			if (var)
-				node->m_Instructions = Opcodes[node->m_Opcode] + " " + var->m_Scope + ":" + var->m_Name;
+			{
+				std::string val = g_ASC.PushRegister();
+				std::string trg = g_ASC.PushRegister();
+				node->m_Instructions = Opcodes[OP_LEA] + " " + val + ", " + var->m_Scope + ":" + var->m_Name;
+				node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode] + " " + trg;
+				std::string width = var->m_TypeName == TN_DWORD ? ".d" : (var->m_TypeName == TN_WORD ? ".w" : ".b");
+				node->m_Instructions += std::string("\n") + Opcodes[OP_STORE] + width + " " + val + ", " + trg;
+				g_ASC.PopRegister(); // Forget trg and val
+				g_ASC.PopRegister();
+				g_ASC.m_InstructionCount+=3;
+			}
 			else
 				node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
-			++g_ASC.m_InstructionCount;
 		}
 		break;
 
@@ -1567,22 +1578,16 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string src = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + src;
-			++g_ASC.m_InstructionCount;
+			g_ASC.m_InstructionCount+=1;
 		}
 		break;
 
 		case OP_JUMP:
+		case OP_JUMPIF:
+		case OP_JUMPIFNOT:
 		{
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
-			++g_ASC.m_InstructionCount;
-		}
-		break;
-
-		case OP_JUMPZ:
-		case OP_JUMPNZ:
-		{
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
-			++g_ASC.m_InstructionCount;
+			g_ASC.m_InstructionCount+=1;
 		}
 		break;
 
@@ -1596,7 +1601,19 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcB;
-			++g_ASC.m_InstructionCount;
+			std::string test = "notequal";
+			// Hardware has: ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL
+			//if (node->m_Opcode == OP_CMPZ) test = "zero";
+			if (node->m_Opcode == OP_CMPNE) test = "not equal";
+			//if (node->m_Opcode == OP_CMPNZ) test = "notzero";
+			if (node->m_Opcode == OP_CMPL) test = "less";
+			if (node->m_Opcode == OP_CMPG) test = "greater";
+			if (node->m_Opcode == OP_CMPE) test = "equal";
+			if (node->m_Opcode == OP_CMPLE) test = "lessequal";
+			if (node->m_Opcode == OP_CMPGE) test = "greaterequal";
+
+			node->m_Instructions += std::string("\n") + Opcodes[OP_TEST] + " " + test;
+			g_ASC.m_InstructionCount+=2;
 		}
 		break;
 
@@ -1608,9 +1625,9 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();
-			std::string trg = g_ASC.PushRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + srcA + ", " + srcB;
-			++g_ASC.m_InstructionCount;
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcB;
+			g_ASC.PushRegister(); // Result goes back into srcA
+			g_ASC.m_InstructionCount+=1;
 		}
 		break;
 
@@ -1633,20 +1650,25 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + ", " + var->m_Scope + ":" + var->m_Name;
 			else
 				node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
-			++g_ASC.m_InstructionCount;
+			g_ASC.m_InstructionCount+=1;
 
-			std::string srcA = g_ASC.PopRegister();
 			std::string srcB = g_ASC.PopRegister();
-			std::string trg2 = g_ASC.PushRegister();
+			std::string srcA = g_ASC.PopRegister();
 
-			node->m_Instructions += std::string("\n") + Opcodes[OP_ADD] + " " + trg2 + ", " + srcA + ", " + srcB + (var->m_TypeName == TN_DWORD ? "*4" : (var->m_TypeName == TN_WORD ? "*2" : "*1"));
-			++g_ASC.m_InstructionCount;
+			if (var->m_TypeName != TN_BYTE)
+			{
+				node->m_Instructions += std::string("\n") + Opcodes[OP_MUL] + " " + srcA + ", " + (var->m_TypeName == TN_DWORD ? "4" : (var->m_TypeName == TN_WORD ? "2" : "1"));
+				g_ASC.m_InstructionCount+=1;
+			}
+			node->m_Instructions += std::string("\n") + Opcodes[OP_ADD] + " " + srcA + ", " + srcB;
+			g_ASC.m_InstructionCount+=1;
+			g_ASC.PushRegister(); // re-use srcA as target
 
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
 				std::string width = g_ASC.m_CurrentTypeName == TN_DWORD ? ".d" : (g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b");
-				node->m_Instructions = Opcodes[OP_LOAD] + width + " " + trg2 + ", [" + trg2 + "]";
-				++g_ASC.m_InstructionCount;
+				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + srcA + ", [" + srcA + "]";
+				g_ASC.m_InstructionCount+=1;
 			}
 		}
 		break;
@@ -1672,7 +1694,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				{
 					std::string width = g_ASC.m_CurrentTypeName == TN_DWORD ? ".d" : (g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b");
 					node->m_Instructions = Opcodes[OP_LOAD] + width + " " + trg + ", [" + var->m_Scope + ":" + var->m_Name + "]";
-					++g_ASC.m_InstructionCount;
+					g_ASC.m_InstructionCount+=1;
 				}
 				else
 					node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
@@ -1685,7 +1707,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				}
 				else
 					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + node->m_Value;
-				++g_ASC.m_InstructionCount;
+				g_ASC.m_InstructionCount+=1;
 			}
 		}
 		break;
@@ -1698,7 +1720,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				node->m_Instructions = Opcodes[node->m_Opcode] + ".w" + " " + trg + ", " + node->m_Value;
 			else
 				node->m_Instructions = Opcodes[node->m_Opcode] + ".d" + " " + trg + ", " + node->m_Value;
-			++g_ASC.m_InstructionCount;
+			g_ASC.m_InstructionCount+=1;
 		}
 		break;
 
@@ -1709,19 +1731,21 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string srcA = g_ASC.PopRegister();
 			std::string width = g_ASC.m_CurrentTypeName == TN_DWORD ? ".d" : (g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b");
 			node->m_Instructions = Opcodes[node->m_Opcode] + width + " " + trg + ", " + srcA;
-			++g_ASC.m_InstructionCount;
+			g_ASC.m_InstructionCount+=1;
 		}
 		break;
 
 		case OP_CALL:
 		{
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
-			++g_ASC.m_InstructionCount;
+			g_ASC.m_InstructionCount+=1;
 		}
 		break;
 
 		default:
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
+			if (node->m_Opcode != OP_LABEL)
+				g_ASC.m_InstructionCount+=1;
 		break;
 	}
 
@@ -1746,25 +1770,37 @@ void CompileGrimR(const char *_filename)
 		AssignRegistersAndGenerateCode(fp, node);
 
 	// Dump asm code
-	fprintf(fp, "// Instruction count: %d\n", g_ASC.m_InstructionCount);
+	fprintf(fp, "# Instruction count: %d\n\n", g_ASC.m_InstructionCount);
+	fprintf(fp, "@ORG 0x00000000\n\n");
+	fprintf(fp, "# Select frame buffer 0 for writes and clear it\n");
+	fprintf(fp, "ld.w r0, 0x0000\n");
+	fprintf(fp, "fsel r0\n");
+	fprintf(fp, "ld.w r0, 0x00E0\n");
+	fprintf(fp, "clf r0\n");
+	fprintf(fp, "branch main\n");
+	fprintf(fp, "# Select frame buffer 1 so we can see frame buffer 0\n");
+	fprintf(fp, "ld.w r0, 0x0001\n");
+	fprintf(fp, "fsel r0\n");
+	fprintf(fp, "halt\n");
+	fprintf(fp, "# End of program\n");
 	for (auto &node : g_ASC.m_ASTNodes)
 		DumpCode(fp, node);
 
 	// Dump symbol table
-	fprintf(fp, "\n//-------------Symbol Table-------------\n\n");
+	fprintf(fp, "\n#-------------Symbol Table-------------\n\n");
 	/*for (auto &func : g_ASC.m_Functions)
-		fprintf(fp, "// function '%s', hash: %.8X, refcount: %d\n", func->m_Name.c_str(), func->m_Hash, func->m_RefCount);*/
+		fprintf(fp, "# function '%s', hash: %.8X, refcount: %d\n", func->m_Name.c_str(), func->m_Hash, func->m_RefCount);*/
 
 	for (auto &var : g_ASC.m_Variables)
 	{
 		/*if (var->m_RefCount == 0)
 			continue;*/
-		fprintf(fp, "@label %s:%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
-		fprintf(fp, "// ref:%d dim:%d typename:%s\n", var->m_RefCount, var->m_Dimension, TypeNames[var->m_TypeName]);
+		fprintf(fp, "@LABEL %s:%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
+		fprintf(fp, "# ref:%d dim:%d typename:%s\n", var->m_RefCount, var->m_Dimension, TypeNames[var->m_TypeName]);
 		int itemsperrow = var->m_TypeName == TN_DWORD ? 4 : (var->m_TypeName == TN_WORD ? 8 : 16);
 		if (var->m_InitialValues.size())
 		{
-			fprintf(fp, var->m_TypeName == TN_DWORD ? "@dword " : (var->m_TypeName == TN_WORD ? "@word " : "@byte "));
+			fprintf(fp, var->m_TypeName == TN_DWORD ? "@DD " : (var->m_TypeName == TN_WORD ? "@DW " : "@DB "));
 			int cnt = 0;
 			for (auto &data : var->m_InitialValues)
 			{
@@ -1773,7 +1809,7 @@ void CompileGrimR(const char *_filename)
 				if (cnt==itemsperrow)
 				{
 					cnt = 0;
-					fprintf(fp, var->m_TypeName == TN_DWORD ? "\n@dword " : (var->m_TypeName == TN_WORD ? "\n@word " : "\n@byte "));
+					fprintf(fp, var->m_TypeName == TN_DWORD ? "\n@DD " : (var->m_TypeName == TN_WORD ? "\n@DW " : "\n@DB "));
 				}
 			}
 			fprintf(fp, "\n");
