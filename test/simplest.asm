@@ -26,8 +26,8 @@ ld.w r0, [DrawRect:spanY]
 ld.w r1, [DrawRect:posY]
 ld.w r2, [DrawRect:height]
 add r1, r1, r2
-cmp.l r0, r0, r1
-jmpz r0, endwhile3
+cmp.l r0, r1
+jmpz endwhile3
 ld.w r0, [DrawRect:posX]
 lea r1 spanX
 st.w [r1], r0
@@ -37,8 +37,8 @@ ld.w r0, [DrawRect:spanX]
 ld.w r1, [DrawRect:posX]
 ld.w r2, [DrawRect:width]
 add r1, r1, r2
-cmp.l r0, r0, r1
-jmpz r0, endwhile1
+cmp.l r0, r1
+jmpz endwhile1
 ld.w r0, 0x4
 ld.w r1, [DrawRect:spanX]
 mod r0, r0, r1
@@ -95,8 +95,8 @@ push r0
 call DrawRect
 ld.w r0, [DrawRect:spanX]
 ld.w r1, 0x40
-cmp.g r0, r0, r1
-jmpz r0, endif4
+cmp.g r0, r1
+jmpz endif4
 ld.w r0, 0x40
 push r0
 ld.w r0, 0x40

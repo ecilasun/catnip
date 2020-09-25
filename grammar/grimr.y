@@ -1581,8 +1581,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_JUMPZ:
 		case OP_JUMPNZ:
 		{
-			std::string src = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + src + ", " + node->m_Value;
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
 			++g_ASC.m_InstructionCount;
 		}
 		break;
@@ -1596,8 +1595,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();
-			std::string trg = g_ASC.PushRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + srcA + ", " + srcB;
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcB;
 			++g_ASC.m_InstructionCount;
 		}
 		break;
