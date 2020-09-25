@@ -2,14 +2,14 @@
 
 @label test
 pop test:thing
-ld r0, 0x00000000
+ld.w r0, 0x0
 lea r1, test:thing
-add r0, r1, r0
-ld [r0], r0
-ld r1, 0x00000001
+add r0, r1, r0*4
+ld.d [r0], r0
+ld.w r1, 0x1
 lea r2, test:thing
-add r1, r2, r1
-st [r1], r0
+add r1, r2, r1*4
+st.d [r1], r0
 ret 
 
 @label DrawRect
@@ -17,93 +17,93 @@ pop DrawRect:height
 pop DrawRect:width
 pop DrawRect:posY
 pop DrawRect:posX
-ld r0, [DrawRect:posY]
+ld.w r0, [DrawRect:posY]
 lea r1 spanY
-st [r1], r0
+st.w [r1], r0
 
 @label beginwhile2
-ld r0, [DrawRect:spanY]
-ld r1, [DrawRect:posY]
-ld r2, [DrawRect:height]
+ld.w r0, [DrawRect:spanY]
+ld.w r1, [DrawRect:posY]
+ld.w r2, [DrawRect:height]
 add r1, r1, r2
 cmp.l r0, r0, r1
 jmpz r0, endwhile3
-ld r0, [DrawRect:posX]
+ld.w r0, [DrawRect:posX]
 lea r1 spanX
-st [r1], r0
+st.w [r1], r0
 
 @label beginwhile0
-ld r0, [DrawRect:spanX]
-ld r1, [DrawRect:posX]
-ld r2, [DrawRect:width]
+ld.w r0, [DrawRect:spanX]
+ld.w r1, [DrawRect:posX]
+ld.w r2, [DrawRect:width]
 add r1, r1, r2
 cmp.l r0, r0, r1
 jmpz r0, endwhile1
-ld r0, 0x00000004
-ld r1, [DrawRect:spanX]
+ld.w r0, 0x4
+ld.w r1, [DrawRect:spanX]
 mod r0, r0, r1
-ld r1, 0x00000004
-ld r2, 0x00000008
-ld r3, [DrawRect:spanY]
+ld.w r1, 0x4
+ld.w r2, 0x8
+ld.w r3, [DrawRect:spanY]
 mod r2, r2, r3
 mul r1, r1, r2
 add r0, r0, r1
 lea r1, :sprite
-add r0, r1, r0
-ld [r0], r0
+add r0, r1, r0*1
+ld.b [r0], r0
 lea r1 spanX
-ld r2, 0x00000140
+ld.w r2, 0x140
 lea r3 spanY
 mul r2, r2, r3
 add r1, r1, r2
 lea r2, :VRAM
-add r1, r2, r1
-st [r1], r0
-ld r0, [DrawRect:spanX]
-ld r1, 0x00000001
+add r1, r2, r1*1
+st.b [r1], r0
+ld.w r0, [DrawRect:spanX]
+ld.w r1, 0x1
 add r0, r0, r1
 lea r1 spanX
-st [r1], r0
+st.w [r1], r0
 jmp beginwhile0
 
 @label endwhile1
-ld r0, [DrawRect:spanY]
-ld r1, 0x00000001
+ld.w r0, [DrawRect:spanY]
+ld.w r1, 0x1
 add r0, r0, r1
 lea r1 spanY
-st [r1], r0
+st.w [r1], r0
 jmp beginwhile2
 
 @label endwhile3
 
 @label main
-ld r0, 0x00000002
+ld.w r0, 0x2
 lea r1, :tree
-add r0, r1, r0
-ld [r0], r0
+add r0, r1, r0*4
+ld.d [r0], r0
 push r0
-ld r0, 0x00000000
+ld.w r0, 0x0
 push r0
-ld r0, 0x00000200
-ld r1, 0x00000003
+ld.w r0, 0x200
+ld.w r1, 0x3
 add r0, r0, r1
-ld r1, [:cursorY]
+ld.d r1, [:cursorY]
 sub r0, r0, r1
 push r0
-ld r0, 0x00000180
+ld.w r0, 0x180
 push r0
 call DrawRect
-ld r0, [DrawRect:spanX]
-ld r1, 0x00000040
+ld.w r0, [DrawRect:spanX]
+ld.w r1, 0x40
 cmp.g r0, r0, r1
 jmpz r0, endif4
-ld r0, 0x00000040
+ld.w r0, 0x40
 push r0
-ld r0, 0x00000040
+ld.w r0, 0x40
 push r0
-ld r0, 0x00000080
+ld.w r0, 0x80
 push r0
-ld r0, 0x00000060
+ld.w r0, 0x60
 push r0
 call DrawRect
 
@@ -111,66 +111,50 @@ call DrawRect
 
 //-------------Symbol Table-------------
 
-// function 'test', hash: BC2C0BE9, refcount: 0
-// function 'DrawRect', hash: 032D1965, refcount: 2
-// function 'main', hash: BC76E6BA, refcount: 0
 @label :cursorX
-// reference count 0
-// array length 1
+// ref:0 dim:1 typename:dword
 @dword 0xCDCDCDCD 
 @label :cursorY
-// reference count 0
-// array length 1
+// ref:0 dim:1 typename:dword
 @dword 0xCDCDCDCD 
 @label :VRAM
-// reference count 0
-// array length 1
-@dword 0x80000000 
+// ref:0 dim:1 typename:byte
+@byte 0x80000000 
 @label :banana
-// reference count 0
-// array length 16
+// ref:0 dim:16 typename:dword
 @dword 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 
 @dword 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 
 @dword 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 
 @dword 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 0xCDCDCDCD 
 @dword 
 @label :tree
-// reference count 0
-// array length 4
-@dword 0x00000001 0x00000002 0x00000003 0x00000004 
+// ref:0 dim:4 typename:dword
+@dword 0x1 0x2 0x3 0x4 
 @dword 
 @label :sprite
-// reference count 0
-// array length 32
-@dword 0xfffffffa 0xfffffffb 0xfffffffc 0xfffffffd 
-@dword 0xfffffffe 0xffffffff 0xffffff00 0xffffff01 
-@dword 0xfffffffa 0xfffffffb 0xfffffffc 0xfffffffd 
-@dword 0xfffffffa 0xfffffffb 0xfffffffc 0xfffffffd 
-@dword 0xfffffffa 0xf00ffffb 0xfffffffc 0xfffffffd 
-@dword 0xfffffffa 0xfffffffb 0xff222ffc 0xfffffffd 
-@dword 0xfffffffa 0xfffffffb 0xfffffffc 0xfffffffd 
-@dword 0xfffffffa 0xfffffffb 0xfffffffc 0xffedcafd 
-@dword 
+// ref:0 dim:32 typename:byte
+@byte 0xff 0xff 0xff 0xfa 0xff 0xff 0xff 0xfb 0xff 0xff 0xff 0xfc 0xff 0xff 0xff 0xfd 
+@byte 0xff 0xff 0xff 0xfe 0xff 0xff 0xff 0xff 0xff 0xff 0xff 0x0 0xff 0xff 0xff 0x1 
+@byte 0xff 0xff 0xff 0xfa 0xff 0xff 0xff 0xfb 0xff 0xff 0xff 0xfc 0xff 0xff 0xff 0xfd 
+@byte 0xff 0xff 0xff 0xfa 0xff 0xff 0xff 0xfb 0xff 0xff 0xff 0xfc 0xff 0xff 0xff 0xfd 
+@byte 0xff 0xff 0xff 0xfa 0xf0 0xf 0xff 0xfb 0xff 0xff 0xff 0xfc 0xff 0xff 0xff 0xfd 
+@byte 0xff 0xff 0xff 0xfa 0xff 0xff 0xff 0xfb 0xff 0x22 0x2f 0xfc 0xff 0xff 0xff 0xfd 
+@byte 0xff 0xff 0xff 0xfa 0xff 0xff 0xff 0xfb 0xff 0xff 0xff 0xfc 0xff 0xff 0xff 0xfd 
+@byte 0xff 0xff 0xff 0xfa 0xff 0xff 0xff 0xfb 0xff 0xff 0xff 0xfc 0xff 0xed 0xca 0xfd 
+@byte 
 @label test:thing
-// reference count 0
-// array length 1
+// ref:0 dim:1 typename:dword
 @label DrawRect:spanX
-// reference count 0
-// array length 1
-@dword 0xCDCDCDCD 
+// ref:0 dim:1 typename:word
+@word 0xCDCDCDCD 
 @label DrawRect:spanY
-// reference count 0
-// array length 1
-@dword 0xCDCDCDCD 
+// ref:0 dim:1 typename:word
+@word 0xCDCDCDCD 
 @label DrawRect:height
-// reference count 0
-// array length 1
+// ref:0 dim:1 typename:word
 @label DrawRect:width
-// reference count 0
-// array length 1
+// ref:0 dim:1 typename:word
 @label DrawRect:posY
-// reference count 0
-// array length 1
+// ref:0 dim:1 typename:word
 @label DrawRect:posX
-// reference count 0
-// array length 1
+// ref:0 dim:1 typename:word

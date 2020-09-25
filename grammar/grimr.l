@@ -33,17 +33,16 @@ void stripquotes(char *string);
 "/*"						{ comment(); }
 "//"[^\n]*					{ /* consume //-comment */ }
 
-"var"						{ count();  return(VAR); }
-"def"						{ count();  return(FUNCTION); }
+"dword"						{ count();  return(DWORD); }
+"word"						{ count();  return(WORD); }
+"byte"						{ count();  return(BYTE); }
 
+"def"						{ count();  return(FUNCTION); }
 "if"						{ count();  return(IF); }
 "else"						{ count();  return(ELSE); }
-
 "while"						{ count();  return(WHILE); }
-
 "{"							{ count();  return(BEGINBLOCK); }
 "}"							{ count();  return(ENDBLOCK); }
-
 "return"					{ count();  return(RETURN); }
 
 "["							{ count();  return('['); }

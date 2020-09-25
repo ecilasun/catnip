@@ -93,8 +93,6 @@ enum EASTNodeType
 	EN_ArrayWithDataJunction,
 	EN_FuncHeader,
 	EN_FuncDecl,
-	EN_InputParamList,
-	EN_InputParam,
 	EN_Prologue,
 	EN_Epilogue,
 	EN_Statement,
@@ -156,8 +154,6 @@ const char* NodeTypes[]=
 	"EN_ArrayWithDataJunction     ",
 	"EN_FuncHeader                ",
 	"EN_FuncDecl                  ",
-	"EN_InputParamList            ",
-	"EN_InputParam                ",
 	"EN_Prologue                  ",
 	"EN_Epilogue                  ",
 	"EN_Statement                 ",
@@ -275,6 +271,19 @@ struct SString
 	uint32_t m_Address{0xFFFFFFFF};
 };
 
+enum ETypeName
+{
+	TN_DWORD,
+	TN_WORD,
+	TN_BYTE,
+};
+
+const char* TypeNames[]={
+	"dword",
+	"word",
+	"byte",
+};
+
 struct SVariable
 {
 	std::string m_Name;
@@ -283,6 +292,7 @@ struct SVariable
 	uint32_t m_ScopeHash{0};
 	uint32_t m_CombinedHash{0};
 	uint32_t m_Dimension{1};
+	ETypeName m_TypeName{TN_WORD};
 	int m_RefCount{0};
 	std::string m_Value;
 	class SASTNode *m_RootNode{nullptr};
@@ -332,6 +342,7 @@ public:
 	ENodeSide m_Side{RIGHT_HAND_SIDE};
 	int m_ScopeDepth{0};
 	int m_Visited{0};
+	ETypeName m_InheritedTypeName{TN_WORD};
 	SString *m_String{nullptr};
 	std::string m_Value;
 	std::vector<SASTNode*> m_ASTNodes;
@@ -440,6 +451,7 @@ struct SASTScanContext
 
 	std::vector<SASTNode*> m_ASTNodes;
 	std::string m_CurrentFunctionName;
+	ETypeName m_CurrentTypeName{TN_WORD};
 	std::vector<SVariable*> m_Variables;
 	std::vector<SFunction*> m_Functions;
 	std::map<uint32_t, SSymbol> m_SymbolTable;
@@ -494,7 +506,7 @@ SASTScanContext g_ASC;
 %token <string> STRING_LITERAL
 
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
-%token VAR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
+%token DWORD WORD BYTE FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
 
 %type <astnode> simple_identifier
 %type <astnode> simple_constant
@@ -522,7 +534,9 @@ SASTScanContext g_ASC;
 %type <astnode> function_def
 
 %type <astnode> parameter_list
+%type <astnode> function_parameters
 %type <astnode> expression_list
+%type <astnode> input_param_list
 
 %type <astnode> additive_expression
 %type <astnode> multiplicative_expression
@@ -554,7 +568,8 @@ simple_identifier
 simple_constant
 	: CONSTANT																					{
 																									std::stringstream stream;
-																									stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << $1;
+																									//stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << $1;
+																									stream << std::hex << $1;
 																									std::string result( stream.str() );
 																									$$ = new SASTNode(EN_Constant, std::string("0x")+result);
 																									$$->m_Opcode = OP_LOAD;
@@ -1115,7 +1130,8 @@ variable_declaration_item
 
 																									// Set dimension to init array size
 																									std::stringstream stream;
-																									stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << initarray->m_ASTNodes.size();
+																									//stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << initarray->m_ASTNodes.size();
+																									stream << std::hex << initarray->m_ASTNodes.size();
 																									std::string result( stream.str() );
 
 																									SASTNode *dimnode=new SASTNode(EN_Constant, std::string("0x")+result);
@@ -1130,8 +1146,14 @@ variable_declaration_item
 																								}
 	;
 
+type_name
+	: DWORD																						{ g_ASC.m_CurrentTypeName = TN_DWORD; }
+	| WORD																						{ g_ASC.m_CurrentTypeName = TN_WORD;  }
+	| BYTE																						{ g_ASC.m_CurrentTypeName = TN_BYTE;  }
+	;
+
 variable_declaration
-	: VAR variable_declaration_item																{
+	: type_name variable_declaration_item														{
 																									$$ = new SASTNode(EN_Decl, "");
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
@@ -1147,6 +1169,7 @@ variable_declaration
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
 																									var->m_Value = "";
+																									var->m_TypeName = g_ASC.m_CurrentTypeName;
 
 																									if (n0->m_ASTNodes.size())
 																									{
@@ -1198,6 +1221,7 @@ variable_declaration
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
 																									var->m_Value = "";
+																									var->m_TypeName = g_ASC.m_CurrentTypeName;
 
 																									if (n0->m_Type == EN_Identifier)
 																									{
@@ -1259,6 +1283,28 @@ expression_list
 parameter_list
 	: '(' ')'																					{}
 	| '(' expression_list ')'																	{}
+	;
+
+input_param_list
+	: type_name simple_identifier																{
+																									$$ = new SASTNode(EN_Expression, "");
+																									SASTNode *n0=g_ASC.PopNode();
+																									$$->PushNode(n0);
+																									$$->m_InheritedTypeName = g_ASC.m_CurrentTypeName;
+																									g_ASC.PushNode($$);
+																								}
+	| input_param_list ',' type_name simple_identifier											{
+																									$$ = new SASTNode(EN_Expression, "");
+																									SASTNode *n0=g_ASC.PopNode();
+																									$$->PushNode(n0);
+																									$$->m_InheritedTypeName = g_ASC.m_CurrentTypeName;
+																									g_ASC.PushNode($$);
+																								}
+	;
+
+function_parameters
+	: '(' ')'																					{}
+	| '(' input_param_list ')'																	{}
 	;
 
 functioncall_statement
@@ -1347,7 +1393,7 @@ function_header
 	;
 
 function_def
-	: function_header parameter_list code_block_start code_block_body code_block_end			{
+	: function_header function_parameters code_block_start code_block_body code_block_end		{
 																									$$ = new SASTNode(EN_FuncDecl, "");
 
 																									// Remove epilogue
@@ -1384,10 +1430,11 @@ function_def
 																										done = n0->m_Type == EN_Expression ? false:true;
 																										if (done)
 																											break;
+
 																										n0->m_Type = EN_StackPop;
 																										n0->m_Opcode = OP_POP;
 																										g_ASC.PopNode();
-																										n0->m_Value = n0->m_ASTNodes[0]->m_Value;
+																										n0->m_Value = n0->m_ASTNodes[0]->m_Value; // Copy value
 																										n0->m_ASTNodes.clear(); // Remove identifier
 																										// Add the input parameter to code block
 																										tmp->PushNode(n0);
@@ -1403,6 +1450,7 @@ function_def
 																										var->m_Dimension = 1;
 																										var->m_RefCount = 0;
 																										var->m_Value = "";
+																										var->m_TypeName = n0->m_InheritedTypeName;
 																										g_ASC.m_Variables.push_back(var);
 
 																									} while (1);
@@ -1451,9 +1499,6 @@ void AssignScopeNode(FILE *_fp, int scopeDepth, SASTNode *node)
 {
 	node->m_ScopeDepth = scopeDepth;
 
-	//std::string spaces = ".................................................................................";
-	//fprintf(_fp, "%s: %s%s(%d) %s\n", node->m_Side==NO_SIDE?"N":(node->m_Side==LEFT_HAND_SIDE?"L":"R"), spaces.substr(0, node->m_ScopeDepth).c_str(), NodeTypes[node->m_Type], node->m_ScopeDepth, node->m_Value.c_str());
-
 	for (auto &subnode : node->m_ASTNodes)
 		AssignScopeNode(_fp, scopeDepth+1, subnode);
 }
@@ -1473,8 +1518,24 @@ void DumpCode(FILE *_fp, SASTNode *node)
 
 void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 {
+	// Set current scope name
 	if (node->m_Type == EN_FuncDecl)
 		g_ASC.m_CurrentFunctionName = node->m_ASTNodes[0]->m_Value;
+
+	if (node->m_Type == EN_Identifier)
+	{
+		uint32_t namehash = HashString(node->m_Value.c_str());
+		uint32_t scopehash = HashString(g_ASC.m_CurrentFunctionName.c_str());
+		uint32_t emptyhash = HashString("");
+		SVariable *var = g_ASC.FindVariable(namehash, scopehash);
+		if (!var)
+		{
+			var = g_ASC.FindVariable(namehash, emptyhash);
+			if(!var)
+				var = g_ASC.FindVariableMergedScope(namehash);
+		}
+		g_ASC.m_CurrentTypeName = var ? var->m_TypeName : TN_DWORD;
+	}
 
 	for (auto &subnode : node->m_ASTNodes)
 		AssignRegistersAndGenerateCode(_fp, subnode);
@@ -1573,17 +1634,20 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			if (var)
 				node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + ", " + var->m_Scope + ":" + var->m_Name;
 			else
-				node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;//Opcodes[OP_LEA] + " " + tgt + ", " + node->m_Value;
+				node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
 			++g_ASC.m_InstructionCount;
 
 			std::string srcA = g_ASC.PopRegister();
 			std::string srcB = g_ASC.PopRegister();
 			std::string trg2 = g_ASC.PushRegister();
-			node->m_Instructions += std::string("\n") + Opcodes[OP_ADD] + " " + trg2 + ", " + srcA + ", " + srcB;
+
+			node->m_Instructions += std::string("\n") + Opcodes[OP_ADD] + " " + trg2 + ", " + srcA + ", " + srcB + (var->m_TypeName == TN_DWORD ? "*4" : (var->m_TypeName == TN_WORD ? "*2" : "*1"));
 			++g_ASC.m_InstructionCount;
+
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
-				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + " [" + trg2 + "], " + trg2;
+				std::string width = g_ASC.m_CurrentTypeName == TN_DWORD ? ".d" : (g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b");
+				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " [" + trg2 + "], " + trg2;
 				++g_ASC.m_InstructionCount;
 			}
 		}
@@ -1607,14 +1671,15 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
 				if (var)
-					node->m_Instructions = Opcodes[OP_LOAD] + " " + trg + ", [" + var->m_Scope + ":" + var->m_Name + "]";
+				{
+					std::string width = g_ASC.m_CurrentTypeName == TN_DWORD ? ".d" : (g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b");
+					node->m_Instructions = Opcodes[OP_LOAD] + width + " " + trg + ", [" + var->m_Scope + ":" + var->m_Name + "]";
+				}
 				else
 					node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
-					//node->m_Instructions = Opcodes[OP_LOAD] + " " + trg + ", [" + node->m_Value + "]";
 			}
 			else
 				node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + " " + node->m_Value;
-
 			++g_ASC.m_InstructionCount;
 		}
 		break;
@@ -1622,7 +1687,11 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_LOAD:
 		{
 			std::string trg = g_ASC.PushRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + node->m_Value;
+			int value = strtol(node->m_Value.c_str(), nullptr, 16);
+			if (value <=65535 && value >=-65535)
+				node->m_Instructions = Opcodes[node->m_Opcode] + ".w" + " " + trg + ", " + node->m_Value;
+			else
+				node->m_Instructions = Opcodes[node->m_Opcode] + ".d" + " " + trg + ", " + node->m_Value;
 			++g_ASC.m_InstructionCount;
 		}
 		break;
@@ -1632,7 +1701,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			// NOTE: target and source are swapped due to evaluation order
 			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
 			std::string srcA = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " [" + trg + "], " + srcA;
+			std::string width = g_ASC.m_CurrentTypeName == TN_DWORD ? ".d" : (g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b");
+			node->m_Instructions = Opcodes[node->m_Opcode] + width + " [" + trg + "], " + srcA;
 			++g_ASC.m_InstructionCount;
 		}
 		break;
@@ -1646,11 +1716,10 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 
 		default:
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
-			// ++g_ASC.m_InstructionCount; // Not considered an instruction, usually @label hits this one
 		break;
 	}
 
-	/*fprintf(_fp, "%s: %s (%s) %s\n",
+	/*fprintf(_fp, "// %s: %s (%s) %s\n",
 		node->m_Side==NO_SIDE?"N":(node->m_Side==LEFT_HAND_SIDE?"L":"R"),
 		NodeTypes[node->m_Type],
 		node->m_Value.c_str(),
@@ -1661,45 +1730,44 @@ void CompileGrimR(const char *_filename)
 {
 	FILE *fp = fopen(_filename, "w");
 
-	//fprintf(fp, "\n//-------------Scope Depth--------------\n\n");
-
+	// Set up scope depth
 	int scopeDepth = 0;
 	for (auto &node : g_ASC.m_ASTNodes)
 		AssignScopeNode(fp, scopeDepth, node);
 
-	//fprintf(fp, "\n//--Assign Registers and generate code--\n\n");
-
+	// Assign registers and generate code
 	for (auto &node : g_ASC.m_ASTNodes)
 		AssignRegistersAndGenerateCode(fp, node);
 
-	//fprintf(fp, "\n//----------------Code------------------\n\n");
+	// Dump asm code
 	fprintf(fp, "// Instruction count: %d\n", g_ASC.m_InstructionCount);
 	for (auto &node : g_ASC.m_ASTNodes)
 		DumpCode(fp, node);
 
+	// Dump symbol table
 	fprintf(fp, "\n//-------------Symbol Table-------------\n\n");
-	for (auto &func : g_ASC.m_Functions)
-		fprintf(fp, "// function '%s', hash: %.8X, refcount: %d\n", func->m_Name.c_str(), func->m_Hash, func->m_RefCount);
+	/*for (auto &func : g_ASC.m_Functions)
+		fprintf(fp, "// function '%s', hash: %.8X, refcount: %d\n", func->m_Name.c_str(), func->m_Hash, func->m_RefCount);*/
 
 	for (auto &var : g_ASC.m_Variables)
 	{
 		/*if (var->m_RefCount == 0)
 			continue;*/
 		fprintf(fp, "@label %s:%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
-		fprintf(fp, "// reference count %d\n", var->m_RefCount);
-		fprintf(fp, "// array length %d\n", var->m_Dimension);
+		fprintf(fp, "// ref:%d dim:%d typename:%s\n", var->m_RefCount, var->m_Dimension, TypeNames[var->m_TypeName]);
+		int itemsperrow = var->m_TypeName == TN_DWORD ? 4 : (var->m_TypeName == TN_WORD ? 8 : 16);
 		if (var->m_InitialValues.size())
 		{
-			fprintf(fp, "@dword ");
+			fprintf(fp, var->m_TypeName == TN_DWORD ? "@dword " : (var->m_TypeName == TN_WORD ? "@word " : "@byte "));
 			int cnt = 0;
 			for (auto &data : var->m_InitialValues)
 			{
 				fprintf(fp, "%s ", data.c_str());
 				cnt++;
-				if (cnt==4)
+				if (cnt==itemsperrow)
 				{
 					cnt = 0;
-					fprintf(fp, "\n@dword ");
+					fprintf(fp, var->m_TypeName == TN_DWORD ? "\n@dword " : (var->m_TypeName == TN_WORD ? "\n@word " : "\n@byte "));
 				}
 			}
 			fprintf(fp, "\n");
