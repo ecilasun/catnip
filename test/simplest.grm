@@ -21,7 +21,7 @@ def test(dword thing)
 
 def DrawRect(word posX, word posY, word width, word height)
 {
-    // GrimR: default behavior for all variables is 'static'
+    // GrimR: Current default behavior for all variables is 'static'
     word spanX, spanY;
 
     spanY = posY;
@@ -40,7 +40,6 @@ def DrawRect(word posX, word posY, word width, word height)
 
 def main()
 {
-    // TODO: check for mismatching input parameter type
     DrawRect(tree[2],0,512+3-cursorY,384);
 
     // GrimR: Snoop a function's local variable
