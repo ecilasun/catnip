@@ -18,7 +18,7 @@ pop DrawRect:width
 pop DrawRect:posY
 pop DrawRect:posX
 ld.w r0, [DrawRect:posY]
-lea r1 spanY
+lea r1, DrawRect:spanY
 st.w [r1], r0
 
 @label beginwhile2
@@ -29,7 +29,7 @@ add r1, r1, r2
 cmp.l r0, r1
 jmpz endwhile3
 ld.w r0, [DrawRect:posX]
-lea r1 spanX
+lea r1, DrawRect:spanX
 st.w [r1], r0
 
 @label beginwhile0
@@ -51,9 +51,9 @@ add r0, r0, r1
 lea r1, :sprite
 add r0, r1, r0*1
 ld.b [r0], r0
-lea r1 spanX
+lea r1, DrawRect:spanX
 ld.w r2, 0x140
-lea r3 spanY
+lea r3, DrawRect:spanY
 mul r2, r2, r3
 add r1, r1, r2
 lea r2, :VRAM
@@ -62,7 +62,7 @@ st.b [r1], r0
 ld.w r0, [DrawRect:spanX]
 ld.w r1, 0x1
 add r0, r0, r1
-lea r1 spanX
+lea r1, DrawRect:spanX
 st.w [r1], r0
 jmp beginwhile0
 
@@ -70,7 +70,7 @@ jmp beginwhile0
 ld.w r0, [DrawRect:spanY]
 ld.w r1, 0x1
 add r0, r0, r1
-lea r1 spanY
+lea r1, DrawRect:spanY
 st.w [r1], r0
 jmp beginwhile2
 

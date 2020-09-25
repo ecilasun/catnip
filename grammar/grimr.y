@@ -1677,7 +1677,14 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 					node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
 			}
 			else
-				node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + " " + node->m_Value;
+			{
+				if (var)
+				{
+					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
+				}
+				else
+					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + node->m_Value;
+			}
 			++g_ASC.m_InstructionCount;
 		}
 		break;
