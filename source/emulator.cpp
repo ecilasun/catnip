@@ -215,7 +215,8 @@ void execute(uint16_t instr)
 
 			switch (si)
 			{
-				case 0b00: // Unconditional branch
+				case 0b00: // Unconditional branch - jmp/branch
+				{
 					if (immed == 1)
 					{
 						// Read branch address from next WORD in memory (short jump, only 16 bits)
@@ -231,474 +232,511 @@ void execute(uint16_t instr)
 						sram_read_req = 1;
 						cpu_state = CPU_FETCH_INSTRUCTION;
 					}
+				}
 				break;
-				case 0b01: // When test register (TR) is true
+
+				case 0b01: // When test register (TR) is true - jmp/branch if
+				{
 					if (TR == 1)
+					{
+						if (immed == 1)
 						{
-							if (immed == 1)
-							{
-								// Read branch address from next WORD in memory (short jump, only 16 bits)
-								IP = IP + 2; // CALL WORD
-								cpu_state = CPU_SET_BRANCH_ADDRESSA;
-							}
-							else
-							{
-								IP = register_file[r1]; // CALL [R1]
-								sram_enable_byteaddress = 0;
-								sram_addr = register_file[r1];
-								sram_read_req = 1;
-								cpu_state = CPU_FETCH_INSTRUCTION;
-							}
+							// Read branch address from next WORD in memory (short jump, only 16 bits)
+							IP = IP + 2; // CALL WORD
+							cpu_state = CPU_SET_BRANCH_ADDRESSA;
 						}
 						else
 						{
-							if (immed == 1)
-							{
-								sram_addr = IP + 6;
-								IP = IP + 6; // Skip the next WORD in memory since it's not a command (short (16bit) branch address)
-							}
-							else
-							{
-								sram_addr = IP + 2;
-								IP = IP + 2; // Does not take the branch if previous call to TEST failed
-							}
+							IP = register_file[r1]; // CALL [R1]
 							sram_enable_byteaddress = 0;
+							sram_addr = register_file[r1];
 							sram_read_req = 1;
 							cpu_state = CPU_FETCH_INSTRUCTION;
 						}
-					break;
-					case 0b10:
-						// UNUSED YET - HALT
-						IP = 0x7FFFF;
-						sram_enable_byteaddress = 0;
-						sram_addr = 0x7FFFF;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
-					break;
-					case 0b11:
-						// UNUSED YET - HALT
-						IP = 0x7FFFF;
-						sram_enable_byteaddress = 0;
-						sram_addr = 0x7FFFF;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
-					break;
-				}
-			}
-			break;
-
-			case INST_MATH:
-			{
-				uint16_t op = (instr&0b0000000001110000)>>4; // [6:4]
-				//uint16_t subop = (instr&0b0000001110000000)>>7; // [9:7]
-				uint16_t r1 = (instr&0b0000111100000000)>>8; // [11:8]
-				uint16_t r2 = (instr&0b1111000000000000)>>12; // [15:12]
-				switch (op)
-				{
-					case 0: // Iadd
-						register_file[r1] = register_file[r1] + register_file[r2];
-					break;
-					case 1: // Isub
-						register_file[r1] = register_file[r1] - register_file[r2];
-					break;
-					case 2: // Imul
-						register_file[r1] = register_file[r1] * register_file[r2];
-					break;
-					case 3: // Idiv
-						register_file[r1] = register_file[r1] / register_file[r2];
-					break;
-					case 4: // Imod
-						register_file[r1] = register_file[r1] % register_file[r2];
-					break;
-					case 5: // Ineg
-						register_file[r1] = register_file[r1]^0x80000000; // Flip integer sign bit
-					break;
-					case 6: // Inc
-						register_file[r1] = register_file[r1] + 1;
-					break;
-					case 7: // Dec
-						register_file[r1] = register_file[r1] - 1;
-					break;
-				}
-				sram_addr = IP+2;
-				IP = IP + 2;
-				sram_enable_byteaddress = 0;
-				sram_read_req = 1;
-				cpu_state = CPU_FETCH_INSTRUCTION;
-			}
-			break;
-
-			case INST_MOV:
-			{
-				uint16_t op = (instr&0b0000000001110000)>>4; // [6:4]
-				uint16_t r1 = (instr&0b0000011110000000)>>7; // [10:7]
-				uint16_t r2 = (instr&0b0111100000000000)>>11; // [14:11]
-				switch (op)
-				{
-					case 0: // reg2mem
+					}
+					else
 					{
-						bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
-						if (is_vram_address) // VRAM write (address>=0x80000000)
+						if (immed == 1)
 						{
-							if ((register_file[r1]&0x0000FFFF) < 0xD000) // Only if within VRAM region
-							{
-								// NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
-								// other attributes such as border color, sprite tables and such
-								framebuffer_address = register_file[r1]&0x0000FFFF;
-								framebuffer_writeena = 1;
-								// TODO: Somehow need to implement a WORD mov to VRAM
-								framebuffer_data = uint8_t(register_file[r2]&0x00FF);
-								sram_addr = IP+2;
-								IP = IP + 2;
-								sram_enable_byteaddress = 0;
-								sram_read_req = 1;
-								cpu_state = CPU_FETCH_INSTRUCTION;
-							}
-							else // Otherwise noop
-							{
-								sram_addr = IP+2;
-								IP = IP + 2;
-								sram_enable_byteaddress = 0;
-								sram_read_req = 1;
-								cpu_state = CPU_FETCH_INSTRUCTION;
-							}
+							sram_addr = IP + 6;
+							IP = IP + 6; // Skip the next WORD in memory since it's not a command (short (16bit) branch address)
 						}
 						else
 						{
-							// SRAM
-							sram_enable_byteaddress = 0;
-							sram_addr = register_file[r1]; // SRAM write
-							sram_wdata = (uint16_t)(register_file[r2]&0x0000FFFF);
-							sram_write_req = 1;
-							IP = IP + 2;
-							cpu_state = CPU_WRITE_DATA;
+							sram_addr = IP + 2;
+							IP = IP + 2; // Does not take the branch if previous call to TEST failed
 						}
-					}
-					break;
-					case 1: // mem2reg
-						// NOTE: VRAM reads are not possible at the moment
-						sram_enable_byteaddress = 0;
-						sram_addr = register_file[r2];
-						target_register = r1;
-						sram_read_req = 1;
-						IP = IP + 2;
-						cpu_state = CPU_READ_DATA;
-					break;
-					case 2: // reg2reg
-						register_file[r1] = register_file[r2];
-						sram_addr = IP+2;
-						IP = IP + 2;
 						sram_enable_byteaddress = 0;
 						sram_read_req = 1;
 						cpu_state = CPU_FETCH_INSTRUCTION;
-					break;
-					case 3: // word2reg
-						target_register = r1;
-						sram_enable_byteaddress = 0;
-						sram_addr = IP + 2;
-						sram_read_req = 1;
-						IP = IP + 4; // Skip the WORD we read plus the instruction
-						cpu_state = CPU_READ_DATA;
-					break;
-					case 4: // dword2regs
-						target_register = r1;
-						sram_enable_byteaddress = 0;
-						sram_addr = IP + 2;
-						sram_read_req = 1;
-						IP = IP + 6; // Skip the WORDs we read plus the instruction
-						cpu_state = CPU_READ_DATAH;
-					break;
-					case 5: // reg2mem (byte)
-					{
-						bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
-						if (is_vram_address) // VRAM write (address>=0x80000000)
-						{
-							if ((register_file[r1]&0x0000FFFF) < 0xD000) // Only if within VRAM region
-							{
-								// NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
-								// other attributes such as border color, sprite tables and such
-								framebuffer_address = register_file[r1]&0x0000FFFF;
-								framebuffer_writeena = 1;
-								// TODO: Somehow need to implement a WORD mov to VRAM
-								framebuffer_data = uint8_t(register_file[r2]&0x00FF);
-								sram_addr = IP+2;
-								IP = IP + 2;
-								sram_enable_byteaddress = 0;
-								sram_read_req = 1;
-								cpu_state = CPU_FETCH_INSTRUCTION;
-							}
-							else // Otherwise noop
-							{
-								sram_addr = IP+2;
-								IP = IP + 2;
-								sram_enable_byteaddress = 0;
-								sram_read_req = 1;
-								cpu_state = CPU_FETCH_INSTRUCTION;
-							}
-						}
-						else
-						{
-							// SRAM
-							sram_enable_byteaddress = 1;
-							sram_addr = register_file[r1]; // SRAM write
-							sram_wdata = (uint16_t)(register_file[r2]&0x000000FF);
-							sram_write_req = 1;
-							IP = IP + 2;
-							cpu_state = CPU_WRITE_DATA;
-						}
 					}
-					break;
-					case 6: // mem2reg (byte)
-						// NOTE: VRAM reads are not possible at the moment
-						sram_enable_byteaddress = 1;
-						sram_addr = register_file[r2];
-						target_register = r1;
-						sram_read_req = 1;
-						IP = IP + 2;
-						cpu_state = CPU_READ_DATA_BYTE;
-					break;
-					case 7: // byte2reg
-						target_register = r1;
-						sram_enable_byteaddress = 1;
-						sram_addr = IP + 2;
-						sram_read_req = 1;
-						IP = IP + 4; // Skip the WORD we read plus the instruction
-						cpu_state = CPU_READ_DATA_BYTE;
-					break;
 				}
-			}
-			break;
+				break;
 
-			case INST_RET:
-			{
-				uint16_t op = (instr&0b0000000000010000)>>4; // [4]
-				if (op == 1) // HALT
+				case 0b10:
 				{
+					// UNUSED YET - HALT
 					IP = 0x7FFFF;
 					sram_enable_byteaddress = 0;
 					sram_addr = 0x7FFFF;
 					sram_read_req = 1;
 					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
-				else
-				{
-					// Return address is in call stack - NOOP for now
-					IP = CALLSTACK[CALLSP-1];
-					sram_enable_byteaddress = 0;
-					sram_addr = CALLSTACK[CALLSP-1];
-					sram_read_req = 1;
-					CALLSP = CALLSP-1;
-					cpu_state = CPU_FETCH_INSTRUCTION;
-				}
-			}
-			break;
+				break;
 
-			case INST_STACK:
-			{
-				uint16_t op = (instr&0b0000000000010000)>>4; // [4]
-				uint16_t r1 = (instr&0b0000000111100000)>>5; // [8:5]
-				switch (op)
+				case 0b11: // When test register (TR) is false - jmp/branch ifnot
 				{
-					case 0:
+					if (TR == 0)
 					{
-						// Push register or IP to stack
+						if (immed == 1)
+						{
+							// Read branch address from next WORD in memory (short jump, only 16 bits)
+							IP = IP + 2; // CALL WORD
+							cpu_state = CPU_SET_BRANCH_ADDRESSA;
+						}
+						else
+						{
+							IP = register_file[r1]; // CALL [R1]
+							sram_enable_byteaddress = 0;
+							sram_addr = register_file[r1];
+							sram_read_req = 1;
+							cpu_state = CPU_FETCH_INSTRUCTION;
+						}
+					}
+					else
+					{
+						if (immed == 1)
+						{
+							sram_addr = IP + 6;
+							IP = IP + 6; // Skip the next WORD in memory since it's not a command (short (16bit) branch address)
+						}
+						else
+						{
+							sram_addr = IP + 2;
+							IP = IP + 2; // Does not take the branch if previous call to TEST failed
+						}
 						sram_enable_byteaddress = 0;
-						sram_addr = SP;
-						SP = SP - 4;
-						target_register = r1;
-						sram_wdata = (register_file[r1]&0xFFFF0000)>>16;
+						sram_read_req = 1;
+						cpu_state = CPU_FETCH_INSTRUCTION;
+					}
+				}
+				break;
+			}
+		}
+		break;
+
+		case INST_MATH:
+		{
+			uint16_t op = (instr&0b0000000001110000)>>4; // [6:4]
+			//uint16_t subop = (instr&0b0000001110000000)>>7; // [9:7]
+			uint16_t r1 = (instr&0b0000111100000000)>>8; // [11:8]
+			uint16_t r2 = (instr&0b1111000000000000)>>12; // [15:12]
+			switch (op)
+			{
+				case 0: // Iadd
+					register_file[r1] = register_file[r1] + register_file[r2];
+				break;
+				case 1: // Isub
+					register_file[r1] = register_file[r1] - register_file[r2];
+				break;
+				case 2: // Imul
+					register_file[r1] = register_file[r1] * register_file[r2];
+				break;
+				case 3: // Idiv
+					register_file[r1] = register_file[r1] / register_file[r2];
+				break;
+				case 4: // Imod
+					register_file[r1] = register_file[r1] % register_file[r2];
+				break;
+				case 5: // Ineg
+					register_file[r1] = register_file[r1]^0x80000000; // Flip integer sign bit
+				break;
+				case 6: // Inc
+					register_file[r1] = register_file[r1] + 1;
+				break;
+				case 7: // Dec
+					register_file[r1] = register_file[r1] - 1;
+				break;
+			}
+			sram_addr = IP+2;
+			IP = IP + 2;
+			sram_enable_byteaddress = 0;
+			sram_read_req = 1;
+			cpu_state = CPU_FETCH_INSTRUCTION;
+		}
+		break;
+
+		case INST_MOV:
+		{
+			uint16_t op = (instr&0b0000000001110000)>>4; // [6:4]
+			uint16_t r1 = (instr&0b0000011110000000)>>7; // [10:7]
+			uint16_t r2 = (instr&0b0111100000000000)>>11; // [14:11]
+			switch (op)
+			{
+				case 0: // reg2mem
+				{
+					bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
+					if (is_vram_address) // VRAM write (address>=0x80000000)
+					{
+						if ((register_file[r1]&0x0000FFFF) < 0xD000) // Only if within VRAM region
+						{
+							// NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
+							// other attributes such as border color, sprite tables and such
+							framebuffer_address = register_file[r1]&0x0000FFFF;
+							framebuffer_writeena = 1;
+							// TODO: Somehow need to implement a WORD mov to VRAM
+							framebuffer_data = uint8_t(register_file[r2]&0x00FF);
+							sram_addr = IP+2;
+							IP = IP + 2;
+							sram_enable_byteaddress = 0;
+							sram_read_req = 1;
+							cpu_state = CPU_FETCH_INSTRUCTION;
+						}
+						else // Otherwise noop
+						{
+							sram_addr = IP+2;
+							IP = IP + 2;
+							sram_enable_byteaddress = 0;
+							sram_read_req = 1;
+							cpu_state = CPU_FETCH_INSTRUCTION;
+						}
+					}
+					else
+					{
+						// SRAM
+						sram_enable_byteaddress = 0;
+						sram_addr = register_file[r1]; // SRAM write
+						sram_wdata = (uint16_t)(register_file[r2]&0x0000FFFF);
 						sram_write_req = 1;
 						IP = IP + 2;
-						cpu_state = CPU_WRITE_DATAH;
+						cpu_state = CPU_WRITE_DATA;
 					}
-					break;
-					case 1:
-					{
-						// Pop from stack to register
-						sram_enable_byteaddress = 0;
-						sram_addr = SP + 4;
-						SP = SP + 4;
-						target_register = r1;
-						sram_read_req = 1;
-						IP = IP + 2;
-						cpu_state = CPU_READ_DATAH;
-					}
-					break;
 				}
-			}
-			break;
-
-			case INST_TEST:
-			{
-				// [ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL] & FLAG_MASK
-				uint16_t flg = (flags_register&0b0000000000111111); // [5:0]
-				uint16_t msk = (instr&0b0000001111110000)>>4; // [9:4]
-				TR = flg&msk ? 1:0; // At least one bit out of the masked bits passed test against mask or no bits passed
-				sram_addr = IP+2;
-				IP = IP + 2;
-				sram_enable_byteaddress = 0;
-				sram_read_req = 1;
-				cpu_state = CPU_FETCH_INSTRUCTION;
-			}
-			break;
-
-			case INST_CMP:
-			{
-				uint16_t r1 = (instr&0b0000000011110000)>>4; // [7:4]
-				uint16_t r2 = (instr&0b0000111100000000)>>8; // [11:8]
-				flags_register = 0;
-				flags_register |= (register_file[r1] == register_file[r2]) ? 1 : 0; // EQUAL
-				flags_register |= (register_file[r1] > register_file[r2]) ? 2 : 0; // GREATER
-				flags_register |= (register_file[r1] < register_file[r2]) ? 4 : 0; // LESS
-				flags_register |= (register_file[r1] != 0) ? 8 : 0; // NOTZERO
-				flags_register |= (register_file[r1] != register_file[r2]) ? 16 : 0; // NOTEQUAL
-				flags_register |= (register_file[r1] == 0) ? 32 : 0; // ZERO
-				sram_addr = IP+2;
-				IP = IP + 2;
-				sram_enable_byteaddress = 0;
-				sram_read_req = 1;
-				cpu_state = CPU_FETCH_INSTRUCTION;
-			}
-			break;
-
-			case INST_IO:
-			{
-				uint16_t sub = (instr&0b0000000001110000)>>4; // [6:4]
-				uint16_t r1  = (instr&0b0000011110000000)>>7; // [10:7]
-				switch(sub)
+				break;
+				case 1: // mem2reg
+					// NOTE: VRAM reads are not possible at the moment
+					sram_enable_byteaddress = 0;
+					sram_addr = register_file[r2];
+					target_register = r1;
+					sram_read_req = 1;
+					IP = IP + 2;
+					cpu_state = CPU_READ_DATA;
+				break;
+				case 2: // reg2reg
+					register_file[r1] = register_file[r2];
+					sram_addr = IP+2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				break;
+				case 3: // word2reg
+					target_register = r1;
+					sram_enable_byteaddress = 0;
+					sram_addr = IP + 2;
+					sram_read_req = 1;
+					IP = IP + 4; // Skip the WORD we read plus the instruction
+					cpu_state = CPU_READ_DATA;
+				break;
+				case 4: // dword2regs
+					target_register = r1;
+					sram_enable_byteaddress = 0;
+					sram_addr = IP + 2;
+					sram_read_req = 1;
+					IP = IP + 6; // Skip the WORDs we read plus the instruction
+					cpu_state = CPU_READ_DATAH;
+				break;
+				case 5: // reg2mem (byte)
 				{
-					case 0b000: // VSYNC
+					bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
+					if (is_vram_address) // VRAM write (address>=0x80000000)
 					{
-						IP = IP + 2;
-						cpu_state = CPU_WAIT_VSYNC;
+						if ((register_file[r1]&0x0000FFFF) < 0xD000) // Only if within VRAM region
+						{
+							// NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
+							// other attributes such as border color, sprite tables and such
+							framebuffer_address = register_file[r1]&0x0000FFFF;
+							framebuffer_writeena = 1;
+							// TODO: Somehow need to implement a WORD mov to VRAM
+							framebuffer_data = uint8_t(register_file[r2]&0x00FF);
+							sram_addr = IP+2;
+							IP = IP + 2;
+							sram_enable_byteaddress = 0;
+							sram_read_req = 1;
+							cpu_state = CPU_FETCH_INSTRUCTION;
+						}
+						else // Otherwise noop
+						{
+							sram_addr = IP+2;
+							IP = IP + 2;
+							sram_enable_byteaddress = 0;
+							sram_read_req = 1;
+							cpu_state = CPU_FETCH_INSTRUCTION;
+						}
 					}
-					break;
-					case 0b001: // IN
+					else
 					{
-						// TODO: Read next word (PORT)
-						// TODO: Input from given port to register_file[instruction[9:7]]
-						// TODO: Isn't this a memory mapped device MOV?
-						sram_addr = IP+2;
+						// SRAM
+						sram_enable_byteaddress = 1;
+						sram_addr = register_file[r1]; // SRAM write
+						sram_wdata = (uint16_t)(register_file[r2]&0x000000FF);
+						sram_write_req = 1;
 						IP = IP + 2;
-						sram_enable_byteaddress = 0;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
+						cpu_state = CPU_WRITE_DATA;
 					}
-					break;
-					case 0b010: // OUT
-					{
-						// TODO: Read next word (PORT)
-						// TODO: Output register_file[instr[9:7]] to given port
-						// TODO: Isn't this a memory mapped device MOV?
-						sram_addr = IP+2;
-						IP = IP + 2;
-						sram_enable_byteaddress = 0;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
-					}
-					break;
-					case 0b011: // FSEL
-						framebuffer_select = register_file[r1]&0x0001;
-						sram_addr = IP+2;
-						IP = IP + 2;
-						sram_enable_byteaddress = 0;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
-					break;
-					case 0b100: // CLF
-						cpu_lane_mask = 0xFFFF;
-						framebuffer_address = 0x0000;
-						framebuffer_data = register_file[r1]&0x00FF;
-						IP = IP + 2;
-						cpu_state = CPU_CLEARVRAM;
-					break;
-					default: // Reserved
-						sram_addr = IP+2;
-						IP = IP + 2;
-						sram_enable_byteaddress = 0;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
-					break;
-				};
-			}
-			break;
-
-			case INST_RELMOV:
-			{
-				uint16_t op = (instr&0b0000000001110000)>>4; // [6:4]
-				//uint16_t r1 = (instr&0b0000011110000000)>>7; // [10:7]
-				//uint16_t r2 = (instr&0b0111100000000000)>>11; // [14:11]
-				switch (op)
-				{
-					case 0: // reserved
-						sram_addr = IP+2;
-						IP = IP + 2;
-						sram_enable_byteaddress = 0;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
-					break;
-					case 1: // reserved
-						sram_addr = IP+2;
-						IP = IP + 2;
-						sram_enable_byteaddress = 0;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
-					break;
-					case 2: // reserved
-						sram_addr = IP+2;
-						IP = IP + 2;
-						sram_enable_byteaddress = 0;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
-					break;
-					case 3: // reserved
-						sram_addr = IP+2;
-						IP = IP + 2;
-						sram_enable_byteaddress = 0;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
-					break;
-					case 4: // unused
-						sram_addr = IP+2;
-						IP = IP + 2;
-						sram_enable_byteaddress = 0;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
-					break;
-					case 5: // unused
-						sram_addr = IP+2;
-						IP = IP + 2;
-						sram_enable_byteaddress = 0;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
-					break;
-					case 6: // unused
-						sram_addr = IP+2;
-						IP = IP + 2;
-						sram_enable_byteaddress = 0;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
-					break;
-					case 7: // unused
-						sram_addr = IP+2;
-						IP = IP + 2;
-						sram_enable_byteaddress = 0;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
-					break;
 				}
+				break;
+				case 6: // mem2reg (byte)
+					// NOTE: VRAM reads are not possible at the moment
+					sram_enable_byteaddress = 1;
+					sram_addr = register_file[r2];
+					target_register = r1;
+					sram_read_req = 1;
+					IP = IP + 2;
+					cpu_state = CPU_READ_DATA_BYTE;
+				break;
+				case 7: // byte2reg
+					target_register = r1;
+					sram_enable_byteaddress = 1;
+					sram_addr = IP + 2;
+					sram_read_req = 1;
+					IP = IP + 4; // Skip the WORD we read plus the instruction
+					cpu_state = CPU_READ_DATA_BYTE;
+				break;
 			}
-			break;
+		}
+		break;
 
-			default:
+		case INST_RET:
+		{
+			uint16_t op = (instr&0b0000000000010000)>>4; // [4]
+			if (op == 1) // HALT
 			{
-				sram_addr = IP+2;
-				IP = IP + 2; // Unknown instructions act as NOOP during development
+				IP = 0x7FFFF;
 				sram_enable_byteaddress = 0;
+				sram_addr = 0x7FFFF;
 				sram_read_req = 1;
 				cpu_state = CPU_FETCH_INSTRUCTION;
 			}
-			break;
+			else
+			{
+				// Return address is in call stack - NOOP for now
+				IP = CALLSTACK[CALLSP-1];
+				sram_enable_byteaddress = 0;
+				sram_addr = CALLSTACK[CALLSP-1];
+				sram_read_req = 1;
+				CALLSP = CALLSP-1;
+				cpu_state = CPU_FETCH_INSTRUCTION;
+			}
+		}
+		break;
+
+		case INST_STACK:
+		{
+			uint16_t op = (instr&0b0000000000010000)>>4; // [4]
+			uint16_t r1 = (instr&0b0000000111100000)>>5; // [8:5]
+			switch (op)
+			{
+				case 0:
+				{
+					// Push register or IP to stack
+					sram_enable_byteaddress = 0;
+					sram_addr = SP;
+					SP = SP - 4;
+					target_register = r1;
+					sram_wdata = (register_file[r1]&0xFFFF0000)>>16;
+					sram_write_req = 1;
+					IP = IP + 2;
+					cpu_state = CPU_WRITE_DATAH;
+				}
+				break;
+				case 1:
+				{
+					// Pop from stack to register
+					sram_enable_byteaddress = 0;
+					sram_addr = SP + 4;
+					SP = SP + 4;
+					target_register = r1;
+					sram_read_req = 1;
+					IP = IP + 2;
+					cpu_state = CPU_READ_DATAH;
+				}
+				break;
+			}
+		}
+		break;
+
+		case INST_TEST:
+		{
+			// [ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL] & FLAG_MASK
+			uint16_t flg = (flags_register&0b0000000000111111); // [5:0]
+			uint16_t msk = (instr&0b0000001111110000)>>4; // [9:4]
+			TR = flg&msk ? 1:0; // At least one bit out of the masked bits passed test against mask or no bits passed
+			sram_addr = IP+2;
+			IP = IP + 2;
+			sram_enable_byteaddress = 0;
+			sram_read_req = 1;
+			cpu_state = CPU_FETCH_INSTRUCTION;
+		}
+		break;
+
+		case INST_CMP:
+		{
+			uint16_t r1 = (instr&0b0000000011110000)>>4; // [7:4]
+			uint16_t r2 = (instr&0b0000111100000000)>>8; // [11:8]
+			flags_register = 0;
+			flags_register |= (register_file[r1] == register_file[r2]) ? 1 : 0; // EQUAL
+			flags_register |= (register_file[r1] > register_file[r2]) ? 2 : 0; // GREATER
+			flags_register |= (register_file[r1] < register_file[r2]) ? 4 : 0; // LESS
+			flags_register |= (register_file[r1] != 0) ? 8 : 0; // NOTZERO
+			flags_register |= (register_file[r1] != register_file[r2]) ? 16 : 0; // NOTEQUAL
+			flags_register |= (register_file[r1] == 0) ? 32 : 0; // ZERO
+			sram_addr = IP+2;
+			IP = IP + 2;
+			sram_enable_byteaddress = 0;
+			sram_read_req = 1;
+			cpu_state = CPU_FETCH_INSTRUCTION;
+		}
+		break;
+
+		case INST_IO:
+		{
+			uint16_t sub = (instr&0b0000000001110000)>>4; // [6:4]
+			uint16_t r1  = (instr&0b0000011110000000)>>7; // [10:7]
+			switch(sub)
+			{
+				case 0b000: // VSYNC
+				{
+					IP = IP + 2;
+					cpu_state = CPU_WAIT_VSYNC;
+				}
+				break;
+				case 0b001: // IN
+				{
+					// TODO: Read next word (PORT)
+					// TODO: Input from given port to register_file[instruction[9:7]]
+					// TODO: Isn't this a memory mapped device MOV?
+					sram_addr = IP+2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				}
+				break;
+				case 0b010: // OUT
+				{
+					// TODO: Read next word (PORT)
+					// TODO: Output register_file[instr[9:7]] to given port
+					// TODO: Isn't this a memory mapped device MOV?
+					sram_addr = IP+2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				}
+				break;
+				case 0b011: // FSEL
+					framebuffer_select = register_file[r1]&0x0001;
+					sram_addr = IP+2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				break;
+				case 0b100: // CLF
+					cpu_lane_mask = 0xFFFF;
+					framebuffer_address = 0x0000;
+					framebuffer_data = register_file[r1]&0x00FF;
+					IP = IP + 2;
+					cpu_state = CPU_CLEARVRAM;
+				break;
+				default: // Reserved
+					sram_addr = IP+2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				break;
+			};
+		}
+		break;
+
+		case INST_RELMOV:
+		{
+			uint16_t op = (instr&0b0000000001110000)>>4; // [6:4]
+			//uint16_t r1 = (instr&0b0000011110000000)>>7; // [10:7]
+			//uint16_t r2 = (instr&0b0111100000000000)>>11; // [14:11]
+			switch (op)
+			{
+				case 0: // reserved
+					sram_addr = IP+2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				break;
+				case 1: // reserved
+					sram_addr = IP+2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				break;
+				case 2: // reserved
+					sram_addr = IP+2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				break;
+				case 3: // reserved
+					sram_addr = IP+2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				break;
+				case 4: // unused
+					sram_addr = IP+2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				break;
+				case 5: // unused
+					sram_addr = IP+2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				break;
+				case 6: // unused
+					sram_addr = IP+2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				break;
+				case 7: // unused
+					sram_addr = IP+2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				break;
+			}
+		}
+		break;
+
+		default:
+		{
+			sram_addr = IP+2;
+			IP = IP + 2; // Unknown instructions act as NOOP during development
+			sram_enable_byteaddress = 0;
+			sram_read_req = 1;
+			cpu_state = CPU_FETCH_INSTRUCTION;
+		}
+		break;
 	}
 }
 

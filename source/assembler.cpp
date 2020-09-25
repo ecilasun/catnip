@@ -284,6 +284,7 @@ public:
 	{
 		// Long jump or branch
 		bool is_conditional = false;
+		bool is_reverse_conditional = false;
 		bool is_branch = false;
 		if (_parser_table[_current_parser_offset+1].m_Value[0] == 'r')
 		{
@@ -294,6 +295,12 @@ public:
 				is_conditional = true;
 				//printf("Long jump to register pair if TR==1: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
 			}
+			if (strcmp(_parser_table[_current_parser_offset].m_Value, "jmpifnot")==0)
+			{
+				is_conditional = true;
+				is_reverse_conditional = true;
+				//printf("Long jump to register pair if TR==1: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
+			}
 			if (strcmp(_parser_table[_current_parser_offset].m_Value, "branch")==0)
 				is_branch = true;//printf("Long branch to register pair: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
 			if (strcmp(_parser_table[_current_parser_offset].m_Value, "branchif")==0)
@@ -302,10 +309,17 @@ public:
 				is_conditional = true;
 				//printf("Long branch to register pair if TR==1: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
 			}
+			if (strcmp(_parser_table[_current_parser_offset].m_Value, "branchifnot")==0)
+			{
+				is_branch = true;
+				is_conditional = true;
+				is_reverse_conditional = true;
+				//printf("Long branch to register pair if TR==1: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
+			}
 
 			int r1;
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
-			unsigned short code = m_Opcode | (r1<<6) | (is_conditional ? 0x0010 : 0x0000) | (is_branch ? 0x4000 : 0x0000);
+			unsigned short code = m_Opcode | (r1<<6) | (is_conditional ? 0x0010 : 0x0000) | (is_reverse_conditional ? 0x0020 : 0x0000) | (is_branch ? 0x4000 : 0x0000);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;
 			return 2;
@@ -1048,6 +1062,8 @@ const SAssemblerPair keywords[] =
 	{{"jmp"}, &s_branchop},
 	{{"branchif"}, &s_branchop},
 	{{"jmpif"}, &s_branchop},
+	{{"branchifnot"}, &s_branchop},
+	{{"jmpifnot"}, &s_branchop},
 
 	{{"iadd"}, &s_mathop},
 	{{"isub"}, &s_mathop},

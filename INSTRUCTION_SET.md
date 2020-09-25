@@ -251,7 +251,9 @@ Branch instruction is a bit special since it needs to read two extra WORDs from 
 | |      |    |  BRANCH
 | |      rA   |
 | |      9:6  00:UNCONDITIONAL
-| |           01:CONDITIONAL based on TEST
+| |           01:CONDITIONAL based on TEST set
+| |           10:RESERVED FOR FUTURE USE
+| |           11:INVCONDITIONAL based on TEST not set
 | 0:JMP
 | 1:CALL
 |
@@ -273,7 +275,11 @@ Sets the IP to the 2 words following this instruction or the contents of registe
 
 ### JMPIF {address} / JMPIF rA
 
-Sets the IP to the 2 words following this instruction or the contents of registers rA if the TR register is set.
+Sets the IP to the 2 words following this instruction or the contents of registers rA if the TR register IS SET.
+
+### JMPIFNOT {address} / JMPIFNOT rA
+
+Sets the IP to the 2 words following this instruction or the contents of registers rA if the TR register IS NOT SET.
 
 ---
 ## Integer Math Instruction
