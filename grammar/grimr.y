@@ -275,13 +275,11 @@ struct SString
 
 enum ETypeName
 {
-	TN_DWORD,
 	TN_WORD,
 	TN_BYTE,
 };
 
 const char* TypeNames[]={
-	"dword",
 	"word",
 	"byte",
 };
@@ -508,7 +506,7 @@ SASTScanContext g_ASC;
 %token <string> STRING_LITERAL
 
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
-%token DWORD WORD BYTE FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
+%token WORD BYTE FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
 
 %type <astnode> simple_identifier
 %type <astnode> simple_constant
@@ -1149,8 +1147,7 @@ variable_declaration_item
 	;
 
 type_name
-	: DWORD																						{ g_ASC.m_CurrentTypeName = TN_DWORD; }
-	| WORD																						{ g_ASC.m_CurrentTypeName = TN_WORD;  }
+	: WORD																						{ g_ASC.m_CurrentTypeName = TN_WORD;  }
 	| BYTE																						{ g_ASC.m_CurrentTypeName = TN_BYTE;  }
 	;
 
@@ -1536,7 +1533,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			if(!var)
 				var = g_ASC.FindVariableMergedScope(namehash);
 		}
-		g_ASC.m_CurrentTypeName = var ? var->m_TypeName : TN_DWORD;
+		g_ASC.m_CurrentTypeName = var ? var->m_TypeName : TN_WORD;
 	}
 
 	for (auto &subnode : node->m_ASTNodes)
@@ -1563,7 +1560,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				std::string trg = g_ASC.PushRegister();
 				node->m_Instructions = Opcodes[OP_LEA] + " " + val + ", " + var->m_Scope + ":" + var->m_Name;
 				node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode] + " " + trg;
-				std::string width = var->m_TypeName == TN_DWORD ? ".d" : (var->m_TypeName == TN_WORD ? ".w" : ".b");
+				std::string width = var->m_TypeName == TN_WORD ? ".w" : ".b";
 				node->m_Instructions += std::string("\n") + Opcodes[OP_STORE] + width + " " + val + ", " + trg;
 				g_ASC.PopRegister(); // Forget trg and val
 				g_ASC.PopRegister();
@@ -1657,7 +1654,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 
 			if (var->m_TypeName != TN_BYTE)
 			{
-				node->m_Instructions += std::string("\n") + Opcodes[OP_MUL] + " " + srcA + ", " + (var->m_TypeName == TN_DWORD ? "4" : (var->m_TypeName == TN_WORD ? "2" : "1"));
+				// Need to multiply address by two for WORD
+				node->m_Instructions += std::string("\n") + Opcodes[OP_MUL] + " " + srcA + ", 2";
 				g_ASC.m_InstructionCount+=1;
 			}
 			node->m_Instructions += std::string("\n") + Opcodes[OP_ADD] + " " + srcA + ", " + srcB;
@@ -1666,7 +1664,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
-				std::string width = g_ASC.m_CurrentTypeName == TN_DWORD ? ".d" : (g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b");
+				std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b";
 				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + srcA + ", [" + srcA + "]";
 				g_ASC.m_InstructionCount+=1;
 			}
@@ -1692,7 +1690,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			{
 				if (var)
 				{
-					std::string width = g_ASC.m_CurrentTypeName == TN_DWORD ? ".d" : (g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b");
+					std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b";
 					node->m_Instructions = Opcodes[OP_LOAD] + width + " " + trg + ", [" + var->m_Scope + ":" + var->m_Name + "]";
 					g_ASC.m_InstructionCount+=1;
 				}
@@ -1729,7 +1727,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			// NOTE: target and source are swapped due to evaluation order
 			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
 			std::string srcA = g_ASC.PopRegister();
-			std::string width = g_ASC.m_CurrentTypeName == TN_DWORD ? ".d" : (g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b");
+			std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b";
 			node->m_Instructions = Opcodes[node->m_Opcode] + width + " " + trg + ", " + srcA;
 			g_ASC.m_InstructionCount+=1;
 		}
@@ -1797,22 +1795,40 @@ void CompileGrimR(const char *_filename)
 			continue;*/
 		fprintf(fp, "@LABEL %s:%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
 		fprintf(fp, "# ref:%d dim:%d typename:%s\n", var->m_RefCount, var->m_Dimension, TypeNames[var->m_TypeName]);
-		int itemsperrow = var->m_TypeName == TN_DWORD ? 4 : (var->m_TypeName == TN_WORD ? 8 : 16);
-		if (var->m_InitialValues.size())
+		//if (var->m_InitialValues.size())
 		{
-			fprintf(fp, var->m_TypeName == TN_DWORD ? "@DD " : (var->m_TypeName == TN_WORD ? "@DW " : "@DB "));
 			int cnt = 0;
+			uint32_t *buf = new uint32_t[var->m_InitialValues.size()+4];
 			for (auto &data : var->m_InitialValues)
 			{
-				fprintf(fp, "%s ", data.c_str());
-				cnt++;
-				if (cnt==itemsperrow)
-				{
-					cnt = 0;
-					fprintf(fp, var->m_TypeName == TN_DWORD ? "\n@DD " : (var->m_TypeName == TN_WORD ? "\n@DW " : "\n@DB "));
-				}
+				uint32_t V = strtol(data.c_str(), nullptr, 16);
+				buf[cnt++] = V;
 			}
-			fprintf(fp, "\n");
+			if (var->m_InitialValues.size()==0)
+				buf[cnt++] = 0xCDCDCDCD;
+			if (var->m_TypeName == TN_WORD)
+			{
+				int end = cnt;
+				end = end==0 ? 1:end;
+				fprintf(fp, "@DW ");
+				for (int i=0;i<end;++i)
+					fprintf(fp, "0x%.4X ", buf[i]);
+				fprintf(fp, "\n");
+			}
+			if (var->m_TypeName == TN_BYTE)
+			{
+				fprintf(fp, "@DW ");
+				int end = cnt/2;
+				end = end==0 ? 1:end;
+				for (int i=0;i<end;++i)
+				{
+					if (i%8 == 0 && i!=0)
+						fprintf(fp, "\n@DW ");
+					fprintf(fp, "0x%.4X ", buf[i*2+0] | ((buf[i*2+1])<<8));
+				}
+				fprintf(fp, "\n");
+			}
+			delete [] buf;
 		}
 	}
 	fclose(fp);

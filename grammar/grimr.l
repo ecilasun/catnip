@@ -33,7 +33,6 @@ void stripquotes(char *string);
 "/*"						{ comment(); }
 "//"[^\n]*					{ /* consume //-comment */ }
 
-"dword"						{ count();  return(DWORD); }
 "word"						{ count();  return(WORD); }
 "byte"						{ count();  return(BYTE); }
 
