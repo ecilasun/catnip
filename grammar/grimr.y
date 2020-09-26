@@ -252,9 +252,9 @@ const std::string Opcodes[]={
 	"cmp",
 	"cmp",
 	"test",
-	"bitand",
-	"bitxor",
-	"bitor",
+	"and",
+	"xor",
+	"or",
 	"logicand",
 	"logicor",
 };
@@ -1628,6 +1628,18 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		}
 		break;
 
+		case OP_BITAND:
+		case OP_BITXOR:
+		case OP_BITOR:
+		{
+			std::string srcB = g_ASC.PopRegister();
+			std::string srcA = g_ASC.PopRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcB;
+			g_ASC.PushRegister(); // Result goes back into srcA
+			g_ASC.m_InstructionCount+=1;
+		}
+		break;
+
 		case OP_ARRAYINDEX:
 		{
 			std::string tgt = g_ASC.PushRegister();
@@ -1644,7 +1656,16 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			}
 
 			if (var)
+			{
+				//printf("arrayindex identifier type: %s[%d]\n", NodeTypes[node->m_Type], var->m_Dimension);
 				node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + ", " + var->m_Scope + ":" + var->m_Name;
+				// This is not a 'real' array, fetch data at address to treat as array base address
+				if (var->m_Dimension <= 1)
+				{
+					// Assuming a word load
+					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + ".w " + tgt + ", [" + tgt + "]";
+				}
+			}
 			else
 				node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
 			g_ASC.m_InstructionCount+=1;
@@ -1824,7 +1845,7 @@ void CompileGrimR(const char *_filename)
 				{
 					if (i%8 == 0 && i!=0)
 						fprintf(fp, "\n@DW ");
-					fprintf(fp, "0x%.4X ", buf[i*2+0] | ((buf[i*2+1])<<8));
+					fprintf(fp, "0x%.4X ", (buf[i*2+0]<<8) | buf[i*2+1]);
 				}
 				fprintf(fp, "\n");
 			}

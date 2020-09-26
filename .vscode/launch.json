@@ -22,7 +22,7 @@
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/release/catnip.exe",
-            "args": ["${workspaceFolder}/test/simplest.grm", "${workspaceFolder}/test/simplest.asm"],
+            "args": ["${workspaceFolder}/test/simplest.rom"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build/release/",
             "symbolSearchPath": "${workspaceFolder}/build/release/",

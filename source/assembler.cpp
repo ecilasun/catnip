@@ -333,12 +333,25 @@ public:
 				is_conditional = true;
 				;//printf("Short jump to address if TR==1: %s\n", _parser_table[_current_parser_offset+1].m_Value);
 			}
+			if (strcmp(_parser_table[_current_parser_offset].m_Value, "jmpif")==0)
+			{
+				is_conditional = true;
+				is_reverse_conditional = true;
+				;//printf("Short jump to address if TR==1: %s\n", _parser_table[_current_parser_offset+1].m_Value);
+			}
 			if (strcmp(_parser_table[_current_parser_offset].m_Value, "branch")==0)
 				is_branch = true;//printf("Long branch to register pair: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
 			if (strcmp(_parser_table[_current_parser_offset].m_Value, "branchif")==0)
 			{
 				is_branch = true;
 				is_conditional = true;
+				//printf("Long branch to register pair if TR==1: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
+			}
+			if (strcmp(_parser_table[_current_parser_offset].m_Value, "branchifnot")==0)
+			{
+				is_branch = true;
+				is_conditional = true;
+				is_reverse_conditional = true;
 				//printf("Long branch to register pair if TR==1: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
 			}
 
