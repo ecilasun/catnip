@@ -26,11 +26,11 @@
 #define CPU_INIT						0b0000
 #define CPU_ROM_STEP					0b0001
 #define CPU_ROM_FETCH					0b0010
-#define CPU_WRITE_DATAH				 0b0011
+#define CPU_WRITE_DATAH					0b0011
 #define CPU_CLEARVRAM					0b0100
 #define CPU_FETCH_INSTRUCTION			0b0101
 #define CPU_EXECUTE_INSTRUCTION			0b0110
-#define CPU_READ_DATAH				  0b0111
+#define CPU_READ_DATAH					0b0111
 #define CPU_STATE_PRE_RUN				0b1000
 #define CPU_READ_DATA					0b1001
 #define CPU_WRITE_DATA					0b1010
@@ -988,23 +988,35 @@ void MemoryMain()
 			uint16_t *sramasword = (uint16_t *)SRAM;
 			uint16_t val = sramasword[sram_addr>>1];
 			if (sram_read_req)
+			{
 				sram_rdata = (sram_addr&1) ? val&0x00FF : (val&0xFF00)>>8;
+				//if (!rom_read_enable) printf("(R:B)0x%.8x -> 0x%.8x\n", sram_addr, sram_rdata);
+			}
 			if (sram_write_req)
+			{
 				SRAM[sram_addr] = sram_wdata&0x00FF;
+				//if (!rom_read_enable) printf("(W:B)0x%.8x <- 0x%.8x\n", sram_addr, sram_wdata&0x00FF);
+			}
 		}
 		else
 		{
 			uint16_t *wordsram = (uint16_t *)&SRAM[sram_addr];
 			if (sram_read_req)
+			{
 				sram_rdata = *wordsram;
+				//if (!rom_read_enable) printf("(R:W)0x%.8x -> 0x%.8x\n", sram_addr, sram_rdata);
+			}
 			if (sram_write_req)
+			{
 				*wordsram = sram_wdata;
+				//if (!rom_read_enable) printf("(W:W)0x%.8x <- 0x%.8x\n", sram_addr, sram_wdata);
+			}
 		}
 	}
 
 	// VRAM write access
 	if (framebuffer_writeena)
-		VRAM[(1-framebuffer_select)*0xFFFF+framebuffer_address] = framebuffer_data;	
+		VRAM[(1-framebuffer_select)*0xFFFF+framebuffer_address] = framebuffer_data;
 }
 
 void VideoMain()

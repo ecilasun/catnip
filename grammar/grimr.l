@@ -54,6 +54,9 @@ void stripquotes(char *string);
 ";"							{ count();  return(';'); }
 ","							{ count();  return(','); }
 
+"<<"						{ count();  return(SHIFTLEFT_OP); }
+">>"						{ count();  return(SHIFTRIGHT_OP); }
+
 "&"							{ count();  return('&'); }
 "!"							{ count();  return('!'); }
 "~"							{ count();  return('~'); }
@@ -75,7 +78,7 @@ void stripquotes(char *string);
 "&&"						{ count();  return(AND_OP); }
 "||"						{ count();  return(OR_OP); }
 
-{L}(":"|{L}|{D})*			{ count(); sscanf(yytext, "%s", yylval.string); return(IDENTIFIER); }
+{L}({L}|{D})*				{ count(); sscanf(yytext, "%s", yylval.string); return(IDENTIFIER); }
 
 0[xX]{H}+{IS}?				{ count(); sscanf(yytext, "%x", &yylval.numeric); return(CONSTANT); }
 0[0-7]*{IS}?				{ count(); yylval.numeric = atoi(yytext); return(CONSTANT); }

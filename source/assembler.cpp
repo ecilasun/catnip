@@ -333,7 +333,7 @@ public:
 				is_conditional = true;
 				;//printf("Short jump to address if TR==1: %s\n", _parser_table[_current_parser_offset+1].m_Value);
 			}
-			if (strcmp(_parser_table[_current_parser_offset].m_Value, "jmpif")==0)
+			if (strcmp(_parser_table[_current_parser_offset].m_Value, "jmpifnot")==0)
 			{
 				is_conditional = true;
 				is_reverse_conditional = true;
@@ -381,7 +381,7 @@ public:
 			if (targetfound==0)
 				printf("Branch target not found: %s\n", _parser_table[_current_parser_offset+1].m_Value);
 
-			unsigned short code = m_Opcode | 0x8000 | (is_conditional ? 0x0010 : 0x0000) | (is_branch ? 0x4000 : 0x0000);
+			unsigned short code = m_Opcode | 0x8000 | (is_conditional ? 0x0010 : 0x0000) | (is_reverse_conditional ? 0x0020 : 0x0000) | (is_branch ? 0x4000 : 0x0000);
 
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;

@@ -114,7 +114,7 @@ push r7
 ld.w r2, 0x0100          # Row pitch (256)
 imul r1, r2              # Y*256
 iadd r0, r1              # X+Y*256
-ld.w r1, 0x8000          # 0x8000:(X+Y*256) == VRAM address
+# ld.w r1, 0x8000          # 0x8000:(X+Y*256) == VRAM address
 
 # Set up sprite address so that r2 == (0000:0400 + spriteindex*256)
 lea r2, SPRITE_SHEET
@@ -166,8 +166,8 @@ ret
 
 # Some tables and other entries
 
-@LABEL VRAMSTART
-@DW 0x8000 0x0000
+# @LABEL VRAMSTART
+# @DW 0x8000 0x0000
 
 @LABEL BORDERCOLOR
 @DW 0x8000 0xC000

@@ -252,7 +252,7 @@ Branch instruction is a bit special since it needs to read two extra WORDs from 
 | |      rA   |
 | |      9:6  00:UNCONDITIONAL
 | |           01:CONDITIONAL based on TEST set
-| |           10:RESERVED FOR FUTURE USE
+| |           10:UNDEFINED
 | |           11:INVCONDITIONAL based on TEST not set
 | 0:JMP
 | 1:CALL

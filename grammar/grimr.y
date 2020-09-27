@@ -57,6 +57,8 @@ enum EASTNodeType
 	EN_Mod,
 	EN_Add,
 	EN_Sub,
+	EN_BitShiftLeft,
+	EN_BitShiftRight,
 	EN_Expression,
 	EN_AssignmentExpression,
 	EN_LessThan,
@@ -118,6 +120,8 @@ const char* NodeTypes[]=
 	"EN_Mod                       ",
 	"EN_Add                       ",
 	"EN_Sub                       ",
+	"EN_BitShiftLeft              ",
+	"EN_BitShiftRight             ",
 	"EN_Expression                ",
 	"EN_AssignmentExpression      ",
 	"EN_LessThan                  ",
@@ -174,6 +178,8 @@ enum EOpcode
 	OP_MOD,
 	OP_ADD,
 	OP_SUB,
+	OP_BSL,
+	OP_BSR,
 	OP_ARRAYINDEX,
 	OP_LEA,
 	OP_LOAD,
@@ -223,6 +229,8 @@ const std::string Opcodes[]={
 	"imod",
 	"iadd",
 	"isub",
+	"bsl",
+	"bsr",
 	"arrayindex",
 	"lea",
 	"ld",
@@ -506,6 +514,7 @@ SASTScanContext g_ASC;
 %token <string> STRING_LITERAL
 
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
+%token SHIFTLEFT_OP SHIFTRIGHT_OP
 %token WORD BYTE FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
 
 %type <astnode> simple_identifier
@@ -540,6 +549,7 @@ SASTScanContext g_ASC;
 
 %type <astnode> additive_expression
 %type <astnode> multiplicative_expression
+%type <astnode> shift_expression
 %type <astnode> relational_expression
 %type <astnode> equality_expression
 %type <astnode> and_expression
@@ -704,8 +714,30 @@ additive_expression
 																								}
 	;
 
-relational_expression
+shift_expression
 	: additive_expression
+	| shift_expression SHIFTLEFT_OP additive_expression											{
+																									$$ = new SASTNode(EN_BitShiftLeft, "");
+																									SASTNode *rightnode=g_ASC.PopNode();
+																									SASTNode *leftnode=g_ASC.PopNode();
+																									$$->PushNode(leftnode);
+																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_BSL;
+																									g_ASC.PushNode($$);
+																								}
+	| shift_expression SHIFTRIGHT_OP additive_expression										{
+																									$$ = new SASTNode(EN_BitShiftRight, "");
+																									SASTNode *rightnode=g_ASC.PopNode();
+																									SASTNode *leftnode=g_ASC.PopNode();
+																									$$->PushNode(leftnode);
+																									$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_BSR;
+																									g_ASC.PushNode($$);
+																								}
+	;
+
+relational_expression
+	: shift_expression
 	| relational_expression LESS_OP additive_expression											{
 																									$$ = new SASTNode(EN_LessThan, "");
 																									SASTNode *rightnode=g_ASC.PopNode();
@@ -846,7 +878,10 @@ assignment_expression
 																									$$ = new SASTNode(EN_AssignmentExpression, "");
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
-																									VisitNodeHierarchy(leftnode, SetAsLeftHandSideCallback);
+																									//printf("LSH:%s\n", NodeTypes[leftnode->m_Type]);
+																									//printf("RHS:%s\n", NodeTypes[rightnode->m_Type]); // EN_PostfixArrayExpression
+																									if ( leftnode->m_Type!= EN_PostfixArrayExpression)
+																										VisitNodeHierarchy(leftnode, SetAsLeftHandSideCallback);
 																									VisitNodeHierarchy(rightnode, SetAsRightHandSideCallback);
 																									// NOTE: Swap left and right nodes because we want to
 																									// evaluate LHS last
@@ -1163,7 +1198,7 @@ variable_declaration
 																									var->m_Scope = g_ASC.m_CurrentFunctionName;
 																									var->m_NameHash = HashString(var->m_Name.c_str());
 																									var->m_ScopeHash = HashString(var->m_Scope.c_str());
-																									var->m_CombinedHash = HashString((var->m_Scope+":"+var->m_Name).c_str());
+																									var->m_CombinedHash = HashString((var->m_Scope+"_"+var->m_Name).c_str());
 																									var->m_RootNode = $$;
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
@@ -1215,7 +1250,7 @@ variable_declaration
 																									var->m_Scope = g_ASC.m_CurrentFunctionName;
 																									var->m_NameHash = HashString(var->m_Name.c_str());
 																									var->m_ScopeHash = HashString(var->m_Scope.c_str());
-																									var->m_CombinedHash = HashString((var->m_Scope+":"+var->m_Name).c_str());
+																									var->m_CombinedHash = HashString((var->m_Scope+"_"+var->m_Name).c_str());
 																									var->m_RootNode = $$;
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
@@ -1444,7 +1479,7 @@ function_def
 																										var->m_Scope = g_ASC.m_CurrentFunctionName;
 																										var->m_NameHash = HashString(var->m_Name.c_str());
 																										var->m_ScopeHash = HashString(var->m_Scope.c_str());
-																										var->m_CombinedHash = HashString((var->m_Scope+":"+var->m_Name).c_str());
+																										var->m_CombinedHash = HashString((var->m_Scope+"_"+var->m_Name).c_str());
 																										var->m_RootNode = n0;
 																										var->m_Dimension = 1;
 																										var->m_RefCount = 0;
@@ -1558,7 +1593,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			{
 				std::string val = g_ASC.PushRegister();
 				std::string trg = g_ASC.PushRegister();
-				node->m_Instructions = Opcodes[OP_LEA] + " " + val + ", " + var->m_Scope + ":" + var->m_Name;
+				node->m_Instructions = Opcodes[OP_LEA] + " " + val + ", " + var->m_Scope + "_" + var->m_Name;
 				node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode] + " " + trg;
 				std::string width = var->m_TypeName == TN_WORD ? ".w" : ".b";
 				node->m_Instructions += std::string("\n") + Opcodes[OP_STORE] + width + " " + val + ", " + trg;
@@ -1619,6 +1654,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_MOD:
 		case OP_ADD:
 		case OP_SUB:
+		case OP_BSL:
+		case OP_BSR:
 		{
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();
@@ -1658,7 +1695,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			if (var)
 			{
 				//printf("arrayindex identifier type: %s[%d]\n", NodeTypes[node->m_Type], var->m_Dimension);
-				node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + ", " + var->m_Scope + ":" + var->m_Name;
+				node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + ", " + var->m_Scope + "_" + var->m_Name;
 				// This is not a 'real' array, fetch data at address to treat as array base address
 				if (var->m_Dimension <= 1)
 				{
@@ -1712,8 +1749,9 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				if (var)
 				{
 					std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b";
-					node->m_Instructions = Opcodes[OP_LOAD] + width + " " + trg + ", [" + var->m_Scope + ":" + var->m_Name + "]";
-					g_ASC.m_InstructionCount+=1;
+					node->m_Instructions = Opcodes[OP_LEA] + " " + trg + ", " + var->m_Scope + "_" + var->m_Name;
+					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + trg + ", [" + trg + "]";
+					g_ASC.m_InstructionCount+=2;
 				}
 				else
 					node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
@@ -1722,7 +1760,9 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			{
 				if (var)
 				{
-					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
+					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + "_" + var->m_Name;
+					//std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b";
+					//node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + trg + ", [" + trg + "]";
 				}
 				else
 					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + node->m_Value;
@@ -1749,7 +1789,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
 			std::string srcA = g_ASC.PopRegister();
 			std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b";
-			node->m_Instructions = Opcodes[node->m_Opcode] + width + " " + trg + ", " + srcA;
+			node->m_Instructions = Opcodes[node->m_Opcode] + width + " [" + trg + "], " + srcA;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
@@ -1794,13 +1834,15 @@ void CompileGrimR(const char *_filename)
 	fprintf(fp, "# Select frame buffer 0 for writes and clear it\n");
 	fprintf(fp, "ld.w r0, 0x0000\n");
 	fprintf(fp, "fsel r0\n");
-	fprintf(fp, "ld.w r0, 0x00E0\n");
+	fprintf(fp, "ld.w r0, 0x00EC # bgcolor\n");
 	fprintf(fp, "clf r0\n");
 	fprintf(fp, "branch main\n");
 	fprintf(fp, "# Select frame buffer 1 so we can see frame buffer 0\n");
 	fprintf(fp, "ld.w r0, 0x0001\n");
 	fprintf(fp, "fsel r0\n");
-	fprintf(fp, "halt\n");
+	fprintf(fp, "@LABEL infloop\n");
+	fprintf(fp, "vsync\n");
+	fprintf(fp, "jmp infloop\n");
 	fprintf(fp, "# End of program\n");
 	for (auto &node : g_ASC.m_ASTNodes)
 		DumpCode(fp, node);
@@ -1814,7 +1856,7 @@ void CompileGrimR(const char *_filename)
 	{
 		/*if (var->m_RefCount == 0)
 			continue;*/
-		fprintf(fp, "@LABEL %s:%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
+		fprintf(fp, "@LABEL %s_%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
 		fprintf(fp, "# ref:%d dim:%d typename:%s\n", var->m_RefCount, var->m_Dimension, TypeNames[var->m_TypeName]);
 		//if (var->m_InitialValues.size())
 		{
