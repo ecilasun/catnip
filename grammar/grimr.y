@@ -888,6 +888,8 @@ assignment_expression
 																									//printf("RHS:%s\n", NodeTypes[rightnode->m_Type]); // EN_PostfixArrayExpression
 																									if (leftnode->m_Type != EN_PostfixArrayExpression)
 																										VisitNodeHierarchy(leftnode, SetAsLeftHandSideCallback);
+																									else
+																										VisitNodeHierarchy(leftnode->m_ASTNodes[1], SetAsLeftHandSideCallback);
 																									VisitNodeHierarchy(rightnode, SetAsRightHandSideCallback);
 																									// NOTE: Swap left and right nodes because we want to
 																									// evaluate LHS last
@@ -1728,14 +1730,13 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			g_ASC.m_InstructionCount+=1;
 			g_ASC.PushRegister(); // re-use srcA as target
 
-			/*
-			// TODO: Need to make sure [] on LHS doesn't run this code path but only RHS does
+			// Need to make sure [] on LHS doesn't run this code path but only RHS does
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
 				std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
-				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + srcA + ", [" + srcA + "]";
+				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + srcA + ", [" + srcA + "] # Should not happen for LHS!";
 				g_ASC.m_InstructionCount+=1;
-			}*/
+			}
 		}
 		break;
 
@@ -1819,7 +1820,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		break;
 	}
 
-	/*fprintf(_fp, "// %s: %s (%s) %s\n",
+	/*fprintf(_fp, "# %s: %s (%s) %s\n",
 		node->m_Side==NO_SIDE?"N":(node->m_Side==LEFT_HAND_SIDE?"L":"R"),
 		NodeTypes[node->m_Type],
 		node->m_Value.c_str(),

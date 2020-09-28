@@ -1,4 +1,4 @@
-# Instruction count: 112
+# Instruction count: 113
 
 @ORG 0x00000000
 
@@ -83,6 +83,7 @@ imul r1, r2
 iadd r0, r1
 lea r1, _sprite
 iadd r0, r1
+ld.b r0, [r0] # Should not happen for LHS!
 ld.w r1, 0x8000
 ld.w r2, 0x10
 bsl r1, r2
