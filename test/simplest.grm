@@ -34,13 +34,13 @@ def TileSprite(word posX, word posY, word width, word height)
     // GrimR: Current default behavior for all variables is 'static'
     word spanX, spanY;
 
-    spanY = posY;
-    while (spanY<posY+height)
+    spanY = 0;
+    while (spanY<height)
     {
-        spanX = posX;
-        while (spanX<posX+width)
+        spanX = 0;
+        while (spanX<width)
         {
-            VRAM[(0x8000<<16) | (spanX + spanY*256)] = sprite[(spanY%23)*17+(spanX%17)];
+            VRAM[(0x8000<<16) | (spanX+posX + (spanY+posY)*256)] = sprite[(spanY%23)*17+(spanX%17)];
             spanX = spanX+1;
         }
         spanY = spanY+1;
@@ -50,18 +50,23 @@ def TileSprite(word posX, word posY, word width, word height)
 
 def main()
 {
-    fsel(0); // Switch writes to frame 0, show frame 1
- 
-    clf(0xFF); // Clear framebuffer
+    word frame = 0;
+    word posX = 0;
 
-    // GrimR: Any expression can be used as input parameter to function call
-    TileSprite(32,48,17,23);
-    TileSprite(96,64,17,23);
-    TileSprite(131,131,96,48);
+    while(frame<100)
+    {
+        fsel(frame);    // Switch writes to 'frame'
+        clf(0xFF);      // Clear framebuffer
 
-    fsel(1); // Switch writes to frame 1, show frame 0
+        // GrimR: Any expression can be used as input parameter to function call
+        TileSprite(posX,48,17,23);
+        //TileSprite(96,64,17,23);
+        //TileSprite(131,131,96,48);
 
-    vsync(); // Wait for vsync
+        frame = frame+1;
+        posX = posX+1;
+        vsync(); // Wait for vsync
+    }
 
     return;
 }

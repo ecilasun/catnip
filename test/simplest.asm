@@ -1,4 +1,4 @@
-# Instruction count: 133
+# Instruction count: 136
 
 @ORG 0x00000000
 
@@ -21,8 +21,7 @@ st.w r0, r1
 lea r0, TileSprite_posX
 pop r1
 st.w r0, r1
-lea r0, TileSprite_posY
-ld.w r0, [r0]
+ld.w r0, 0x0
 lea r1, TileSprite_spanY
 st.w [r1], r0
 
@@ -31,14 +30,10 @@ lea r0, TileSprite_spanY
 ld.w r0, [r0]
 lea r1, TileSprite_height
 ld.w r1, [r1]
-lea r2, TileSprite_posY
-ld.w r2, [r2]
-iadd r1, r2
 cmp r0, r1
 test less
 jmpifnot endwhile3
-lea r0, TileSprite_posX
-ld.w r0, [r0]
+ld.w r0, 0x0
 lea r1, TileSprite_spanX
 st.w [r1], r0
 
@@ -47,9 +42,6 @@ lea r0, TileSprite_spanX
 ld.w r0, [r0]
 lea r1, TileSprite_width
 ld.w r1, [r1]
-lea r2, TileSprite_posX
-ld.w r2, [r2]
-iadd r1, r2
 cmp r0, r1
 test less
 jmpifnot endwhile1
@@ -70,12 +62,18 @@ ld.b r0, [r0] # RHS, valueof
 ld.w r1, 0x8000
 ld.w r2, 0x10
 bsl r1, r2
-lea r2, TileSprite_spanY
+lea r2, TileSprite_posY
 ld.w r2, [r2]
+lea r3, TileSprite_spanY
+ld.w r3, [r3]
+iadd r2, r3
 ld.w r3, 0x100
 imul r2, r3
-lea r3, TileSprite_spanX
+lea r3, TileSprite_posX
 ld.w r3, [r3]
+lea r4, TileSprite_spanX
+ld.w r4, [r4]
+iadd r3, r4
 iadd r2, r3
 or r1, r2
 lea r2, _VRAM
@@ -103,40 +101,45 @@ jmp beginwhile2
 ret 
 
 @LABEL main
-ld.w r0, 0x0
+
+@LABEL beginwhile4
+lea r0, main_frame
+ld.w r0, [r0]
+ld.w r1, 0x64
+cmp r0, r1
+test less
+jmpifnot endwhile5
+lea r0, main_frame
+ld.w r0, [r0]
 fsel r0
 ld.w r0, 0xff
 clf r0
-ld.w r0, 0x20
+lea r0, main_posX
+ld.w r0, [r0]
 push r0
 ld.w r0, 0x30
 push r0
 ld.w r0, 0x11
 push r0
 ld.w r0, 0x17
-push r0
-branch TileSprite
-ld.w r0, 0x60
-push r0
-ld.w r0, 0x40
-push r0
-ld.w r0, 0x11
-push r0
-ld.w r0, 0x17
-push r0
-branch TileSprite
-ld.w r0, 0x83
-push r0
-ld.w r0, 0x83
-push r0
-ld.w r0, 0x60
-push r0
-ld.w r0, 0x30
 push r0
 branch TileSprite
 ld.w r0, 0x1
-fsel r0
+lea r1, main_frame
+ld.w r1, [r1]
+iadd r0, r1
+lea r1, main_frame
+st.w [r1], r0
+ld.w r0, 0x1
+lea r1, main_posX
+ld.w r1, [r1]
+iadd r0, r1
+lea r1, main_posX
+st.w [r1], r0
 vsync 
+jmp beginwhile4
+
+@LABEL endwhile5
 ret 
 
 #-------------Symbol Table-------------
@@ -192,3 +195,9 @@ ret
 @LABEL TileSprite_posX
 # ref:0 dim:1 typename:word
 @DW 0xCDCDCDCD 
+@LABEL main_frame
+# ref:0 dim:1 typename:word
+@DW 0x0000 
+@LABEL main_posX
+# ref:0 dim:1 typename:word
+@DW 0x0000 
