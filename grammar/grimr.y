@@ -671,28 +671,28 @@ multiplicative_expression
 	: unary_expression
 	| multiplicative_expression '*' unary_expression											{
 																									$$ = new SASTNode(EN_Mul, "");
-																									SASTNode *n0=g_ASC.PopNode();
-																									SASTNode *n1=g_ASC.PopNode();
-																									$$->PushNode(n0);
-																									$$->PushNode(n1);
+																									SASTNode *rightnode=g_ASC.PopNode();
+																									SASTNode *leftnode=g_ASC.PopNode();
+																									$$->PushNode(rightnode);
+																									$$->PushNode(leftnode);
 																									$$->m_Opcode = OP_MUL;
 																									g_ASC.PushNode($$);
 																								}
 	| multiplicative_expression '/' unary_expression											{
 																									$$ = new SASTNode(EN_Div, "");
-																									SASTNode *n0=g_ASC.PopNode();
-																									SASTNode *n1=g_ASC.PopNode();
-																									$$->PushNode(n0);
-																									$$->PushNode(n1);
+																									SASTNode *rightnode=g_ASC.PopNode();
+																									SASTNode *leftnode=g_ASC.PopNode();
+																									$$->PushNode(rightnode);
+																									$$->PushNode(leftnode);
 																									$$->m_Opcode = OP_DIV;
 																									g_ASC.PushNode($$);
 																								}
 	| multiplicative_expression '%' unary_expression											{
 																									$$ = new SASTNode(EN_Mod, "");
-																									SASTNode *n0=g_ASC.PopNode();
-																									SASTNode *n1=g_ASC.PopNode();
-																									$$->PushNode(n0);
-																									$$->PushNode(n1);
+																									SASTNode *rightnode=g_ASC.PopNode();
+																									SASTNode *leftnode=g_ASC.PopNode();
+																									$$->PushNode(rightnode);
+																									$$->PushNode(leftnode);
 																									$$->m_Opcode = OP_MOD;
 																									g_ASC.PushNode($$);
 																								}
@@ -704,8 +704,8 @@ additive_expression
 																									$$ = new SASTNode(EN_Add, "");
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
-																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->PushNode(leftnode);
 																									$$->m_Opcode = OP_ADD;
 																									g_ASC.PushNode($$);
 																								}
@@ -713,8 +713,8 @@ additive_expression
 																									$$ = new SASTNode(EN_Sub, "");
 																									SASTNode *rightnode = g_ASC.PopNode();
 																									SASTNode *leftnode = g_ASC.PopNode();
-																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
+																									$$->PushNode(leftnode);
 																									$$->m_Opcode = OP_SUB;
 																									g_ASC.PushNode($$);
 																								}
@@ -1734,7 +1734,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
 				std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
-				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + srcA + ", [" + srcA + "] # Should not happen for LHS!";
+				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + srcA + ", [" + srcA + "] # RHS, valueof";
 				g_ASC.m_InstructionCount+=1;
 			}
 		}

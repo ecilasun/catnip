@@ -1,4 +1,4 @@
-# Instruction count: 113
+# Instruction count: 135
 
 @ORG 0x00000000
 
@@ -29,6 +29,9 @@ st.w r0, r1
 lea r0, TileSprite_posX
 pop r1
 st.w r0, r1
+ld.w r0, 0x0
+lea r1, TileSprite_j
+st.w [r1], r0
 lea r0, TileSprite_posY
 ld.w r0, [r0]
 lea r1, TileSprite_spanY
@@ -37,14 +40,17 @@ st.w [r1], r0
 @LABEL beginwhile2
 lea r0, TileSprite_spanY
 ld.w r0, [r0]
-lea r1, TileSprite_posY
+lea r1, TileSprite_height
 ld.w r1, [r1]
-lea r2, TileSprite_height
+lea r2, TileSprite_posY
 ld.w r2, [r2]
 iadd r1, r2
 cmp r0, r1
 test less
 jmpifnot endwhile3
+ld.w r0, 0x0
+lea r1, TileSprite_i
+st.w [r1], r0
 lea r0, TileSprite_posX
 ld.w r0, [r0]
 lea r1, TileSprite_spanX
@@ -53,61 +59,65 @@ st.w [r1], r0
 @LABEL beginwhile0
 lea r0, TileSprite_spanX
 ld.w r0, [r0]
-lea r1, TileSprite_posX
+lea r1, TileSprite_width
 ld.w r1, [r1]
-lea r2, TileSprite_width
+lea r2, TileSprite_posX
 ld.w r2, [r2]
 iadd r1, r2
 cmp r0, r1
 test less
 jmpifnot endwhile1
-lea r0, TileSprite_spanX
+lea r0, TileSprite_i
 ld.w r0, [r0]
-ld.w r1, 0x100
-lea r2, TileSprite_spanY
-ld.w r2, [r2]
-imul r1, r2
-iadd r0, r1
-lea r1, TileSprite_offset
-st.w [r1], r0
-ld.w r0, 0x10
-lea r1, TileSprite_spanX
-ld.w r1, [r1]
-imod r0, r1
 ld.w r1, 0x10
-ld.w r2, 0x8
-lea r3, TileSprite_spanY
-ld.w r3, [r3]
-imod r2, r3
+lea r2, TileSprite_j
+ld.w r2, [r2]
 imul r1, r2
 iadd r0, r1
 lea r1, _sprite
 iadd r0, r1
-ld.b r0, [r0] # Should not happen for LHS!
+ld.b r0, [r0] # RHS, valueof
 ld.w r1, 0x8000
 ld.w r2, 0x10
 bsl r1, r2
-lea r2, TileSprite_offset
-ld.w r2, [r2]
+ld.w r2, 0x100
+lea r3, TileSprite_spanY
+ld.w r3, [r3]
+imul r2, r3
+lea r3, TileSprite_spanX
+ld.w r3, [r3]
+iadd r2, r3
 or r1, r2
 lea r2, _VRAM
 ld.w r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-lea r0, TileSprite_spanX
-ld.w r0, [r0]
-ld.w r1, 0x1
+ld.w r0, 0x1
+lea r1, TileSprite_spanX
+ld.w r1, [r1]
 iadd r0, r1
 lea r1, TileSprite_spanX
+st.w [r1], r0
+ld.w r0, 0x1
+lea r1, TileSprite_i
+ld.w r1, [r1]
+iadd r0, r1
+lea r1, TileSprite_i
 st.w [r1], r0
 jmp beginwhile0
 
 @LABEL endwhile1
-lea r0, TileSprite_spanY
-ld.w r0, [r0]
-ld.w r1, 0x1
+ld.w r0, 0x1
+lea r1, TileSprite_spanY
+ld.w r1, [r1]
 iadd r0, r1
 lea r1, TileSprite_spanY
+st.w [r1], r0
+ld.w r0, 0x1
+lea r1, TileSprite_j
+ld.w r1, [r1]
+iadd r0, r1
+lea r1, TileSprite_j
 st.w [r1], r0
 jmp beginwhile2
 
@@ -118,6 +128,15 @@ ret
 ld.w r0, 0x20
 push r0
 ld.w r0, 0x30
+push r0
+ld.w r0, 0x10
+push r0
+ld.w r0, 0x10
+push r0
+branch TileSprite
+ld.w r0, 0x60
+push r0
+ld.w r0, 0x40
 push r0
 ld.w r0, 0x10
 push r0
@@ -158,7 +177,10 @@ ret
 @LABEL TileSprite_spanY
 # ref:0 dim:1 typename:word
 @DW 0x7FFFFFFF 
-@LABEL TileSprite_offset
+@LABEL TileSprite_i
+# ref:0 dim:1 typename:word
+@DW 0x7FFFFFFF 
+@LABEL TileSprite_j
 # ref:0 dim:1 typename:word
 @DW 0x7FFFFFFF 
 @LABEL TileSprite_height

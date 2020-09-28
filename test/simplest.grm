@@ -27,19 +27,22 @@ def TileSprite(word posX, word posY, word width, word height)
 
     // GrimR: Current default behavior for all variables is 'static'
     word spanX, spanY;
+    word i,j;
 
+    j=0;
     spanY = posY;
     while (spanY<posY+height)
     {
+        i=0;
         spanX = posX;
         while (spanX<posX+width)
         {
-            word offset;
-            offset = (spanX + spanY*256);
-            VRAM[(0x8000<<16) | offset] = sprite[(spanX%16) + (spanY%8)*16];
+            VRAM[(0x8000<<16) | (spanX + spanY*256)] = sprite[j*16+i];
             spanX = spanX+1;
+            i=i+1;
         }
         spanY = spanY+1;
+        j=j+1;
     }
     return;
 }
@@ -48,6 +51,7 @@ def main()
 {
     // GrimR: Any expression can be used as input parameter to function call
     TileSprite(32,48,16,16);
+    TileSprite(96,64,16,16);
 
     return;
 }
