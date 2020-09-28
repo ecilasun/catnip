@@ -673,8 +673,8 @@ multiplicative_expression
 																									$$ = new SASTNode(EN_Mul, "");
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
-																									$$->PushNode(rightnode);
 																									$$->PushNode(leftnode);
+																									$$->PushNode(rightnode);
 																									$$->m_Opcode = OP_MUL;
 																									g_ASC.PushNode($$);
 																								}
@@ -682,8 +682,8 @@ multiplicative_expression
 																									$$ = new SASTNode(EN_Div, "");
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
-																									$$->PushNode(rightnode);
 																									$$->PushNode(leftnode);
+																									$$->PushNode(rightnode);
 																									$$->m_Opcode = OP_DIV;
 																									g_ASC.PushNode($$);
 																								}
@@ -691,8 +691,8 @@ multiplicative_expression
 																									$$ = new SASTNode(EN_Mod, "");
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
-																									$$->PushNode(rightnode);
 																									$$->PushNode(leftnode);
+																									$$->PushNode(rightnode);
 																									$$->m_Opcode = OP_MOD;
 																									g_ASC.PushNode($$);
 																								}

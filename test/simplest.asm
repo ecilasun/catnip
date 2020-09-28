@@ -1,4 +1,4 @@
-# Instruction count: 135
+# Instruction count: 126
 
 @ORG 0x00000000
 
@@ -29,9 +29,6 @@ st.w r0, r1
 lea r0, TileSprite_posX
 pop r1
 st.w r0, r1
-ld.w r0, 0x0
-lea r1, TileSprite_j
-st.w [r1], r0
 lea r0, TileSprite_posY
 ld.w r0, [r0]
 lea r1, TileSprite_spanY
@@ -48,9 +45,6 @@ iadd r1, r2
 cmp r0, r1
 test less
 jmpifnot endwhile3
-ld.w r0, 0x0
-lea r1, TileSprite_i
-st.w [r1], r0
 lea r0, TileSprite_posX
 ld.w r0, [r0]
 lea r1, TileSprite_spanX
@@ -67,11 +61,15 @@ iadd r1, r2
 cmp r0, r1
 test less
 jmpifnot endwhile1
-lea r0, TileSprite_i
+lea r0, TileSprite_spanX
 ld.w r0, [r0]
 ld.w r1, 0x10
-lea r2, TileSprite_j
-ld.w r2, [r2]
+imod r0, r1
+lea r1, TileSprite_spanY
+ld.w r1, [r1]
+ld.w r2, 0x10
+imod r1, r2
+ld.w r2, 0x10
 imul r1, r2
 iadd r0, r1
 lea r1, _sprite
@@ -80,9 +78,9 @@ ld.b r0, [r0] # RHS, valueof
 ld.w r1, 0x8000
 ld.w r2, 0x10
 bsl r1, r2
-ld.w r2, 0x100
-lea r3, TileSprite_spanY
-ld.w r3, [r3]
+lea r2, TileSprite_spanY
+ld.w r2, [r2]
+ld.w r3, 0x100
 imul r2, r3
 lea r3, TileSprite_spanX
 ld.w r3, [r3]
@@ -98,12 +96,6 @@ ld.w r1, [r1]
 iadd r0, r1
 lea r1, TileSprite_spanX
 st.w [r1], r0
-ld.w r0, 0x1
-lea r1, TileSprite_i
-ld.w r1, [r1]
-iadd r0, r1
-lea r1, TileSprite_i
-st.w [r1], r0
 jmp beginwhile0
 
 @LABEL endwhile1
@@ -112,12 +104,6 @@ lea r1, TileSprite_spanY
 ld.w r1, [r1]
 iadd r0, r1
 lea r1, TileSprite_spanY
-st.w [r1], r0
-ld.w r0, 0x1
-lea r1, TileSprite_j
-ld.w r1, [r1]
-iadd r0, r1
-lea r1, TileSprite_j
 st.w [r1], r0
 jmp beginwhile2
 
@@ -141,6 +127,15 @@ push r0
 ld.w r0, 0x10
 push r0
 ld.w r0, 0x10
+push r0
+branch TileSprite
+ld.w r0, 0x83
+push r0
+ld.w r0, 0x83
+push r0
+ld.w r0, 0x60
+push r0
+ld.w r0, 0x30
 push r0
 branch TileSprite
 ret 
@@ -175,12 +170,6 @@ ret
 # ref:0 dim:1 typename:word
 @DW 0x7FFFFFFF 
 @LABEL TileSprite_spanY
-# ref:0 dim:1 typename:word
-@DW 0x7FFFFFFF 
-@LABEL TileSprite_i
-# ref:0 dim:1 typename:word
-@DW 0x7FFFFFFF 
-@LABEL TileSprite_j
 # ref:0 dim:1 typename:word
 @DW 0x7FFFFFFF 
 @LABEL TileSprite_height
