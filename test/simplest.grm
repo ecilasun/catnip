@@ -50,10 +50,9 @@ def main()
     //DrawRect(16,16,16,16);
 
     // 256x192 8bpp at 0x80000000
-    VRAM = 0x8000<<16;
-    while (loword < 0xC000)
+    while (loword < 0x1000)
     {
-        VRAM[loword] = 0xFF;
+        VRAM[(0x8000<<16) | loword] = 0xFF;
         loword = loword + 1;
     }
 
