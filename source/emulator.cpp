@@ -456,7 +456,7 @@ void execute(uint16_t instr)
 				break;
 				case 5: // Ineg
 				{
-					register_file[r1] = register_file[r1]^0x80000000; // Flip integer sign bit
+					register_file[r1] = -register_file[r1];//^0x80000000; // Flip integer sign bit
 					#if defined(DEBUG_EXECUTE)
 					printf("ineg r%d (r%d = %.8X)\n", r1, r1, register_file[r1]);
 					#endif

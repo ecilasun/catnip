@@ -230,8 +230,8 @@ const std::string Opcodes[]={
 	"nop",
 	"addrof",
 	"valof",
-	"bnot",
-	"neg",
+	"not",
+	"ineg",
 	"lnot",
 	"imul",
 	"idiv",
@@ -446,10 +446,10 @@ struct SASTScanContext
 		return std::string(labelname+std::to_string(r));
 	}
 
-	std::string PopLabel(std::string labelname)
+	/*std::string PopLabel(std::string labelname)
 	{
 		return std::string(labelname+std::to_string(m_CurrentAutoLabel--));
-	}
+	}*/
 
 	SVariable *FindVariable(uint32_t namehash, uint32_t scopehash)
 	{
@@ -964,7 +964,7 @@ if_statement
 																									branchcode->m_Opcode = OP_JUMPIFNOT;
 																									SASTNode *endlabel = new SASTNode(EN_Label, label);
 																									endlabel->m_Opcode = OP_LABEL;
-																									g_ASC.PopLabel("endif");
+																									//g_ASC.PopLabel("endif");
 
 																									SASTNode *exprnode=g_ASC.PopNode();
 																									$$->PushNode(exprnode);
@@ -1034,7 +1034,7 @@ if_statement
 																									endlabel->m_Opcode = OP_LABEL;
 																									SASTNode *exitlabel = new SASTNode(EN_Label, finallabel);
 																									exitlabel->m_Opcode = OP_LABEL;
-																									g_ASC.PopLabel("endif");
+																									//g_ASC.PopLabel("endif");
 
 																									SASTNode *jumpnode = new SASTNode(EN_Jump, finallabel);
 																									jumpnode->m_Opcode = OP_JUMP;
@@ -1818,6 +1818,15 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string srcA = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA;
 			g_ASC.m_InstructionCount+=1;
+		}
+		break;
+
+		case OP_NEG:
+		{
+			std::string srcA = g_ASC.PopRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA;
+			g_ASC.m_InstructionCount+=1;
+			g_ASC.PushRegister(); // Keep output in same register
 		}
 		break;
 
