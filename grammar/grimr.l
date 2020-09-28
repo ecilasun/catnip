@@ -35,6 +35,8 @@ void stripquotes(char *string);
 
 "word"						{ count();  return(WORD); }
 "byte"						{ count();  return(BYTE); }
+"wordptr"					{ count();  return(WORDPTR); }
+"byteptr"					{ count();  return(BYTEPTR); }
 
 "def"						{ count();  return(FUNCTION); }
 "if"						{ count();  return(IF); }

@@ -1,7 +1,7 @@
 // GrimR language test file
 
-word loword = 0;
-byte VRAM = 0x0;
+word loword;
+byteptr VRAM;
 
 // GrimR: Function input parameters support type aliasing, therefore one can pass a byte array as a dword array into a function.
 /*byte sprite[] = {
@@ -50,6 +50,8 @@ def main()
     //DrawRect(16,16,16,16);
 
     // 256x192 8bpp at 0x80000000
+    loword = 0;
+    VRAM = 0x8000<<16;
     while (loword < 0x1000)
     {
         VRAM[(0x8000<<16) | loword] = 0xFF;

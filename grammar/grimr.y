@@ -285,11 +285,17 @@ enum ETypeName
 {
 	TN_WORD,
 	TN_BYTE,
+	TN_WORDPTR,
+	TN_BYTEPTR,
+	TN_DWORD,
 };
 
 const char* TypeNames[]={
 	"word",
 	"byte",
+	"wordptr",
+	"byteptr",
+	"dword",
 };
 
 struct SVariable
@@ -515,7 +521,7 @@ SASTScanContext g_ASC;
 
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
-%token WORD BYTE FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
+%token WORD BYTE WORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
 
 %type <astnode> simple_identifier
 %type <astnode> simple_constant
@@ -1184,6 +1190,8 @@ variable_declaration_item
 type_name
 	: WORD																						{ g_ASC.m_CurrentTypeName = TN_WORD;  }
 	| BYTE																						{ g_ASC.m_CurrentTypeName = TN_BYTE;  }
+	| WORDPTR																					{ g_ASC.m_CurrentTypeName = TN_WORDPTR;  }
+	| BYTEPTR																					{ g_ASC.m_CurrentTypeName = TN_BYTEPTR;  }
 	;
 
 variable_declaration
@@ -1595,7 +1603,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				std::string trg = g_ASC.PushRegister();
 				node->m_Instructions = Opcodes[OP_LEA] + " " + val + ", " + var->m_Scope + "_" + var->m_Name;
 				node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode] + " " + trg;
-				std::string width = var->m_TypeName == TN_WORD ? ".w" : ".b";
+				std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
 				node->m_Instructions += std::string("\n") + Opcodes[OP_STORE] + width + " " + val + ", " + trg;
 				g_ASC.PopRegister(); // Forget trg and val
 				g_ASC.PopRegister();
@@ -1722,7 +1730,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
-				std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b";
+				std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
 				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + srcA + ", [" + srcA + "]";
 				g_ASC.m_InstructionCount+=1;
 			}
@@ -1748,7 +1756,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			{
 				if (var)
 				{
-					std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b";
+					std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
 					node->m_Instructions = Opcodes[OP_LEA] + " " + trg + ", " + var->m_Scope + "_" + var->m_Name;
 					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + trg + ", [" + trg + "]";
 					g_ASC.m_InstructionCount+=2;
@@ -1761,7 +1769,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				if (var)
 				{
 					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + "_" + var->m_Name;
-					//std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b";
+					//std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
 					//node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + trg + ", [" + trg + "]";
 				}
 				else
@@ -1788,7 +1796,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			// NOTE: target and source are swapped due to evaluation order
 			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
 			std::string srcA = g_ASC.PopRegister();
-			std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : ".b";
+			std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : (g_ASC.m_CurrentTypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
 			node->m_Instructions = Opcodes[node->m_Opcode] + width + " [" + trg + "], " + srcA;
 			g_ASC.m_InstructionCount+=1;
 		}
@@ -1862,6 +1870,7 @@ void CompileGrimR(const char *_filename)
 		{
 			int cnt = 0;
 			uint32_t *buf = new uint32_t[var->m_InitialValues.size()+4];
+			memset(buf, 0xCD, (var->m_InitialValues.size()+4)*sizeof(uint32_t));
 			for (auto &data : var->m_InitialValues)
 			{
 				uint32_t V = strtol(data.c_str(), nullptr, 16);
@@ -1889,6 +1898,15 @@ void CompileGrimR(const char *_filename)
 						fprintf(fp, "\n@DW ");
 					fprintf(fp, "0x%.4X ", (buf[i*2+0]<<8) | buf[i*2+1]);
 				}
+				fprintf(fp, "\n");
+			}
+			if (var->m_TypeName == TN_WORDPTR || var->m_TypeName == TN_BYTEPTR)
+			{
+				int end = cnt;
+				end = end==0 ? 1:end;
+				fprintf(fp, "@DW ");
+				for (int i=0;i<end;++i)
+					fprintf(fp, "0x%.4X 0x%.4X", (buf[i]<<16)&0xFFFF, (buf[i])&0xFFFF);
 				fprintf(fp, "\n");
 			}
 			delete [] buf;

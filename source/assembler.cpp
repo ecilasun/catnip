@@ -9,9 +9,9 @@ struct SAssemblerKeyword
 
 struct SParserItem
 {
-	unsigned int m_Index;						   // Index into the SAssemblerKeyword table
-	char *m_Value;								  // Value as string
-	unsigned int m_LabelMemoryOffset = 0xFFFFFFFF;  // Recorded while scanning
+	unsigned int m_Index;							// Index into the SAssemblerKeyword table
+	char *m_Value;									// Value as string
+	unsigned int m_LabelMemoryOffset = 0xFFFFFFFF;	// Recorded while scanning
 };
 
 struct SCodeBlock
@@ -540,11 +540,21 @@ public:
 
 	int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
 	{
-		int r1=0;
+		int r1 = 0, r2 = 0;
 		sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 		uint32_t extra_dword = 0;
-		if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))				  // R1 <- IMMEDIATE(DWORD)
+		if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))				  // R1 <- IMMEDIATE(WORD)
 			sscanf(_parser_table[_current_parser_offset+2].m_Value, "%x", &extra_dword);
+		else if (strstr(_parser_table[_current_parser_offset+2].m_Value, "["))			  // R1 <- WORD [R2]
+		{
+			sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d]", &r2);
+			unsigned int code = 0x01; // M2R
+			unsigned short gencode;
+			gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<11);
+			_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
+			_binary_output[_current_binary_offset++] = gencode&0x00FF;
+			return 3;
+		}
 		else																				// R1 <- *LABEL
 		{
 			extra_dword = 0xFFFFFFFF; // To be patched later.
@@ -558,9 +568,9 @@ public:
 					{
 						labelfound = true;
 						SLEAResolvePair postResolve;
-						postResolve.m_PatchAddressPointer = _current_binary_offset+2; // and also +4
+						postResolve.m_PatchAddressPointer = _current_binary_offset+2;
 						postResolve.m_LabelToResolve = &_parser_table[i];
-						m_LDDResolves.emplace_back(postResolve);
+						m_LDWResolves.emplace_back(postResolve);
 					}
 				}
 			}
@@ -568,13 +578,11 @@ public:
 				printf("ERROR: label not found for ld.d instruction.\n");
 		}
 
-		unsigned int code = 0x04; // DW2Rs
+		unsigned int code = 0x04; // DW2R
 		unsigned short gencode;
 		gencode = m_Opcode | (code<<4) | (r1<<7);
 		_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 		_binary_output[_current_binary_offset++] = gencode&0x00FF;
-		_binary_output[_current_binary_offset++] = (extra_dword&0xFF000000)>>24;
-		_binary_output[_current_binary_offset++] = (extra_dword&0x00FF0000)>>16;
 		_binary_output[_current_binary_offset++] = (extra_dword&0x0000FF00)>>8;
 		_binary_output[_current_binary_offset++] = (extra_dword&0x000000FF);
 
@@ -696,26 +704,26 @@ public:
 	}
 };
 
-/*class CSTDOp : public CAssemblerTokenCompiler
+class CSTDOp : public CAssemblerTokenCompiler
 {
 public:
 	CSTDOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
 	int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
 	{
-		int r1 = 0, r2 = 0, r3 = 0;
+		int r1 = 0, r2 = 0;
 
-		sscanf(_parser_table[_current_parser_offset+1].m_Value, "[r%d:r%d]", &r1, &r2);
-		sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r3);
+		sscanf(_parser_table[_current_parser_offset+1].m_Value, "[r%d]", &r1);
+		sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
 
-		unsigned int code = 0x00; // DW2M
+		unsigned int code = 0x00; // W2M
 		unsigned short gencode;
-		gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<10) | (r3<<13);
+		gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<11);
 		_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 		_binary_output[_current_binary_offset++] = gencode&0x00FF;
 		return 3;
 	}
-};*/
+};
 
 class CSTWOp : public CAssemblerTokenCompiler
 {
@@ -1038,7 +1046,7 @@ CLeaOp s_leaop(0x0003); // Not a real instruction!
 CLDBOp s_ldbop(0x0003);
 CSTBOp s_stbop(0x0003);
 CLDDOp s_lddop(0x0003);
-//CSTDOp s_stdop(0x0003);
+CSTDOp s_stdop(0x0003);
 CLDWOp s_ldwop(0x0003);
 CSTWOp s_stwop(0x0003);
 CCPWOp s_cpwop(0x0003);
@@ -1091,7 +1099,7 @@ const SAssemblerPair keywords[] =
 	{{"ld.w"}, &s_ldwop},
 	{{"ld.b"}, &s_ldbop},
 
-	//{{"st.d"}, &s_stdop},
+	{{"st.d"}, &s_stdop},
 	{{"st.w"}, &s_stwop},
 	{{"st.b"}, &s_stbop},
 
