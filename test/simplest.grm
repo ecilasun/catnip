@@ -4,7 +4,7 @@ word loword;
 byteptr VRAM = 0x0;
 
 // GrimR: Function input parameters support type aliasing, therefore one can pass a byte array as a dword array into a function.
-/*byte sprite[] = {
+byte sprite[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
@@ -35,27 +35,19 @@ def TileSprite(word posX, word posY, word width, word height)
         while (spanX<posX+width)
         {
             word offset;
-            offset = (spanX + spanY*320) | (0x8000<<16);
-            VRAM[offset] = sprite[(spanX%16) + (spanY%8)*16];
+            offset = (spanX + spanY*256);
+            VRAM[(0x8000<<16) | offset] = sprite[(spanX%16) + (spanY%8)*16];
             spanX = spanX+1;
         }
         spanY = spanY+1;
     }
     return;
-}*/
+}
 
 def main()
 {
     // GrimR: Any expression can be used as input parameter to function call
-    //TileSprite(16,16,16,16);
-
-    // 256x192 8bpp at 0x80000000
-    loword = 0;
-    while (loword < 0x1000)
-    {
-        VRAM[(0x8000<<16) | loword] = 0xFF;
-        loword = loword + 1;
-    }
+    TileSprite(32,48,16,16);
 
     return;
 }
