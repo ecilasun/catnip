@@ -84,11 +84,11 @@ iadd r0, r1
 lea r1, _sprite
 iadd r0, r1
 ld.b r0, [r0] # Should not happen for LHS!
-ld.w r1, 0x8000
-ld.w r2, 0x10
-bsl r1, r2
-lea r2, TileSprite_offset
-ld.w r2, [r2]
+lea r1, TileSprite_offset
+ld.w r1, [r1]
+ld.w r2, 0x8000
+ld.w r3, 0x10
+bsl r2, r3
 or r1, r2
 lea r2, _VRAM
 ld.w r2, [r2]
