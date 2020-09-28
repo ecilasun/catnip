@@ -51,7 +51,6 @@ def main()
 
     // 256x192 8bpp at 0x80000000
     loword = 0;
-    VRAM = 0x8000<<16;
     while (loword < 0x1000)
     {
         VRAM[(0x8000<<16) | loword] = 0xFF;

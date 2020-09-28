@@ -1,4 +1,4 @@
-# Instruction count: 43
+# Instruction count: 37
 
 @ORG 0x00000000
 
@@ -20,11 +20,6 @@ jmp infloop
 ld.w r0, 0x0
 lea r1, _loword
 st.w [r1], r0
-ld.w r0, 0x8000
-ld.w r1, 0x10
-bsl r0, r1
-lea r1, _VRAM
-st.d [r1], r0
 
 @LABEL beginwhile0
 lea r0, _loword
