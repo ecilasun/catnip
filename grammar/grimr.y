@@ -886,7 +886,7 @@ assignment_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									//printf("LSH:%s\n", NodeTypes[leftnode->m_Type]);
 																									//printf("RHS:%s\n", NodeTypes[rightnode->m_Type]); // EN_PostfixArrayExpression
-																									if ( leftnode->m_Type!= EN_PostfixArrayExpression)
+																									if (leftnode->m_Type != EN_PostfixArrayExpression)
 																										VisitNodeHierarchy(leftnode, SetAsLeftHandSideCallback);
 																									VisitNodeHierarchy(rightnode, SetAsRightHandSideCallback);
 																									// NOTE: Swap left and right nodes because we want to
@@ -1728,10 +1728,12 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			g_ASC.m_InstructionCount+=1;
 			g_ASC.PushRegister(); // re-use srcA as target
 
-			/*if (node->m_Side == RIGHT_HAND_SIDE)
+			/*
+			// TODO: Need to make sure [] on LHS doesn't run this code path but only RHS does
+			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
 				std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
-				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + srcA + ", [" + srcA + "] ??";
+				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + srcA + ", [" + srcA + "]";
 				g_ASC.m_InstructionCount+=1;
 			}*/
 		}
