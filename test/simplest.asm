@@ -1,4 +1,4 @@
-# Instruction count: 37
+# Instruction count: 35
 
 @ORG 0x00000000
 
@@ -37,10 +37,8 @@ ld.w r2, [r2]
 or r1, r2
 lea r2, _VRAM
 ld.w r2, [r2]
-imul r1, 2
 iadd r1, r2
-ld.d r1, [r1]
-st.d [r1], r0
+st.b [r1], r0
 lea r0, _loword
 ld.w r0, [r0]
 ld.w r1, 0x1
@@ -59,4 +57,4 @@ ret
 @DW 0x7FFFFFFF 
 @LABEL _VRAM
 # ref:0 dim:1 typename:byteptr
-@DW 0x0000 0xFFFF
+@DW 0x0000 0x0000

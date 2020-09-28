@@ -11,7 +11,7 @@
 // Neko emulator
 
 // Enable this to switch to single-step mode
-#define DEBUG_EXECUTE
+//#define DEBUG_EXECUTE
 
 // VGA timings
 #define H_FRONT_PORCH 16

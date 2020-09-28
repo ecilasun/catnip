@@ -1718,22 +1718,22 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();
 
-			if (var->m_TypeName != TN_BYTE)
+			/*if (var->m_TypeName != TN_BYTE)
 			{
 				// Need to multiply address by two for WORD
 				node->m_Instructions += std::string("\n") + Opcodes[OP_MUL] + " " + srcA + ", 2";
 				g_ASC.m_InstructionCount+=1;
-			}
+			}*/
 			node->m_Instructions += std::string("\n") + Opcodes[OP_ADD] + " " + srcA + ", " + srcB;
 			g_ASC.m_InstructionCount+=1;
 			g_ASC.PushRegister(); // re-use srcA as target
 
-			if (node->m_Side == RIGHT_HAND_SIDE)
+			/*if (node->m_Side == RIGHT_HAND_SIDE)
 			{
 				std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
-				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + srcA + ", [" + srcA + "]";
+				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + srcA + ", [" + srcA + "] ??";
 				g_ASC.m_InstructionCount+=1;
-			}
+			}*/
 		}
 		break;
 
@@ -1796,7 +1796,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			// NOTE: target and source are swapped due to evaluation order
 			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
 			std::string srcA = g_ASC.PopRegister();
-			std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : (g_ASC.m_CurrentTypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
+			//std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : (g_ASC.m_CurrentTypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
+			std::string width = (g_ASC.m_CurrentTypeName == TN_WORD || g_ASC.m_CurrentTypeName == TN_WORDPTR) ? ".w" : ".b"; // pointer types are always DWORD
 			node->m_Instructions = Opcodes[node->m_Opcode] + width + " [" + trg + "], " + srcA;
 			g_ASC.m_InstructionCount+=1;
 		}
