@@ -84,6 +84,9 @@ enum EASTNodeType
 	EN_DummyString,
 	EN_Call,
 	EN_Return,
+	EN_FrameSelect,
+	EN_ClearFrame,
+	EN_Vsync,
 	EN_EndCodeBlock,
 	EN_BeginCodeBlock,
 	EN_StackPush,
@@ -147,6 +150,9 @@ const char* NodeTypes[]=
 	"EN_DummyString               ",
 	"EN_Call                      ",
 	"EN_Return                    ",
+	"EN_FrameSelect               ",
+	"EN_ClearFrame                ",
+	"EN_Vsync                     ",
 	"EN_EndCodeBlock              ",
 	"EN_BeginCodeBlock            ",
 	"EN_StackPush                 ",
@@ -187,6 +193,9 @@ enum EOpcode
 	OP_BULKASSIGN,
 	OP_DATAARRAY,
 	OP_RETURN,
+	OP_FSEL,
+	OP_CLF,
+	OP_VSYNC,
 	OP_PUSHCONTEXT,
 	OP_POPCONTEXT,
 	OP_PUSHLOCALREGISTERS,
@@ -238,6 +247,9 @@ const std::string Opcodes[]={
 	"bulkassign",
 	"dataarray",
 	"ret",
+	"fsel",
+	"clf",
+	"vsync",
 	"pushcontext",
 	"popcontext",
 	"pushregs",
@@ -522,6 +534,7 @@ SASTScanContext g_ASC;
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
 %token WORD BYTE WORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
+%token VSYNC FSEL CLF
 
 %type <astnode> simple_identifier
 %type <astnode> simple_constant
@@ -532,7 +545,7 @@ SASTScanContext g_ASC;
 %type <astnode> expression_statement
 %type <astnode> while_statement
 %type <astnode> if_statement
-%type <astnode> return_statement
+%type <astnode> builtin_statement
 %type <astnode> any_statement
 
 %type <astnode> code_block_start
@@ -667,6 +680,7 @@ unary_expression
 																								}
 	;
 
+// Accumulates right
 multiplicative_expression
 	: unary_expression
 	| multiplicative_expression '*' unary_expression											{
@@ -698,6 +712,7 @@ multiplicative_expression
 																								}
 	;
 
+// Accumulates left
 additive_expression
 	: multiplicative_expression
 	| additive_expression '+' multiplicative_expression											{
@@ -1397,10 +1412,25 @@ code_block_end
 																								}
 	;
 
-return_statement
+builtin_statement
 	: RETURN ';'																				{
 																									$$ = new SASTNode(EN_Return, "");
 																									$$->m_Opcode = OP_RETURN;
+																									g_ASC.PushNode($$);
+																								}
+	| FSEL '(' expression ')' ';'																{
+																									$$ = new SASTNode(EN_FrameSelect, "");
+																									$$->m_Opcode = OP_FSEL;
+																									g_ASC.PushNode($$);
+																								}
+	| CLF '(' expression ')' ';'																{
+																									$$ = new SASTNode(EN_ClearFrame, "");
+																									$$->m_Opcode = OP_CLF;
+																									g_ASC.PushNode($$);
+																								}
+	| VSYNC '(' ')' ';'																			{
+																									$$ = new SASTNode(EN_Vsync, "");
+																									$$->m_Opcode = OP_VSYNC;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -1416,7 +1446,7 @@ any_statement
 																								}
 	| variable_declaration_statement															{
 																								}
-	| return_statement																			{
+	| builtin_statement																			{
 																								}
 	;
 
@@ -1782,6 +1812,15 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		}
 		break;
 
+		case OP_FSEL:
+		case OP_CLF:
+		{
+			std::string srcA = g_ASC.PopRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA;
+			g_ASC.m_InstructionCount+=1;
+		}
+		break;
+
 		case OP_LOAD:
 		{
 			std::string trg = g_ASC.PushRegister();
@@ -1843,15 +1882,7 @@ void CompileGrimR(const char *_filename)
 	// Dump asm code
 	fprintf(fp, "# Instruction count: %d\n\n", g_ASC.m_InstructionCount);
 	fprintf(fp, "@ORG 0x00000000\n\n");
-	fprintf(fp, "# Select frame buffer 0 for writes and clear it\n");
-	fprintf(fp, "ld.w r0, 0x0000\n");
-	fprintf(fp, "fsel r0\n");
-	fprintf(fp, "ld.w r0, 0x00EC # bgcolor\n");
-	fprintf(fp, "clf r0\n");
 	fprintf(fp, "branch main\n");
-	fprintf(fp, "# Select frame buffer 1 so we can see frame buffer 0\n");
-	fprintf(fp, "ld.w r0, 0x0001\n");
-	fprintf(fp, "fsel r0\n");
 	fprintf(fp, "@LABEL infloop\n");
 	fprintf(fp, "vsync\n");
 	fprintf(fp, "jmp infloop\n");
