@@ -1,4 +1,4 @@
-# Instruction count: 181
+# Instruction count: 191
 
 @ORG 0x00000000
 
@@ -95,6 +95,15 @@ test equal
 jmpifnot endwhile9
 ld.w r0, 0xff
 clf r0
+lea r0, main_frame
+ld.w r0, [r0]
+ld.w r1, 0x4
+bsr r0, r1
+ld.w r1, 0x0
+lea r2, _BORDERCOLOR
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0
 lea r0, main_posX
 ld.w r0, [r0]
 push r0
@@ -187,6 +196,9 @@ jmp beginwhile8
 @LABEL _VRAM
 # ref:0 dim:1 typename:byteptr
 @DW 0x8000 0x0000
+@LABEL _BORDERCOLOR
+# ref:0 dim:1 typename:byteptr
+@DW 0x8000 0xC000
 @LABEL _loword
 # ref:0 dim:1 typename:word
 @DW 0x0000 

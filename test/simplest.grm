@@ -1,6 +1,7 @@
 // GrimR language test file
 
 byteptr VRAM = 0x80000000;
+byteptr BORDERCOLOR = 0x8000C000;
 word loword = 0;
 
 byte sprite[] = {
@@ -56,6 +57,7 @@ def main()
     while(forever==1)
     {
         clf(0xFF);      // Clear framebuffer
+        BORDERCOLOR[0]=frame>>4;
 
         Sprite(posX,posY);
 
