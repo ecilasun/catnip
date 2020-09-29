@@ -1,4 +1,4 @@
-# Instruction count: 183
+# Instruction count: 179
 
 @ORG 0x00000000
 
@@ -39,12 +39,8 @@ test less
 jmpifnot endwhile1
 lea r0, Sprite_spanX
 ld.w r0, [r0]
-ld.w r1, 0x10
-imod r0, r1
 lea r1, Sprite_spanY
 ld.w r1, [r1]
-ld.w r2, 0x17
-imod r1, r2
 ld.w r2, 0x10
 imul r1, r2
 iadd r0, r1

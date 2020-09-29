@@ -38,7 +38,7 @@ def Sprite(word posX, word posY)
         spanX = 0;
         while (spanX<16)
         {
-            VRAM[(spanX+posX + (spanY+posY)*256)] = sprite[(spanY%23)*16+(spanX%16)];
+            VRAM[(spanX+posX + (spanY+posY)*256)] = sprite[spanY*16+spanX];
             spanX = spanX++;
         }
         spanY = spanY++;
