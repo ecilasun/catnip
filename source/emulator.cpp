@@ -156,6 +156,12 @@ void ClockMain()
 void execute(uint16_t instr)
 {
 	uint16_t inst = instr&0x000F;
+
+#if defined(DEBUG_EXECUTE)
+	int breakpoint = 0xBE;
+	bool break_loop = IP != breakpoint ? true : false;
+#endif
+
 	switch(inst)
 	{
 		case INST_LOGIC:
@@ -169,7 +175,7 @@ void execute(uint16_t instr)
 				{
 					register_file[r1] = register_file[r1] | register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("or r%d, r%d (r%d = %.8X) \n", r1, r2, r1, register_file[r1]);
+					printf("%.8X: or r%d, r%d (r%d = %.8X) \n", IP, r1, r2, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -177,7 +183,7 @@ void execute(uint16_t instr)
 				{
 					register_file[r1] = register_file[r1] & register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("and r%d, r%d (r%d = %.8X) \n", r1, r2, r1, register_file[r1]);
+					printf("%.8X: and r%d, r%d (r%d = %.8X) \n", IP, r1, r2, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -185,7 +191,7 @@ void execute(uint16_t instr)
 				{
 					register_file[r1] = register_file[r1] ^ register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("xor r%d, r%d (r%d = %.8X) \n", r1, r2, r1, register_file[r1]);
+					printf("%.8X: xor r%d, r%d (r%d = %.8X) \n", IP, r1, r2, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -193,7 +199,7 @@ void execute(uint16_t instr)
 				{
 					register_file[r1] = ~register_file[r1];
 					#if defined(DEBUG_EXECUTE)
-					printf("not r%d (r%d = %.8X) \n", r1, r1, register_file[r1]);
+					printf("%.8X: not r%d (r%d = %.8X) \n", IP, r1, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -201,7 +207,7 @@ void execute(uint16_t instr)
 				{
 					register_file[r1] = register_file[r1] << register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("bsl r%d, r%d (r%d = %.8X) \n", r1, r2, r1, register_file[r1]);
+					printf("%.8X: bsl r%d, r%d (r%d = %.8X) \n", IP, r1, r2, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -209,7 +215,7 @@ void execute(uint16_t instr)
 				{
 					register_file[r1] = register_file[r1] >> register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("bsr r%d, r%d (r%d = %.8X) \n", r1, r2, r1, register_file[r1]);
+					printf("%.8X: bsr r%d, r%d (r%d = %.8X) \n", IP, r1, r2, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -219,7 +225,7 @@ void execute(uint16_t instr)
 					uint16_t upper8 = (register_file[r2]&0x0000FF00)>>8;
 					register_file[r1] = upper8 | (lower8<<8);
 					#if defined(DEBUG_EXECUTE)
-					printf("bswap_l r%d, r%d (r%d = %.8X) \n", r1, r2, r1, register_file[r1]);
+					printf("%.8X: bswap_l r%d, r%d (r%d = %.8X) \n", IP, r1, r2, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -260,7 +266,7 @@ void execute(uint16_t instr)
 						#if defined(DEBUG_EXECUTE)
 						uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
 						uint16_t *wordsram1 = (uint16_t *)&SRAM[IP+4];
-						printf("%s %.4X%.4X\n", op, *wordsram0, *wordsram1);
+						printf("%.8X: %s %.4X%.4X\n", IP, op, *wordsram0, *wordsram1);
 						#endif
 						// Read branch address from next WORD in memory (short jump, only 16 bits)
 						IP = IP + 2; // CALL WORD
@@ -269,7 +275,7 @@ void execute(uint16_t instr)
 					else
 					{
 						#if defined(DEBUG_EXECUTE)
-						printf("%s r%d (%.8X)\n", op, r1, register_file[r1]);
+						printf("%.8X: %s r%d (%.8X)\n", IP, op, r1, register_file[r1]);
 						#endif
 						// Use address in register pair inside instruction
 						IP = register_file[r1]; // CALL [R1]
@@ -290,7 +296,7 @@ void execute(uint16_t instr)
 							#if defined(DEBUG_EXECUTE)
 							uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
 							uint16_t *wordsram1 = (uint16_t *)&SRAM[IP+4];
-							printf("%sif %.4X%.4X (taken)\n", op, *wordsram0, *wordsram1);
+							printf("%.8X: %sif %.4X%.4X (taken)\n", IP, op, *wordsram0, *wordsram1);
 							#endif
 							// Read branch address from next WORD in memory (short jump, only 16 bits)
 							IP = IP + 2; // CALL WORD
@@ -299,7 +305,7 @@ void execute(uint16_t instr)
 						else
 						{
 							#if defined(DEBUG_EXECUTE)
-							printf("%sif r%d (%.8X) (taken)\n", op, r1, register_file[r1]);
+							printf("%.8X: %sif r%d (%.8X) (taken)\n", IP, op, r1, register_file[r1]);
 							#endif
 							IP = register_file[r1]; // CALL [R1]
 							sram_enable_byteaddress = 0;
@@ -315,7 +321,7 @@ void execute(uint16_t instr)
 							#if defined(DEBUG_EXECUTE)
 							uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
 							uint16_t *wordsram1 = (uint16_t *)&SRAM[IP+4];
-							printf("%sif %.4X%.4X (not taken)\n", op, *wordsram0, *wordsram1);
+							printf("%.8X: %sif %.4X%.4X (not taken)\n", IP, op, *wordsram0, *wordsram1);
 							#endif
 							sram_addr = IP + 6;
 							IP = IP + 6; // Skip the next WORD in memory since it's not a command (short (16bit) branch address)
@@ -323,7 +329,7 @@ void execute(uint16_t instr)
 						else
 						{
 							#if defined(DEBUG_EXECUTE)
-							printf("%sif r%d (%.8X) (not taken)\n", op, r1, register_file[r1]);
+							printf("%.8X: %sif r%d (%.8X) (not taken)\n", IP, op, r1, register_file[r1]);
 							#endif
 							sram_addr = IP + 2;
 							IP = IP + 2; // Does not take the branch if previous call to TEST failed
@@ -339,7 +345,7 @@ void execute(uint16_t instr)
 				{
 					// UNUSED YET - HALT
 					#if defined(DEBUG_EXECUTE)
-					printf("undefined - halt\n");
+					printf("%.8X: undefined - halt\n", IP);
 					#endif
 					IP = 0x7FFFF;
 					sram_enable_byteaddress = 0;
@@ -358,7 +364,7 @@ void execute(uint16_t instr)
 							#if defined(DEBUG_EXECUTE)
 							uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
 							uint16_t *wordsram1 = (uint16_t *)&SRAM[IP+4];
-							printf("%sifnot %.4X%.4X (taken)\n", op, *wordsram0, *wordsram1);
+							printf("%.8X: %sifnot %.4X%.4X (taken)\n", IP, op, *wordsram0, *wordsram1);
 							#endif
 							// Read branch address from next WORD in memory (short jump, only 16 bits)
 							IP = IP + 2; // CALL WORD
@@ -367,7 +373,7 @@ void execute(uint16_t instr)
 						else
 						{
 							#if defined(DEBUG_EXECUTE)
-							printf("%sifnot r%d (%.8X) (taken)\n", op, r1, register_file[r1]);
+							printf("%.8X: %sifnot r%d (%.8X) (taken)\n", IP, op, r1, register_file[r1]);
 							#endif
 							IP = register_file[r1]; // CALL [R1]
 							sram_enable_byteaddress = 0;
@@ -383,7 +389,7 @@ void execute(uint16_t instr)
 							#if defined(DEBUG_EXECUTE)
 							uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
 							uint16_t *wordsram1 = (uint16_t *)&SRAM[IP+4];
-							printf("%sifnot %.4X%.4X (not taken)\n", op, *wordsram0, *wordsram1);
+							printf("%.8X: %sifnot %.4X%.4X (not taken)\n", IP, op, *wordsram0, *wordsram1);
 							#endif
 							sram_addr = IP + 6;
 							IP = IP + 6; // Skip the next WORD in memory since it's not a command (short (16bit) branch address)
@@ -391,7 +397,7 @@ void execute(uint16_t instr)
 						else
 						{
 							#if defined(DEBUG_EXECUTE)
-							printf("%sifnot r%d (%.8X) (not taken)\n", op, r1, register_file[r1]);
+							printf("%.8X: %sifnot r%d (%.8X) (not taken)\n", IP, op, r1, register_file[r1]);
 							#endif
 							sram_addr = IP + 2;
 							IP = IP + 2; // Does not take the branch if previous call to TEST failed
@@ -418,7 +424,7 @@ void execute(uint16_t instr)
 				{
 					register_file[r1] = register_file[r1] + register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("iadd r%d, r%d (r%d = %.8X)\n", r1, r2, r1, register_file[r1]);
+					printf("%.8X: iadd r%d, r%d (r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -426,7 +432,7 @@ void execute(uint16_t instr)
 				{
 					register_file[r1] = register_file[r1] - register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("isub r%d, r%d (r%d = %.8X)\n", r1, r2, r1, register_file[r1]);
+					printf("%.8X: isub r%d, r%d (r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -434,7 +440,7 @@ void execute(uint16_t instr)
 				{
 					register_file[r1] = register_file[r1] * register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("imul r%d, r%d (r%d = %.8X)\n", r1, r2, r1, register_file[r1]);
+					printf("%.8X: imul r%d, r%d (r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -442,7 +448,7 @@ void execute(uint16_t instr)
 				{
 					register_file[r1] = register_file[r1] / register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("idiv r%d, r%d (r%d = %.8X)\n", r1, r2, r1, register_file[r1]);
+					printf("%.8X: idiv r%d, r%d (r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -450,7 +456,7 @@ void execute(uint16_t instr)
 				{
 					register_file[r1] = register_file[r1] % register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("imod r%d, r%d (r%d = %.8X)\n", r1, r2, r1, register_file[r1]);
+					printf("%.8X: imod r%d, r%d (r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -458,7 +464,7 @@ void execute(uint16_t instr)
 				{
 					register_file[r1] = -register_file[r1];//^0x80000000; // Flip integer sign bit
 					#if defined(DEBUG_EXECUTE)
-					printf("ineg r%d (r%d = %.8X)\n", r1, r1, register_file[r1]);
+					printf("%.8X: ineg r%d (r%d = %.8X)\n", IP, r1, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -466,7 +472,7 @@ void execute(uint16_t instr)
 				{
 					register_file[r1] = register_file[r1] + 1;
 					#if defined(DEBUG_EXECUTE)
-					printf("inc r%d (r%d = %.8X)\n", r1, r1, register_file[r1]);
+					printf("%.8X: inc r%d (r%d = %.8X)\n", IP, r1, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -474,7 +480,7 @@ void execute(uint16_t instr)
 				{
 					register_file[r1] = register_file[r1] - 1;
 					#if defined(DEBUG_EXECUTE)
-					printf("dec r%d (r%d = %.8X)\n", r1,r1, register_file[r1]);
+					printf("%.8X: dec r%d (r%d = %.8X)\n", IP, r1, r1, register_file[r1]);
 					#endif
 				}
 				break;
@@ -502,7 +508,7 @@ void execute(uint16_t instr)
 						if ((register_file[r1]&0x0000FFFF) < 0xD000) // Only if within VRAM region
 						{
 							#if defined(DEBUG_EXECUTE)
-							printf("reg2mem(vram) r%d (%.8X), r%d (%.8X)\n", r1, register_file[r1], r2, register_file[r2]);
+							printf("%.8X: st.w(vram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 							#endif
 							// NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
 							// other attributes such as border color, sprite tables and such
@@ -521,7 +527,7 @@ void execute(uint16_t instr)
 							#if defined(DEBUG_EXECUTE)
 							uint16_t *wordsram0 = (uint16_t *)&SRAM[register_file[IP+2]];
 							uint16_t *wordsram1 = (uint16_t *)&SRAM[register_file[IP+4]];
-							printf("reg2mem(sram) r%d (%.8X), r%d (%.8X)\n", r1, register_file[r1], r2, register_file[r2]);
+							printf("%.8X: st.w(sram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 							#endif
 							sram_addr = IP+2;
 							IP = IP + 2;
@@ -534,7 +540,7 @@ void execute(uint16_t instr)
 					{
 						// SRAM
 						#if defined(DEBUG_EXECUTE)
-						printf("reg2mem(sram) r%d (%.8X), r%d (%.8X)\n", r1, register_file[r1], r2, register_file[r2]);
+						printf("%.8X: st.w(sram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 						#endif
 						sram_enable_byteaddress = 0;
 						sram_addr = register_file[r1]; // SRAM write
@@ -550,7 +556,7 @@ void execute(uint16_t instr)
 				{
 					// NOTE: VRAM reads are not possible at the moment
 					#if defined(DEBUG_EXECUTE)
-					printf("ld.w r%d, [r%d] (r%d=[%.8X])\n", r1, r2, r1, register_file[r2]);
+					printf("%.8X: ld.w r%d, [r%d] (r%d=[%.8X])\n", IP, r1, r2, r1, register_file[r2]);
 					#endif
 					sram_enable_byteaddress = 0;
 					sram_addr = register_file[r2];
@@ -564,7 +570,7 @@ void execute(uint16_t instr)
 				case 2: // reg2reg
 				{
 					#if defined(DEBUG_EXECUTE)
-					printf("reg2reg(sram) r%d (%.8X), r%d (%.8X)\n", r1, register_file[r1], r2, register_file[r2]);
+					printf("%.8X: reg2reg(sram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 					#endif
 					register_file[r1] = register_file[r2];
 					sram_addr = IP+2;
@@ -579,7 +585,7 @@ void execute(uint16_t instr)
 				{
 					#if defined(DEBUG_EXECUTE)
 					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
-					printf("ld.w r%d, %.4X\n", r1, *wordsram0);
+					printf("%.8X: ld.w r%d, %.4X\n", IP, r1, *wordsram0);
 					#endif
 					target_register = r1;
 					sram_enable_byteaddress = 0;
@@ -595,7 +601,7 @@ void execute(uint16_t instr)
 					#if defined(DEBUG_EXECUTE)
 					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
 					uint16_t *wordsram1 = (uint16_t *)&SRAM[IP+4];
-					printf("ld.d/lea r%d, %.4X%.4X\n", r1, *wordsram0, *wordsram1);
+					printf("%.8X: ld.d/lea r%d, %.4X%.4X\n", IP, r1, *wordsram0, *wordsram1);
 					#endif
 					target_register = r1;
 					sram_enable_byteaddress = 0;
@@ -614,7 +620,7 @@ void execute(uint16_t instr)
 						if ((register_file[r1]&0x0000FFFF) < 0xD000) // Only if within VRAM region
 						{
 							#if defined(DEBUG_EXECUTE)
-							printf("reg2mem(vram,byte) r%d (%.8X), r%d (%.8X)\n", r1, register_file[r1], r2, register_file[r2]);
+							printf("%.8X: st.b(vram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 							#endif
 							// NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
 							// other attributes such as border color, sprite tables and such
@@ -633,7 +639,7 @@ void execute(uint16_t instr)
 							#if defined(DEBUG_EXECUTE)
 							uint16_t *wordsram0 = (uint16_t *)&SRAM[register_file[IP+2]];
 							uint16_t *wordsram1 = (uint16_t *)&SRAM[register_file[IP+4]];
-							printf("reg2mem(vram, byte) r%d (%.8X), r%d (%.8X)\n", r1, register_file[r1], r2, register_file[r2]);
+							printf("%.8X: st.b(sram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 							#endif
 							sram_addr = IP+2;
 							IP = IP + 2;
@@ -646,7 +652,7 @@ void execute(uint16_t instr)
 					{
 						// SRAM
 						#if defined(DEBUG_EXECUTE)
-						printf("st.b r%d r%d (%.8X = %.8X)\n", r1, r2, register_file[r1], register_file[r2]);
+						printf("%.8X: st.b(sram) r%d r%d (%.8X = %.8X)\n", IP, r1, r2, register_file[r1], register_file[r2]);
 						#endif
 						sram_enable_byteaddress = 1;
 						sram_addr = register_file[r1]; // SRAM write
@@ -662,7 +668,7 @@ void execute(uint16_t instr)
 				{
 					// NOTE: VRAM reads are not possible at the moment
 					#if defined(DEBUG_EXECUTE)
-					printf("ld.b r%d, [r%d] (r%d=[%.8X])\n", r1, r2, r1, register_file[r2]);
+					printf("%.8X: ld.b r%d, [r%d] (r%d=[%.8X])\n", IP, r1, r2, r1, register_file[r2]);
 					#endif
 					sram_enable_byteaddress = 1;
 					sram_addr = register_file[r2];
@@ -676,7 +682,7 @@ void execute(uint16_t instr)
 				case 7: // byte2reg
 				{
 					#if defined(DEBUG_EXECUTE)
-					printf("byte2reg(sram,byte) r%d (%.8X), r%d (%.8X)\n", r1, register_file[r1], r2, register_file[r2]);
+					printf("%.8X: byte2reg(sram,byte) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 					#endif
 					target_register = r1;
 					sram_enable_byteaddress = 1;
@@ -691,7 +697,7 @@ void execute(uint16_t instr)
 				{
 					// NOTE: VRAM reads are not possible at the moment
 					#if defined(DEBUG_EXECUTE)
-					printf("ld.d r%d, [r%d] (r%d=[%.8X])\n", r1, r2, r1, register_file[r2]);
+					printf("%.8X: ld.d r%d, [r%d] (r%d=[%.8X])\n", IP, r1, r2, r1, register_file[r2]);
 					#endif
 					sram_enable_byteaddress = 0;
 					sram_addr = register_file[r2];
@@ -711,7 +717,7 @@ void execute(uint16_t instr)
 			if (op == 1) // HALT
 			{
 				#if defined(DEBUG_EXECUTE)
-				printf("halt\n");
+				printf("%.8X: halt\n", IP);
 				#endif
 				IP = 0x7FFFF;
 				sram_enable_byteaddress = 0;
@@ -722,7 +728,7 @@ void execute(uint16_t instr)
 			else
 			{
 				#if defined(DEBUG_EXECUTE)
-				printf("ret\n");
+				printf("%.8X: ret\n", IP);
 				#endif
 				// Return address is in call stack - NOOP for now
 				IP = CALLSTACK[CALLSP-1];
@@ -744,7 +750,7 @@ void execute(uint16_t instr)
 				case 0:
 				{
 					#if defined(DEBUG_EXECUTE)
-					printf("push r%d (%.8X) (SP=%.8X)\n", r1, register_file[r1], SP);
+					printf("%.8X: push r%d (%.8X) (SP=%.8X)\n", IP, r1, register_file[r1], SP);
 					#endif
 					// Push register or IP to stack
 					sram_enable_byteaddress = 0;
@@ -760,7 +766,7 @@ void execute(uint16_t instr)
 				case 1:
 				{
 					#if defined(DEBUG_EXECUTE)
-					printf("pop r%d (SP=%.8X)\n", r1, SP);
+					printf("%.8X: pop r%d (SP=%.8X)\n", IP, r1, SP);
 					#endif
 					// Pop from stack to register
 					sram_enable_byteaddress = 0;
@@ -788,7 +794,7 @@ void execute(uint16_t instr)
 			sram_read_req = 1;
 			cpu_state = CPU_FETCH_INSTRUCTION;
 			#if defined(DEBUG_EXECUTE)
-			printf("test %d -> TR:%d\n", msk, TR);
+			printf("%.8X: test %d -> TR:%d\n", IP, msk, TR);
 			#endif
 		}
 		break;
@@ -798,7 +804,7 @@ void execute(uint16_t instr)
 			uint16_t r1 = (instr&0b0000000011110000)>>4; // [7:4]
 			uint16_t r2 = (instr&0b0000111100000000)>>8; // [11:8]
 			#if defined(DEBUG_EXECUTE)
-			printf("cmp r%d (%.8X), r%d  (%.8X)\n", r1, register_file[r1], r2, register_file[r2]);
+			printf("%.8X: cmp r%d (%.8X), r%d  (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 			#endif
 			flags_register = 0;
 			flags_register |= (register_file[r1] == register_file[r2]) ? 1 : 0; // EQUAL
@@ -824,7 +830,7 @@ void execute(uint16_t instr)
 				case 0b000: // VSYNC
 				{
 					#if defined(DEBUG_EXECUTE)
-					printf("vsync\n");
+					printf("%.8X: vsync\n", IP);
 					#endif
 					IP = IP + 2;
 					cpu_state = CPU_WAIT_VSYNC;
@@ -834,7 +840,7 @@ void execute(uint16_t instr)
 				{
 					#if defined(DEBUG_EXECUTE)
 					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
-					printf("in %.8X\n", *wordsram0);
+					printf("%.8X: in %.8X\n", *wordsram0, IP);
 					#endif
 					// TODO: Read next word (PORT)
 					// TODO: Input from given port to register_file[instruction[9:7]]
@@ -850,7 +856,7 @@ void execute(uint16_t instr)
 				{
 					#if defined(DEBUG_EXECUTE)
 					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
-					printf("out %.8X\n", *wordsram0);
+					printf("%.8X: out %.8X\n", *wordsram0, IP);
 					#endif
 					// TODO: Read next word (PORT)
 					// TODO: Output register_file[instr[9:7]] to given port
@@ -865,7 +871,7 @@ void execute(uint16_t instr)
 				case 0b011: // FSEL
 				{
 					#if defined(DEBUG_EXECUTE)
-					printf("fsel r%d (%.8X)\n", r1, register_file[r1]);
+					printf("%.8X: fsel r%d (%.8X)\n", IP, r1, register_file[r1]);
 					#endif
 					framebuffer_select = register_file[r1]&0x0001;
 					sram_addr = IP+2;
@@ -878,7 +884,7 @@ void execute(uint16_t instr)
 				case 0b100: // CLF
 				{
 					#if defined(DEBUG_EXECUTE)
-					printf("clf r%d (%.8X)\n", r1, register_file[r1]);
+					printf("%.8X: clf r%d (%.8X)\n", IP, r1, register_file[r1]);
 					#endif
 					cpu_lane_mask = 0xFFFF;
 					framebuffer_address = 0x0000;
@@ -890,7 +896,7 @@ void execute(uint16_t instr)
 				default: // Reserved
 				{
 					#if defined(DEBUG_EXECUTE)
-					printf("undefined IO\n");
+					printf("%.8X: undefined IO\n", IP);
 					#endif
 					sram_addr = IP+2;
 					IP = IP + 2;
@@ -906,7 +912,7 @@ void execute(uint16_t instr)
 		case INST_RELMOV:
 		{
 			#if defined(DEBUG_EXECUTE)
-			printf("relmov - not implemented\n");
+			printf("%.8X: relmov - not implemented\n", IP);
 			#endif
 			uint16_t op = (instr&0b0000000001110000)>>4; // [6:4]
 			//uint16_t r1 = (instr&0b0000011110000000)>>7; // [10:7]
@@ -975,7 +981,7 @@ void execute(uint16_t instr)
 
 		default:
 		{
-			printf("unknown instruction\n");
+			printf("%.8X: illegal instruction %d\n", IP, instr);
 			sram_addr = IP+2;
 			IP = IP + 2; // Unknown instructions act as NOOP during development
 			sram_enable_byteaddress = 0;
@@ -986,7 +992,6 @@ void execute(uint16_t instr)
 	}
 
 #if defined(DEBUG_EXECUTE)
-	bool break_loop = false;
 	while(!break_loop)
 	{
 		SDL_Event event;
