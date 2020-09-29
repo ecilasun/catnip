@@ -70,6 +70,8 @@ enum EASTNodeType
 	EN_BitAnd,
 	EN_BitOr,
 	EN_BitXor,
+	EN_PostfixInc,
+	EN_PostfixDec,
 	EN_ConditionalExpr,
 	EN_LogicAnd,
 	EN_LogicOr,
@@ -136,6 +138,8 @@ const char* NodeTypes[]=
 	"EN_BitAnd                    ",
 	"EN_BitOr                     ",
 	"EN_BitXor                    ",
+	"EN_PostfixInc                ",
+	"EN_PostfixDec                ",
 	"EN_ConditionalExpr           ",
 	"EN_LogicAnd                  ",
 	"EN_LogicOr                   ",
@@ -174,6 +178,8 @@ enum EOpcode
 {
 	OP_EMPTY,
 	OP_NOOP,
+	OP_INC,
+	OP_DEC,
 	OP_ADDRESSOF,
 	OP_VALUEOF,
 	OP_BITNOT,
@@ -228,6 +234,8 @@ enum EOpcode
 const std::string Opcodes[]={
 	"",
 	"nop",
+	"inc",
+	"dec",
 	"addrof",
 	"valof",
 	"not",
@@ -535,6 +543,7 @@ SASTScanContext g_ASC;
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
 %token WORD BYTE WORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
 %token VSYNC FSEL CLF
+%token INC_OP DEC_OP
 
 %type <astnode> simple_identifier
 %type <astnode> simple_constant
@@ -637,6 +646,20 @@ postfix_expression
 																									$$->PushNode(offsetexpressionnode);
 																									$$->PushNode(exprnode);
 																									exprnode->m_Opcode = OP_ARRAYINDEX;
+																									g_ASC.PushNode($$);
+																								}
+	| postfix_expression INC_OP																	{
+																									SASTNode *exprnode = g_ASC.PopNode();
+																									$$ = new SASTNode(EN_PostfixInc, "");
+																									$$->PushNode(exprnode);
+																									$$->m_Opcode = OP_INC;
+																									g_ASC.PushNode($$);
+																								}
+	| postfix_expression DEC_OP																	{
+																									SASTNode *exprnode = g_ASC.PopNode();
+																									$$ = new SASTNode(EN_PostfixDec, "");
+																									$$->PushNode(exprnode);
+																									$$->m_Opcode = OP_DEC;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -1822,6 +1845,16 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		break;
 
 		case OP_NEG:
+		{
+			std::string srcA = g_ASC.PopRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA;
+			g_ASC.m_InstructionCount+=1;
+			g_ASC.PushRegister(); // Keep output in same register
+		}
+		break;
+
+		case OP_INC:
+		case OP_DEC:
 		{
 			std::string srcA = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA;

@@ -1,4 +1,4 @@
-# Instruction count: 190
+# Instruction count: 187
 
 @ORG 0x00000000
 
@@ -72,19 +72,17 @@ lea r2, _VRAM
 ld.w r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-ld.w r0, 0x1
-lea r1, Sprite_spanX
-ld.w r1, [r1]
-iadd r0, r1
+lea r0, Sprite_spanX
+ld.w r0, [r0]
+inc r0
 lea r1, Sprite_spanX
 st.w [r1], r0
 jmp beginwhile0
 
 @LABEL endwhile1
-ld.w r0, 0x1
-lea r1, Sprite_spanY
-ld.w r1, [r1]
-iadd r0, r1
+lea r0, Sprite_spanY
+ld.w r0, [r0]
+inc r0
 lea r1, Sprite_spanY
 st.w [r1], r0
 jmp beginwhile2
@@ -101,15 +99,6 @@ ld.w r1, 0x1
 cmp r0, r1
 test equal
 jmpifnot endwhile9
-lea r0, main_frame
-ld.w r0, [r0]
-fsel r0
-ld.w r0, 0x1
-lea r1, main_frame
-ld.w r1, [r1]
-iadd r0, r1
-lea r1, main_frame
-st.w [r1], r0
 ld.w r0, 0xff
 clf r0
 lea r0, main_posX
@@ -186,10 +175,18 @@ st.w [r1], r0
 
 @LABEL endif7
 vsync 
+lea r0, main_frame
+ld.w r0, [r0]
+fsel r0
+ld.w r0, 0x1
+lea r1, main_frame
+ld.w r1, [r1]
+iadd r0, r1
+lea r1, main_frame
+st.w [r1], r0
 jmp beginwhile8
 
 @LABEL endwhile9
-ret 
 
 #-------------Symbol Table-------------
 

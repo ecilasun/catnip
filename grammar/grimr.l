@@ -83,6 +83,9 @@ void stripquotes(char *string);
 "&&"						{ count();  return(AND_OP); }
 "||"						{ count();  return(OR_OP); }
 
+"++"						{ count();  return(INC_OP); }
+"--"						{ count();  return(DEC_OP); }
+
 {L}({L}|{D})*				{ count(); sscanf(yytext, "%s", yylval.string); return(IDENTIFIER); }
 
 0[xX]{H}+{IS}?				{ count(); sscanf(yytext, "%x", &yylval.numeric); return(CONSTANT); }

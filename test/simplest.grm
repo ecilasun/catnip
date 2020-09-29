@@ -39,9 +39,9 @@ def Sprite(word posX, word posY)
         while (spanX<16)
         {
             VRAM[(0x8000<<16) | (spanX+posX + (spanY+posY)*256)] = sprite[(spanY%23)*16+(spanX%16)];
-            spanX = spanX+1;
+            spanX = spanX++;
         }
-        spanY = spanY+1;
+        spanY = spanY++;
     }
     return;
 }
@@ -55,8 +55,6 @@ def main()
 
     while(forever==1)
     {
-        fsel(frame);    // Switch writes to 'frame'
-        frame = frame+1;
         clf(0xFF);      // Clear framebuffer
 
         Sprite(posX,posY);
@@ -81,8 +79,10 @@ def main()
             dirX = -dirX;
         }
 
-        vsync(); // Wait for vsync
+        vsync();        // Wait for vsync
+        fsel(frame);    // Switch writes to 'frame'
+        frame = frame + 1;
     }
 
-    return;
+    // return; //no return
 }
