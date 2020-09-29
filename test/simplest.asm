@@ -1,4 +1,4 @@
-# Instruction count: 187
+# Instruction count: 183
 
 @ORG 0x00000000
 
@@ -51,25 +51,21 @@ iadd r0, r1
 lea r1, _sprite
 iadd r0, r1
 ld.b r0, [r0] # RHS, valueof
-ld.w r1, 0x8000
-ld.w r2, 0x10
-bsl r1, r2
-lea r2, Sprite_posY
+lea r1, Sprite_posY
+ld.w r1, [r1]
+lea r2, Sprite_spanY
 ld.w r2, [r2]
-lea r3, Sprite_spanY
+iadd r1, r2
+ld.w r2, 0x100
+imul r1, r2
+lea r2, Sprite_posX
+ld.w r2, [r2]
+lea r3, Sprite_spanX
 ld.w r3, [r3]
 iadd r2, r3
-ld.w r3, 0x100
-imul r2, r3
-lea r3, Sprite_posX
-ld.w r3, [r3]
-lea r4, Sprite_spanX
-ld.w r4, [r4]
-iadd r3, r4
-iadd r2, r3
-or r1, r2
+iadd r1, r2
 lea r2, _VRAM
-ld.w r2, [r2]
+ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
 lea r0, Sprite_spanX
@@ -190,12 +186,12 @@ jmp beginwhile8
 
 #-------------Symbol Table-------------
 
-@LABEL _loword
-# ref:0 dim:1 typename:word
-@DW 0x7FFFFFFF 
 @LABEL _VRAM
 # ref:0 dim:1 typename:byteptr
-@DW 0x0000 0x0000
+@DW 0x8000 0x0000
+@LABEL _loword
+# ref:0 dim:1 typename:word
+@DW 0x0000 
 @LABEL _sprite
 # ref:0 dim:368 typename:byte
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
@@ -223,10 +219,10 @@ jmp beginwhile8
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
 @LABEL Sprite_spanX
 # ref:0 dim:1 typename:word
-@DW 0x7FFFFFFF 
+@DW 0xCDCDCDCD 
 @LABEL Sprite_spanY
 # ref:0 dim:1 typename:word
-@DW 0x7FFFFFFF 
+@DW 0xCDCDCDCD 
 @LABEL Sprite_posY
 # ref:0 dim:1 typename:word
 @DW 0xCDCDCDCD 

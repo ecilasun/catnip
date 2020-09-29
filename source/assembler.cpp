@@ -519,9 +519,9 @@ public:
 				printf("ERROR: label not found for LEA intrinsic.\n");
 		}
 
-		unsigned int code = 0x04; // DW2Rs
+		unsigned int code = 0x04; // DW2R
 		unsigned short gencode;
-		gencode = m_Opcode | (code<<4) | (r1<<7);
+		gencode = m_Opcode | (code<<4) | (r1<<8);
 		_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 		_binary_output[_current_binary_offset++] = gencode&0x00FF;
 		_binary_output[_current_binary_offset++] = (extra_dword&0xFF000000)>>24;
@@ -543,14 +543,14 @@ public:
 		int r1 = 0, r2 = 0;
 		sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 		uint32_t extra_dword = 0;
-		if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))				  // R1 <- IMMEDIATE(WORD)
+		if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))				  // R1 <- IMMEDIATE(DWORD)
 			sscanf(_parser_table[_current_parser_offset+2].m_Value, "%x", &extra_dword);
-		else if (strstr(_parser_table[_current_parser_offset+2].m_Value, "["))			  // R1 <- WORD [R2]
+		else if (strstr(_parser_table[_current_parser_offset+2].m_Value, "["))			  // R1 <- DWORD [R2]
 		{
 			sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d]", &r2);
-			unsigned int code = 0x01; // M2R
+			unsigned int code = 0x08; // DWM2R
 			unsigned short gencode;
-			gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<11);
+			gencode = m_Opcode | (code<<4) | (r1<<8) | (r2<<12);
 			_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = gencode&0x00FF;
 			return 3;
@@ -580,9 +580,11 @@ public:
 
 		unsigned int code = 0x04; // DW2R
 		unsigned short gencode;
-		gencode = m_Opcode | (code<<4) | (r1<<7);
+		gencode = m_Opcode | (code<<4) | (r1<<8);
 		_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 		_binary_output[_current_binary_offset++] = gencode&0x00FF;
+		_binary_output[_current_binary_offset++] = (extra_dword&0xFF000000)>>24;
+		_binary_output[_current_binary_offset++] = (extra_dword&0x00FF0000)>>16;
 		_binary_output[_current_binary_offset++] = (extra_dword&0x0000FF00)>>8;
 		_binary_output[_current_binary_offset++] = (extra_dword&0x000000FF);
 
@@ -607,7 +609,7 @@ public:
 			sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d]", &r2);
 			unsigned int code = 0x01; // M2R
 			unsigned short gencode;
-			gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<11);
+			gencode = m_Opcode | (code<<4) | (r1<<8) | (r2<<12);
 			_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = gencode&0x00FF;
 			return 3;
@@ -637,7 +639,7 @@ public:
 
 		unsigned int code = 0x03; // W2R
 		unsigned short gencode;
-		gencode = m_Opcode | (code<<4) | (r1<<7);
+		gencode = m_Opcode | (code<<4) | (r1<<8);
 		_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 		_binary_output[_current_binary_offset++] = gencode&0x00FF;
 		_binary_output[_current_binary_offset++] = (extra_dword&0x0000FF00)>>8;
@@ -664,7 +666,7 @@ public:
 			sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d]", &r2);
 			unsigned int code = 0x06; // M2R
 			unsigned short gencode;
-			gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<11);
+			gencode = m_Opcode | (code<<4) | (r1<<8) | (r2<<12);
 			_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = gencode&0x00FF;
 			return 3;
@@ -694,7 +696,7 @@ public:
 
 		unsigned int code = 0x07; // B2R
 		unsigned short gencode;
-		gencode = m_Opcode | (code<<4) | (r1<<7);
+		gencode = m_Opcode | (code<<4) | (r1<<8);
 		_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 		_binary_output[_current_binary_offset++] = gencode&0x00FF;
 		_binary_output[_current_binary_offset++] = (extra_dword&0x0000FF00)>>8;
@@ -718,7 +720,7 @@ public:
 
 		unsigned int code = 0x00; // W2M
 		unsigned short gencode;
-		gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<11);
+		gencode = m_Opcode | (code<<4) | (r1<<8) | (r2<<12);
 		_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 		_binary_output[_current_binary_offset++] = gencode&0x00FF;
 		return 3;
@@ -739,7 +741,7 @@ public:
 
 		unsigned int code = 0x00; // W2M
 		unsigned short gencode;
-		gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<11);
+		gencode = m_Opcode | (code<<4) | (r1<<8) | (r2<<12);
 		_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 		_binary_output[_current_binary_offset++] = gencode&0x00FF;
 		return 3;
@@ -760,7 +762,7 @@ public:
 
 		unsigned int code = 0x05; // B2M
 		unsigned short gencode;
-		gencode = m_Opcode | (code<<4) | (r1<<7) | (r2<<11);
+		gencode = m_Opcode | (code<<4) | (r1<<8) | (r2<<12);
 		_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 		_binary_output[_current_binary_offset++] = gencode&0x00FF;
 		return 3;

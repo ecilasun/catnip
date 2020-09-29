@@ -331,7 +331,7 @@ struct SVariable
 	std::string m_Value;
 	class SASTNode *m_RootNode{nullptr};
 	SString *m_String{nullptr};
-	std::vector<std::string> m_InitialValues;
+	std::vector<uint32_t> m_InitialValues;
 };
 
 struct SFunction
@@ -1257,31 +1257,39 @@ variable_declaration
 																									{
 																										if (n0->m_Type == EN_DeclArray)
 																										{
-																											var->m_Dimension = strtol(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
+																											var->m_Dimension = strtoul(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
 																											for (int i=0;i<var->m_Dimension;++i)
-																												var->m_InitialValues.push_back("0xCDCDCDCD");
+																												var->m_InitialValues.push_back(0xCDCDCDCD);
 																										}
 																										else if (n0->m_Type == EN_DeclInitJunction)
 																										{
 																											if (n0->m_ASTNodes.size()>=3 && n0->m_ASTNodes[2]->m_Type == EN_ArrayWithDataJunction)
 																											{
-																												var->m_Dimension = strtol(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
+																												var->m_Dimension = strtoul(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
 																												for (auto &val : n0->m_ASTNodes[2]->m_ASTNodes)
-																													var->m_InitialValues.push_back(val->m_Value);
+																												{
+																													uint32_t V = strtoul(val->m_Value.c_str(), nullptr, 16);
+																													var->m_InitialValues.push_back(V);
+																												}
 																											}
 																											else
 																											{
-																												var->m_InitialValues.push_back(n0->m_ASTNodes[1]->m_Value);
+																												//printf("VAR:%s VAL:%s\n", var->m_Name.c_str(), n0->m_ASTNodes[1]->m_Value.c_str());
+																												uint32_t V = strtoul(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
+																												var->m_InitialValues.push_back(V);
 																											}
 																										}
 																										else if (n0->m_Type == EN_ArrayWithDataJunction)
 																										{
 																											for (auto &val : n0->m_ASTNodes)
-																												var->m_InitialValues.push_back(val->m_Value);
+																											{
+																												uint32_t V = strtoul(val->m_Value.c_str(), nullptr, 16);
+																												var->m_InitialValues.push_back(V);
+																											}
 																										}
 																									}
 																									else
-																										var->m_InitialValues.push_back("0xCDCDCDCD");
+																										var->m_InitialValues.push_back(0xCDCDCDCD);
 
 																									$$->m_Opcode = OP_DECL;
 																									//g_ASC.PushNode($$); // Variable already added to var stack
@@ -1305,37 +1313,43 @@ variable_declaration
 																									var->m_Value = "";
 																									var->m_TypeName = g_ASC.m_CurrentTypeName;
 
-																									if (n0->m_Type == EN_Identifier)
-																									{
-																										var->m_InitialValues.push_back("0xCDCDCDCD");
-																									}
-																									else
+																									if (n0->m_ASTNodes.size())
 																									{
 																										if (n0->m_Type == EN_DeclArray)
 																										{
-																											var->m_Dimension = strtol(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
+																											var->m_Dimension = strtoul(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
 																											for (int i=0;i<var->m_Dimension;++i)
-																												var->m_InitialValues.push_back("0xCDCDCDCD");
+																												var->m_InitialValues.push_back(0xCDCDCDCD);
 																										}
 																										else if (n0->m_Type == EN_DeclInitJunction)
 																										{
 																											if (n0->m_ASTNodes.size()>=3 && n0->m_ASTNodes[2]->m_Type == EN_ArrayWithDataJunction)
 																											{
-																												var->m_Dimension = strtol(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
+																												var->m_Dimension = strtoul(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
 																												for (auto &val : n0->m_ASTNodes[2]->m_ASTNodes)
-																													var->m_InitialValues.push_back(val->m_Value);
+																												{
+																													uint32_t V = strtoul(val->m_Value.c_str(), nullptr, 16);
+																													var->m_InitialValues.push_back(V);
+																												}
 																											}
 																											else
 																											{
-																												var->m_InitialValues.push_back(n0->m_ASTNodes[1]->m_Value);
+																												//printf("VAR:%s VAL:%s\n", var->m_Name.c_str(), n0->m_ASTNodes[1]->m_Value.c_str());
+																												uint32_t V = strtoul(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
+																												var->m_InitialValues.push_back(V);
 																											}
 																										}
 																										else if (n0->m_Type == EN_ArrayWithDataJunction)
 																										{
 																											for (auto &val : n0->m_ASTNodes)
-																												var->m_InitialValues.push_back(val->m_Value);
+																											{
+																												uint32_t V = strtoul(val->m_Value.c_str(), nullptr, 16);
+																												var->m_InitialValues.push_back(V);
+																											}
 																										}
 																									}
+																									else
+																										var->m_InitialValues.push_back(0xCDCDCDCD);
 
 																									$$->m_Opcode = OP_DECL;
 																									//g_ASC.PushNode($$); // Variable already added to var stack
@@ -1762,8 +1776,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				// This is not a 'real' array, fetch data at address to treat as array base address
 				if (var->m_Dimension <= 1)
 				{
-					// Assuming a word load
-					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + ".w " + tgt + ", [" + tgt + "]";
+					std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
+					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + tgt + ", [" + tgt + "]";
 				}
 			}
 			else
@@ -1943,50 +1957,54 @@ void CompileGrimR(const char *_filename)
 			continue;*/
 		fprintf(fp, "@LABEL %s_%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
 		fprintf(fp, "# ref:%d dim:%d typename:%s\n", var->m_RefCount, var->m_Dimension, TypeNames[var->m_TypeName]);
-		//if (var->m_InitialValues.size())
 		{
-			int cnt = 0;
-			uint32_t *buf = new uint32_t[var->m_InitialValues.size()+4];
-			memset(buf, 0xCD, (var->m_InitialValues.size()+4)*sizeof(uint32_t));
-			for (auto &data : var->m_InitialValues)
-			{
-				uint32_t V = strtol(data.c_str(), nullptr, 16);
-				buf[cnt++] = V;
-			}
-			if (var->m_InitialValues.size()==0)
-				buf[cnt++] = 0xCDCDCDCD;
 			if (var->m_TypeName == TN_WORD)
 			{
-				int end = cnt;
-				end = end==0 ? 1:end;
 				fprintf(fp, "@DW ");
-				for (int i=0;i<end;++i)
-					fprintf(fp, "0x%.4X ", buf[i]);
+				for (auto &data : var->m_InitialValues)
+					fprintf(fp, "0x%.4X ", data);
+				if (var->m_InitialValues.size()==0)
+				{
+					for (int i=0;i<var->m_Dimension;++i)
+						fprintf(fp, "0xCDCDCDCD ");
+				}
 				fprintf(fp, "\n");
 			}
 			if (var->m_TypeName == TN_BYTE)
 			{
 				fprintf(fp, "@DW ");
-				int end = cnt/2;
-				end = end==0 ? 1:end;
-				for (int i=0;i<end;++i)
+				if (var->m_InitialValues.size()%2 == 1)
+					var->m_InitialValues.push_back(0x0);
+				auto beg = var->m_InitialValues.begin();
+				auto end = var->m_InitialValues.end();
+				int i=0;
+				while(beg!=end)
 				{
 					if (i%8 == 0 && i!=0)
 						fprintf(fp, "\n@DW ");
-					fprintf(fp, "0x%.4X ", (buf[i*2+0]<<8) | buf[i*2+1]);
+					fprintf(fp, "0x%.2X%.2X ", *beg, *(beg+1));
+					beg+=2;
+					++i;
+				}
+				if (var->m_InitialValues.size()==0)
+				{
+					for (int i=0;i<var->m_Dimension;++i)
+						fprintf(fp, "0xCDCDCDCD ");
 				}
 				fprintf(fp, "\n");
 			}
 			if (var->m_TypeName == TN_WORDPTR || var->m_TypeName == TN_BYTEPTR)
 			{
-				int end = cnt;
-				end = end==0 ? 1:end;
 				fprintf(fp, "@DW ");
-				for (int i=0;i<end;++i)
-					fprintf(fp, "0x%.4X 0x%.4X", (buf[i]<<16)&0xFFFF, (buf[i])&0xFFFF);
+				for (auto &data : var->m_InitialValues)
+					fprintf(fp, "0x%.4X 0x%.4X", (data&0xFFFF0000)>>16, data&0x0000FFFF);
+				if (var->m_InitialValues.size()==0)
+				{
+					for (int i=0;i<var->m_Dimension;++i)
+						fprintf(fp, "0xCDCD 0xCDCD ");
+				}
 				fprintf(fp, "\n");
 			}
-			delete [] buf;
 		}
 	}
 	fclose(fp);

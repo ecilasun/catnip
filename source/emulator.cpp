@@ -489,9 +489,9 @@ void execute(uint16_t instr)
 
 		case INST_MOV:
 		{
-			uint16_t op = (instr&0b0000000001110000)>>4; // [6:4]
-			uint16_t r1 = (instr&0b0000011110000000)>>7; // [10:7]
-			uint16_t r2 = (instr&0b0111100000000000)>>11; // [14:11]
+			uint16_t op = (instr&0b0000000011110000)>>4; // [7:4]
+			uint16_t r1 = (instr&0b0000111100000000)>>8; // [11:8]
+			uint16_t r2 = (instr&0b1111000000000000)>>12; // [15:12]
 			switch (op)
 			{
 				case 0: // reg2mem
@@ -545,6 +545,7 @@ void execute(uint16_t instr)
 					}
 				}
 				break;
+
 				case 1: // mem2reg
 				{
 					// NOTE: VRAM reads are not possible at the moment
@@ -559,6 +560,7 @@ void execute(uint16_t instr)
 					cpu_state = CPU_READ_DATA;
 				}
 				break;
+
 				case 2: // reg2reg
 				{
 					#if defined(DEBUG_EXECUTE)
@@ -572,6 +574,7 @@ void execute(uint16_t instr)
 					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
+
 				case 3: // word2reg
 				{
 					#if defined(DEBUG_EXECUTE)
@@ -586,6 +589,7 @@ void execute(uint16_t instr)
 					cpu_state = CPU_READ_DATA;
 				}
 				break;
+
 				case 4: // dword2reg
 				{
 					#if defined(DEBUG_EXECUTE)
@@ -601,6 +605,7 @@ void execute(uint16_t instr)
 					cpu_state = CPU_READ_DATAH;
 				}
 				break;
+
 				case 5: // reg2mem (byte)
 				{
 					bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
@@ -652,6 +657,7 @@ void execute(uint16_t instr)
 					}
 				}
 				break;
+
 				case 6: // mem2reg (byte)
 				{
 					// NOTE: VRAM reads are not possible at the moment
@@ -666,6 +672,7 @@ void execute(uint16_t instr)
 					cpu_state = CPU_READ_DATA_BYTE;
 				}
 				break;
+
 				case 7: // byte2reg
 				{
 					#if defined(DEBUG_EXECUTE)
@@ -677,6 +684,21 @@ void execute(uint16_t instr)
 					sram_read_req = 1;
 					IP = IP + 4; // Skip the WORD we read plus the instruction
 					cpu_state = CPU_READ_DATA_BYTE;
+				}
+				break;
+
+				case 8: // dwmem2reg (dword)
+				{
+					// NOTE: VRAM reads are not possible at the moment
+					#if defined(DEBUG_EXECUTE)
+					printf("ld.d r%d, [r%d] (r%d=[%.8X])\n", r1, r2, r1, register_file[r2]);
+					#endif
+					sram_enable_byteaddress = 0;
+					sram_addr = register_file[r2];
+					target_register = r1;
+					sram_read_req = 1;
+					IP = IP + 2;
+					cpu_state = CPU_READ_DATAH;
 				}
 				break;
 			}

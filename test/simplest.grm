@@ -1,7 +1,7 @@
 // GrimR language test file
 
-word loword;
-byteptr VRAM = 0x0;
+byteptr VRAM = 0x80000000;
+word loword = 0;
 
 byte sprite[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
@@ -38,7 +38,7 @@ def Sprite(word posX, word posY)
         spanX = 0;
         while (spanX<16)
         {
-            VRAM[(0x8000<<16) | (spanX+posX + (spanY+posY)*256)] = sprite[(spanY%23)*16+(spanX%16)];
+            VRAM[(spanX+posX + (spanY+posY)*256)] = sprite[(spanY%23)*16+(spanX%16)];
             spanX = spanX++;
         }
         spanY = spanY++;
@@ -86,3 +86,4 @@ def main()
 
     // return; //no return
 }
+

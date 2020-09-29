@@ -364,16 +364,17 @@ There are two variants for memory access instructions: word access and byte acce
 
 Non-relative address mode:
 ```
-? 0000 0000 000 0011
-  |    |    |   MOV (DWORD / WORD / BYTE)
-  rB   rA   000:REG2MEM [rA], rB - st.w
-  E:B  A:7  001:MEM2REG rA, [rB] - ld.w
-            010:REG2REG rA, rB - cp.w
-            011:WORD2REG rA, [IP+2] (16 bit constant starting at IP+2) - ld.w
-            100:DWORD2REG rA, [IP+2:IP+4] (32 bit constant address starting at IP+2) - ld.d
-            101:REG2MEM [rA], rB - st.b
-            110:MEM2REG rA, [rB] - ld.b
-            111:BYTE2REG rA, [IP+2] (low 8 bit constant starting at IP+2) - ld.b
+0000 0000 0000 0011
+|    |    |    MOV (DWORD / WORD / BYTE)
+rB   rA   0000:REG2MEM [rA], rB - st.w
+E:B  A:7  0001:MEM2REG rA, [rB] - ld.w
+          0010:REG2REG rA, rB - cp.w
+          0011:WORD2REG rA, [IP+2] (16 bit constant starting at IP+2) - ld.w
+          0100:DWORD2REG rA, [IP+2:IP+4] (32 bit constant address starting at IP+2) - ld.d
+          0101:REG2MEM [rA], rB - st.b
+          0110:MEM2REG rA, [rB] - ld.b
+          0111:BYTE2REG rA, [IP+2] (low 8 bit constant starting at IP+2) - ld.b
+          1000:DWMEM2REG rA, [rB] - ld.d
 ```
 Relative address mode (NOT IMPLEMENTED YET):
 ```
