@@ -317,12 +317,14 @@ public:
 				//printf("Long branch to register pair if TR==1: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
 			}
 
-			int r1;
+			int r1=0,r2=0;
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
-			unsigned short code = m_Opcode | (r1<<6) | (is_conditional ? 0x0010 : 0x0000) | (is_reverse_conditional ? 0x0020 : 0x0000) | (is_branch ? 0x4000 : 0x0000);
+			if(is_conditional)
+				sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r2);
+			unsigned short code = m_Opcode | (r1<<6) | (r2<<10) | (is_conditional ? 0x0010 : 0x0000) | (is_reverse_conditional ? 0x0020 : 0x0000) | (is_branch ? 0x4000 : 0x0000);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;
-			return 2;
+			return is_conditional ? 3:2;
 		}
 		else
 		{
@@ -381,7 +383,11 @@ public:
 			if (targetfound==0)
 				printf("Branch target not found: %s\n", _parser_table[_current_parser_offset+1].m_Value);
 
-			unsigned short code = m_Opcode | 0x8000 | (is_conditional ? 0x0010 : 0x0000) | (is_reverse_conditional ? 0x0020 : 0x0000) | (is_branch ? 0x4000 : 0x0000);
+			int r2;
+			if(is_conditional)
+				sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
+
+			unsigned short code = m_Opcode | 0x8000 | (r2<<10) | (is_conditional ? 0x0010 : 0x0000) | (is_reverse_conditional ? 0x0020 : 0x0000) | (is_branch ? 0x4000 : 0x0000);
 
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;
@@ -392,7 +398,7 @@ public:
 			_binary_output[_current_binary_offset++] = 0xFF;
 			_binary_output[_current_binary_offset++] = 0xFF;
 
-			return 2;
+			return is_conditional ? 3:2;
 		}
 	}
 };
@@ -884,8 +890,11 @@ public:
 	// INSTRUCTION: 0x00006
 	int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
 	{
+		int r1;
+		sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+
 		unsigned int mask = 0;
-		int i = _current_parser_offset+1;
+		int i = _current_parser_offset+2;
 		// Loop and gather mask from all non-keywords after this instruction
 		// ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL
 		do
@@ -907,7 +916,7 @@ public:
 
 		//printf("Test mask on previous compare: %.8X\n", mask);
 
-		unsigned short code = m_Opcode | (mask<<4);
+		unsigned short code = m_Opcode | (mask<<4) | (r1<<10);
 		_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 		_binary_output[_current_binary_offset++] = code&0x00FF;
 

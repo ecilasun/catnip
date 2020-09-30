@@ -71,7 +71,6 @@ uint16_t flags_register;	   	// Flag registers [ZERO:NOTEQUAL:NOTZERO:LESS:GREAT
 uint16_t target_register;		// Target for some memory read operations
 uint16_t target_registerH;		// Target for some memory read operations (high word)
 uint16_t cpu_state = CPU_INIT;	// Default state to boot from
-uint16_t TR;					// Test register, holds result of TEST
 uint16_t CALLSP;				// Branch stack pointer
 uint32_t CALLSTACK[16];			// Branch stack
 
@@ -246,6 +245,7 @@ void execute(uint16_t instr)
 			uint16_t immed = (instr&0b1000000000000000)>>15; // [15]
 			uint16_t si = (instr&0b0000000000110000)>>4; // [5:4]
 			uint16_t r1 = (instr&0b0000001111000000)>>6; // [9:6]
+			uint16_t r2 = (instr&0b0011110000000000)>>10; // [13:10]
 
 			// NOTE: BRANCH and JMP share the same logic except the stack bit
 			// Push return address to branch stack for 'BRANCH/BRANCHIF'
@@ -289,7 +289,7 @@ void execute(uint16_t instr)
 
 				case 0b01: // When test register (TR) is true - jmp/branch if
 				{
-					if (TR == 1)
+					if (register_file[r2] == 1)
 					{
 						if (immed == 1)
 						{
@@ -357,7 +357,7 @@ void execute(uint16_t instr)
 
 				case 0b11: // When test register (TR) is false - jmp/branch ifnot
 				{
-					if (TR == 0)
+					if (register_file[r2] == 0)
 					{
 						if (immed == 1)
 						{
@@ -787,7 +787,8 @@ void execute(uint16_t instr)
 			// [ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL] & FLAG_MASK
 			uint16_t flg = (flags_register&0b0000000000111111); // [5:0]
 			uint16_t msk = (instr&0b0000001111110000)>>4; // [9:4]
-			TR = flg&msk ? 1:0; // At least one bit out of the masked bits passed test against mask or no bits passed
+			uint16_t r1 =  (instr&0b0011110000000000)>>10; // [13:10]
+			register_file[r1] = flg&msk ? 1:0; // At least one bit out of the masked bits passed test against mask or no bits passed
 			sram_addr = IP+2;
 			IP = IP + 2;
 			sram_enable_byteaddress = 0;
@@ -1066,7 +1067,6 @@ void CPUMain()
 
 			// Clear status flags and Test register
 			flags_register = 0; // [ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL]
-			TR = 0;
 
 			// Reset SRAM access
 			sram_addr = 0;// 0x7FFFF; Slightly different behavior in hardware

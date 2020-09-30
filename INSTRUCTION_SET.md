@@ -247,13 +247,13 @@ rA = (lower<<8)|upper;
 
 Branch instruction is a bit special since it needs to read two extra WORDs from the adjacent addresses in memory, IP+2 and IP+4 and therefore takes up more than one cycle to complete its operation.
 ```
-0 0 ???? 0000 00 0001   [IP+2] [IP+4]
-| |      |    |  BRANCH
-| |      rA   |
+0 0 0000 0000 00 0001   [IP+2] [IP+4]
+| | |    |    |  BRANCH
+| | rB   rA   |
 | |      9:6  00:UNCONDITIONAL
-| |           01:CONDITIONAL based on TEST set
+| |           01:CONDITIONAL based on rB set
 | |           10:UNDEFINED
-| |           11:INVCONDITIONAL based on TEST not set
+| |           11:INVCONDITIONAL based on rB not set
 | 0:JMP
 | 1:CALL
 |
@@ -265,21 +265,21 @@ Branch instruction is a bit special since it needs to read two extra WORDs from 
 
 Pushes the next instuction's address onto the branch stack and sets the IP to the 2 words following this instruction or the contents of register rA.
 
-### BRANCHIF {address} / BRANCHIF rA
+### BRANCHIF {address} rB / BRANCHIF rA rB
 
-Pushes the next instuction's address onto the branch stack and sets the IP to the 2 words following this instruction or the contents of register rA if the TR register is set.
+Pushes the next instuction's address onto the branch stack and sets the IP to the 2 words following this instruction or the contents of register rA if the rB register is 1.
 
 ### JMP {address} / JMP rA
 
 Sets the IP to the 2 words following this instruction or the contents of register rA.
 
-### JMPIF {address} / JMPIF rA
+### JMPIF {address} rB / JMPIF rA rB
 
-Sets the IP to the 2 words following this instruction or the contents of registers rA if the TR register IS SET.
+Sets the IP to the 2 words following this instruction or the contents of registers rA if the rB register IS SET.
 
-### JMPIFNOT {address} / JMPIFNOT rA
+### JMPIFNOT {address} rB / JMPIFNOT rA rB
 
-Sets the IP to the 2 words following this instruction or the contents of registers rA if the TR register IS NOT SET.
+Sets the IP to the 2 words following this instruction or the contents of registers rA if the rB register IS NOT SET.
 
 ---
 ## Integer Math Instruction
@@ -493,7 +493,7 @@ Increments the stack pointer to access a valid stack entry then sets the value a
 ---
 ## Comparison Instructions
 
-Comparison consists of two base instructions. TEST base instruction is used to set the TR register to either 0 or 1 based on a previous COMPARE base instruction's result. TEST receives a FLAG_MASK that matches the FLAGS register.
+Comparison consists of two base instructions. TEST base instruction is used to set the rA register in the instruction to either 0 or 1 based on a previous COMPARE base instruction's result. TEST receives a FLAG_MASK that is used to pattern match to the FLAGS register.
 
 ```
 ???? 0000 0000 0111
@@ -502,10 +502,10 @@ Comparison consists of two base instructions. TEST base instruction is used to s
      B:8  7:4
 ```
 ```
-????? 000000 0110
-      |      TEST FLAG_MASK
-      FLAG_MASK
-      9:4
+? 0000 000000 0110
+  |    |      TEST FLAG_MASK
+  rA   FLAG_MASK
+       9:4
 ```
 
 The bit order of the FLAGS register is as follows (LSB on the right)
@@ -517,18 +517,18 @@ for a total of 6 bits.
 The correct way to invoke a full compare usually consists of these instructions in series similar to the following:
 ```c
 cmp r0,r0
-test notzero
-jmpif SKIP
+test r1, notzero
+jmpif SKIP, r1
 ```
 which is equal to `branch if r0 is not zero`
 
-These masks can be combined by adding a space in between them after the instruction, such as `test less equal` where it makes sense. The actual test will then pass if _any_ of the bits was set in the FLAGS register in the previous compare instruction, therefore in this example we can read it as _'set TR to one if comparison is less than or equal'_
+These masks can be combined by adding a space in between them after the instruction, such as `test less equal` where it makes sense. The actual test will then pass if _any_ of the bits was set in the FLAGS register in the previous compare instruction, therefore in this example we can read it as _'set r1 to one if comparison is less than or equal'_
 
 ### CMP rA, rB
 Applies all known tests between rA and rB, and subsequently sets the matching bits of FLAGSREGISTER to either one or zero. Use the `TEST` instruction to apply a test mask on the FLAGSREGISTER to be able to use the result in conditional branches.
 
-### TEST {condition_mask}
-Sets the TR bit based on one or more of the following condition flags. If more than one option us used, each option should be separated by spaces:
+### TEST rA, {condition_mask}
+Sets rA to 0 or 1 based on one or more of the following condition flags. If more than one option us used, each option should be separated by spaces:
 ```
 zero
 notequal
@@ -538,13 +538,13 @@ greater
 equal
 ```
 
-The test operation is equivalent to `FLAGSREGISTER & {condition_mask}`. If any bit of the result is set, TR register will contain a one, otherwise it will be set to zero. This effectively makes the condition_mask cases acted upon as if they were combined with `OR`.
+The test operation is equivalent to `FLAGSREGISTER & {condition_mask}`. If any bit of the result is set, rA register will contain a one, otherwise it will be set to zero. This effectively makes the condition_mask cases acted upon as if they were combined with `OR`.
 
 As an example, one could use multiple tests together as in the following example
 ```c
-// TR = r0 >= r1 ? 1 : 0;
+// r2 = r0 >= r1 ? 1 : 0;
 cmp r0, r1
-test greater equal
+test r2, greater equal
 ```
 
 ---

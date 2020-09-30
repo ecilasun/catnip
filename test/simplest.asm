@@ -24,8 +24,8 @@ lea r0, Sprite_spanY
 ld.w r0, [r0]
 ld.w r1, 0x17
 cmp r0, r1
-test less
-jmpifnot endwhile3
+test r0, less
+jmpifnot endwhile3, r0
 ld.w r0, 0x0
 lea r1, Sprite_spanX
 st.w [r1], r0
@@ -35,8 +35,8 @@ lea r0, Sprite_spanX
 ld.w r0, [r0]
 ld.w r1, 0x10
 cmp r0, r1
-test less
-jmpifnot endwhile1
+test r0, less
+jmpifnot endwhile1, r0
 lea r0, Sprite_spanX
 ld.w r0, [r0]
 lea r1, Sprite_spanY
@@ -91,8 +91,8 @@ lea r0, main_forever
 ld.w r0, [r0]
 ld.w r1, 0x1
 cmp r0, r1
-test equal
-jmpifnot endwhile9
+test r0, equal
+jmpifnot endwhile9, r0
 ld.w r0, 0xff
 clf r0
 lea r0, main_frame
@@ -129,8 +129,8 @@ lea r0, main_posY
 ld.w r0, [r0]
 ld.w r1, 0xa7
 cmp r0, r1
-test greater
-jmpifnot endif4
+test r0, greater
+jmpifnot endif4, r0
 lea r0, main_dirY
 ld.w r0, [r0]
 ineg r0
@@ -142,8 +142,8 @@ lea r0, main_posY
 ld.w r0, [r0]
 ld.w r1, 0x2
 cmp r0, r1
-test less
-jmpifnot endif5
+test r0, less
+jmpifnot endif5, r0
 lea r0, main_dirY
 ld.w r0, [r0]
 ineg r0
@@ -155,8 +155,8 @@ lea r0, main_posX
 ld.w r0, [r0]
 ld.w r1, 0xee
 cmp r0, r1
-test greater
-jmpifnot endif6
+test r0, greater
+jmpifnot endif6, r0
 lea r0, main_dirX
 ld.w r0, [r0]
 ineg r0
@@ -168,8 +168,8 @@ lea r0, main_posX
 ld.w r0, [r0]
 ld.w r1, 0x2
 cmp r0, r1
-test less
-jmpifnot endif7
+test r0, less
+jmpifnot endif7, r0
 lea r0, main_dirX
 ld.w r0, [r0]
 ineg r0

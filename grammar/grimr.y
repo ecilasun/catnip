@@ -1692,10 +1692,17 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		break;
 
 		case OP_JUMP:
+		{
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
+			g_ASC.m_InstructionCount+=1;
+		}
+		break;
+
 		case OP_JUMPIF:
 		case OP_JUMPIFNOT:
 		{
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
+			std::string src = g_ASC.PopRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value + ", " + src;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
@@ -1709,6 +1716,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();
+			std::string trg = g_ASC.PushRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcB;
 			std::string test = "notequal";
 			// Hardware has: ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL
@@ -1721,7 +1729,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			if (node->m_Opcode == OP_CMPLE) test = "lessequal";
 			if (node->m_Opcode == OP_CMPGE) test = "greaterequal";
 
-			node->m_Instructions += std::string("\n") + Opcodes[OP_TEST] + " " + test;
+			node->m_Instructions += std::string("\n") + Opcodes[OP_TEST] + " " + trg + ", " + test;
 			g_ASC.m_InstructionCount+=2;
 		}
 		break;
