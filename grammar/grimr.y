@@ -184,7 +184,6 @@ enum EOpcode
 	OP_VALUEOF,
 	OP_BITNOT,
 	OP_NEG,
-	OP_LOGICNOT,
 	OP_MUL,
 	OP_DIV,
 	OP_MOD,
@@ -227,8 +226,6 @@ enum EOpcode
 	OP_BITAND,
 	OP_BITXOR,
 	OP_BITOR,
-	OP_LOGICAND,
-	OP_LOGICOR,
 };
 
 const std::string Opcodes[]={
@@ -240,7 +237,6 @@ const std::string Opcodes[]={
 	"valof",
 	"not",
 	"ineg",
-	"lnot",
 	"imul",
 	"idiv",
 	"imod",
@@ -283,8 +279,6 @@ const std::string Opcodes[]={
 	"and",
 	"xor",
 	"or",
-	"logicand",
-	"logicor",
 };
 
 enum ENodeSide
@@ -684,7 +678,7 @@ unary_expression
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryLogicNot, "");
 																									$$->PushNode(unaryexpressionnode);
-																									$$->m_Opcode = OP_LOGICNOT;
+																									$$->m_Opcode = OP_BITNOT;
 																									g_ASC.PushNode($$);
 																								}
 	| '&' unary_expression																		{
@@ -889,7 +883,7 @@ logical_and_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
-																									$$->m_Opcode = OP_LOGICAND;
+																									$$->m_Opcode = OP_BITAND;
 																									g_ASC.PushNode($$);
 	}
 	;
@@ -902,7 +896,7 @@ logical_or_expression
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
 																									$$->PushNode(rightnode);
-																									$$->m_Opcode = OP_LOGICOR;
+																									$$->m_Opcode = OP_BITOR;
 																									g_ASC.PushNode($$);
 																								}
 	;
