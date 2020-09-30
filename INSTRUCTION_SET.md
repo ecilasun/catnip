@@ -62,8 +62,8 @@ Here is a brief list of the architecture details of Neko V3
 
 The working memory starts at address 0x00000000 and continues up to 0x7FFFFFFF, out of which currently only 512Kbytes is actual physical memory.
 Instructions are often considered to start at even address boundaries to simplify the hardware access pattern and reduce access times.
-Starting at 0x80000000 resides the VRAM which only allows for byte access, and ends at address 0x8000FEFF.
-At the addresses from 0x8000FF00 to 0x8000D000 lives a variety of device control bytes.
+Starting at 0x80000000 resides the VRAM which only allows for byte access, and ends at address 0x8000BFFF.
+At the addresses from 0x8000C000 to 0x8000D000 lives a variety of device control bytes.
 Following diagram shows the uses of each byte starting at the device control address
 ```
 |----------------| 
@@ -123,7 +123,6 @@ Neko has some GPRs that the user can access and some hidden ones that only the C
 * FLAGS: Internal, comparison flag registers, 6bit wide
 * CALLSP: Internal, Branch Stack Pointer, 16bits wide
 * CALLSTACK[...]: Internal, Branch Stack (return addresses), 32bits wide per entry
-* TR: Internal, Test Result Register, 1bit wide
 * BRANCHTARGET: Internal, Transient Branch Target Register, 32bits wide
 * TARGETREGISTER: Internal, Transient Target Register Index, 3bits wide
 
