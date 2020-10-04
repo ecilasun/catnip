@@ -1,4 +1,4 @@
-# Instruction count: 187
+# Instruction count: 186
 
 @ORG 0x00000000
 
@@ -177,10 +177,9 @@ vsync
 lea r0, main_frame
 ld.w r0, [r0]
 fsel r0
-ld.w r0, 0x1
-lea r1, main_frame
-ld.w r1, [r1]
-iadd r0, r1
+lea r0, main_frame
+ld.w r0, [r0]
+inc r0
 lea r1, main_frame
 st.w [r1], r0
 jmp beginwhile8

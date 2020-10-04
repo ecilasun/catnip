@@ -82,7 +82,7 @@ def main()
 
         vsync();        // Wait for vsync
         fsel(frame);    // Switch writes to 'frame'
-        frame = frame + 1;
+        frame = frame++;
     }
 
     // return; //no return

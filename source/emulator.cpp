@@ -982,7 +982,7 @@ void execute(uint16_t instr)
 
 		default:
 		{
-			printf("%.8X: illegal instruction %d, CPU halted\n", IP, instr);
+			printf("%.8X: illegal instruction %.4X, CPU halted\n", IP, instr);
 			IP = 0x7FFFF;
 			sram_enable_byteaddress = 0;
 			sram_addr = 0x7FFFF;
