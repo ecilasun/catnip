@@ -1,4 +1,4 @@
-# Instruction count: 191
+# Instruction count: 187
 
 @ORG 0x00000000
 
@@ -87,11 +87,7 @@ ret
 @LABEL main
 
 @LABEL beginwhile8
-lea r0, main_forever
-ld.w r0, [r0]
-ld.w r1, 0x1
-cmp r0, r1
-test r0, equal
+ld.w r0, 0x1
 jmpifnot endwhile9, r0
 ld.w r0, 0xff
 clf r0
@@ -239,9 +235,6 @@ jmp beginwhile8
 @LABEL Sprite_posX
 # ref:0 dim:1 typename:word
 @DW 0xCDCDCDCD 
-@LABEL main_forever
-# ref:0 dim:1 typename:word
-@DW 0x0001 
 @LABEL main_frame
 # ref:0 dim:1 typename:word
 @DW 0x0000 

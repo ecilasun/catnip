@@ -49,12 +49,11 @@ def Sprite(word posX, word posY)
 
 def main()
 {
-    word forever = 1;
     word frame = 0;
     word posX = 8, dirX = 2;
     word posY = 8, dirY = 1;
 
-    while(forever==1)
+    while(1)
     {
         clf(0xFF);      // Clear framebuffer
         BORDERCOLOR[0]=frame>>4;
