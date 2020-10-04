@@ -1349,9 +1349,9 @@ void VideoMain()
 bool StepEmulator()
 {
 	ClockMain();	// Clock ticks first (rising/falling edge)
-	CPUMain();	  // CPU state machine
+	CPUMain();		// CPU state machine
 	VideoMain();	// Video scan out (to tie it with 'read old data' in dualport VRAM in hardware)
-	MemoryMain();   // Update all memory (SRAM/VRAM) after video data is processed
+	MemoryMain();	// Update all memory (SRAM/VRAM) after video data is processed
 
 	static uint32_t K = 0;
 	if (K > 0xC000)
@@ -1389,10 +1389,10 @@ bool InitEmulator(uint16_t *_rom_binary)
 {
 	s_SystemClock = 0b10101010101010101010101010101010;	// 50Mhz corresponds to this bit frequency
 	s_VGAClock	= 0b00110011001100110011001100110011;	// 25Mhz corresponds to this bit frequency
-	s_SystemClockRisingEdge  = 0;
-	s_SystemClockFallingEdge = 0;
-	s_VGAClockRisingEdge	 = 0;
-	s_VGAClockFallingEdge	= 0;
+	s_SystemClockRisingEdge		= 0;
+	s_SystemClockFallingEdge	= 0;
+	s_VGAClockRisingEdge		= 0;
+	s_VGAClockFallingEdge		= 0;
 	vga_x = 0;
 	vga_y = 0;
 
