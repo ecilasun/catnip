@@ -51,7 +51,7 @@ def main()
 {
     word frame = 0;
     word posX = 8, dirX = 2;
-    word posY = 8, dirY = 1;
+    word posY = 64, dirY = 1;
 
     while(1)
     {
@@ -67,7 +67,7 @@ def main()
         {
             dirY = -dirY;
         }
-        if (posY < 2)
+        if (posY < 8)
         {
             dirY = -dirY;
         }
@@ -75,7 +75,7 @@ def main()
         {
             dirX = -dirX;
         }
-        if (posX < 2)
+        if (posX < 8)
         {
             dirX = -dirX;
         }

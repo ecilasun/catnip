@@ -136,7 +136,7 @@ st.w [r1], r0
 @LABEL endif4
 lea r0, main_posY
 ld.w r0, [r0]
-ld.w r1, 0x2
+ld.w r1, 0x8
 cmp r0, r1
 test r0, less
 jmpifnot endif5, r0
@@ -162,7 +162,7 @@ st.w [r1], r0
 @LABEL endif6
 lea r0, main_posX
 ld.w r0, [r0]
-ld.w r1, 0x2
+ld.w r1, 0x8
 cmp r0, r1
 test r0, less
 jmpifnot endif7, r0
@@ -245,7 +245,7 @@ jmp beginwhile8
 @DW 0x0002 
 @LABEL main_posY
 # ref:0 dim:1 typename:word
-@DW 0x0008 
+@DW 0x0040 
 @LABEL main_dirY
 # ref:0 dim:1 typename:word
 @DW 0x0001 
