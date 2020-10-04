@@ -320,7 +320,7 @@ public:
 			int r1=0,r2=0;
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 			if(is_conditional)
-				sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r2);
+				sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
 			unsigned short code = m_Opcode | (r1<<6) | (r2<<10) | (is_conditional ? 0x0010 : 0x0000) | (is_reverse_conditional ? 0x0020 : 0x0000) | (is_branch ? 0x4000 : 0x0000);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;

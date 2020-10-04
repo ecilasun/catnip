@@ -154,14 +154,14 @@ void ClockMain()
 
 void execute(uint16_t instr)
 {
-	uint16_t inst = instr&0x000F;
+	uint16_t baseopcode = instr&0x000F;
 
 #if defined(DEBUG_EXECUTE)
 	int breakpoint = 0xBE;
 	bool break_loop = IP != breakpoint ? true : false;
 #endif
 
-	switch(inst)
+	switch(baseopcode)
 	{
 		case INST_LOGIC:
 		{
@@ -788,7 +788,7 @@ void execute(uint16_t instr)
 			uint16_t flg = (flags_register&0b0000000000111111); // [5:0]
 			uint16_t msk = (instr&0b0000001111110000)>>4; // [9:4]
 			uint16_t r1 =  (instr&0b0011110000000000)>>10; // [13:10]
-			register_file[r1] = flg&msk ? 1:0; // At least one bit out of the masked bits passed test against mask or no bits passed
+			register_file[r1] = (flg&msk) ? 1:0; // At least one bit out of the masked bits passed test against mask or no bits passed
 			sram_addr = IP+2;
 			IP = IP + 2;
 			sram_enable_byteaddress = 0;
@@ -982,10 +982,10 @@ void execute(uint16_t instr)
 
 		default:
 		{
-			printf("%.8X: illegal instruction %d\n", IP, instr);
-			sram_addr = IP+2;
-			IP = IP + 2; // Unknown instructions act as NOOP during development
+			printf("%.8X: illegal instruction %d, CPU halted\n", IP, instr);
+			IP = 0x7FFFF;
 			sram_enable_byteaddress = 0;
+			sram_addr = 0x7FFFF;
 			sram_read_req = 1;
 			cpu_state = CPU_FETCH_INSTRUCTION;
 		}

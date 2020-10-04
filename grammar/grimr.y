@@ -182,7 +182,7 @@ enum EOpcode
 	OP_DEC,
 	OP_ADDRESSOF,
 	OP_VALUEOF,
-	OP_BITNOT,
+	OP_NOT,
 	OP_NEG,
 	OP_MUL,
 	OP_DIV,
@@ -664,7 +664,7 @@ unary_expression
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryBitNot, "");
 																									$$->PushNode(unaryexpressionnode);
-																									$$->m_Opcode = OP_BITNOT;
+																									$$->m_Opcode = OP_NOT;
 																									g_ASC.PushNode($$);
 																								}
 	| '-' unary_expression																		{
@@ -678,7 +678,7 @@ unary_expression
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryLogicNot, "");
 																									$$->PushNode(unaryexpressionnode);
-																									$$->m_Opcode = OP_BITNOT;
+																									$$->m_Opcode = OP_NOT;
 																									g_ASC.PushNode($$);
 																								}
 	| '&' unary_expression																		{
@@ -1857,6 +1857,15 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string srcA = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA;
 			g_ASC.m_InstructionCount+=1;
+		}
+		break;
+
+		case OP_NOT:
+		{
+			std::string srcA = g_ASC.PopRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcA;
+			g_ASC.m_InstructionCount+=1;
+			g_ASC.PushRegister(); // Keep output in same register
 		}
 		break;
 
