@@ -50,7 +50,7 @@ def Sprite(word posX, word posY)
 def main()
 {
     word frame = 0;
-    word posX = 8, dirX = 3;
+    word posX = 58, dirX = 3;
     word posY = 64, dirY = 1;
 
     while(1)
@@ -60,8 +60,8 @@ def main()
         BORDERCOLOR[0] = frame>>4;
         Sprite(posX, posY);
 
-        posX = posX+dirX;
-        posY = posY+dirY;
+        posX = posX + dirX;
+        posY = posY + dirY;
 
         if (posY > 167 || posY < 8)
         {
