@@ -150,7 +150,7 @@ Example:
 ```c
 lea r7, SPRITEPOSDATA
 // which is equivalent to a load of the address of the label, resulting in the following code:
-// mov r7, 0x00000300
+// ld.d r7, 0x00000300
 
 @ORG 0x00000300
 @LABEL SPRITEPOSDATA
@@ -378,20 +378,15 @@ E:B  A:7  0001:MEM2REG rA, [rB] - ld.w
           0110:MEM2REG rA, [rB] - ld.b
           0111:BYTE2REG rA, [IP+2] (low 8 bit constant starting at IP+2) - ld.b
           1000:DWMEM2REG rA, [rB] - ld.d
+          1001: RESERVED
+          1010: RESERVED
+          1011: RESERVED
+          1100: RESERVED
+          1101: RESERVED
+          1110: RESERVED
+          1111: RESERVED
 ```
-Relative address mode (NOT IMPLEMENTED YET):
-```
-? 0000 0000 000 1001
-  |    |    |   MOV (REL)
-  rB   rA   000:reserved
-  E:B  A:7  001:reserved
-            010:reserved
-            011:reserved
-            100:reserved
-            101:reserved
-            110:reserved
-            111:reserved
-```
+
 
 ### ST.W [rA], rB / ST.B [rA], rB
 Stores the 16 bit value in register rB at memory pointed by rA register. For `ST.B` instrucion, the byte value at the memory address is copied to the lower 8 bits of the register rA.
