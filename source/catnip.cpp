@@ -26,6 +26,8 @@ int main(int _argc, char **_argv)
 			const char *tmpfile = tmpnam(nullptr);
 			retVal = CompileCode(_argv[1], tmpfile);		// .GrimR -> .ROM/.MIF
 			retVal = compile_asm(tmpfile, _argv[2]);
+			// Remove the temporary file
+			remove(tmpfile);
 		}
 	}
 	else if (strstr(_argv[1], ".asm"))
