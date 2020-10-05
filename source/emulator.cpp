@@ -249,10 +249,14 @@ void execute(uint16_t instr)
 
 			// NOTE: BRANCH and JMP share the same logic except the stack bit
 			// Push return address to branch stack for 'BRANCH/BRANCHIF'
+			#if defined(DEBUG_EXECUTE)
 			const char *op = "jmp";
+			#endif
 			if (typ == 1)
 			{
+				#if defined(DEBUG_EXECUTE)
 				op = "branch";
+				#endif
 				CALLSTACK[CALLSP] = IP + (immed ? 6:2); // Skip current instruction (and two WORDs if this not register based)
 				CALLSP = CALLSP + 1;
 			}
@@ -1387,8 +1391,8 @@ bool StepEmulator()
 
 bool InitEmulator(uint16_t *_rom_binary)
 {
-	s_SystemClock = 0b10101010101010101010101010101010;	// 50Mhz corresponds to this bit frequency
-	s_VGAClock	= 0b00110011001100110011001100110011;	// 25Mhz corresponds to this bit frequency
+	s_SystemClock	= 0b10101010101010101010101010101010;	// 50Mhz corresponds to this bit frequency
+	s_VGAClock		= 0b00110011001100110011001100110011;	// 25Mhz corresponds to this bit frequency
 	s_SystemClockRisingEdge		= 0;
 	s_SystemClockFallingEdge	= 0;
 	s_VGAClockRisingEdge		= 0;
