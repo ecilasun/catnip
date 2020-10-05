@@ -1,1 +1,1 @@
-int EmulateROMImage(char *_romname);
+int EmulateROMImage(const char *_romname);

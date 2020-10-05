@@ -34,7 +34,7 @@
 #define CPU_FETCH_INSTRUCTION			0b0101
 #define CPU_EXECUTE_INSTRUCTION			0b0110
 #define CPU_READ_DATAH					0b0111
-#define CPU_STATE_PRE_RUN				0b1000
+#define CPU_READ_DATAL					0b1000
 #define CPU_READ_DATA					0b1001
 #define CPU_WRITE_DATA					0b1010
 #define CPU_SET_BRANCH_ADDRESSA			0b1011
@@ -127,6 +127,7 @@ const char *s_state_string[]={
 	"CPU_FETCH_INSTRUCTION",
 	"CPU_EXECUTE_INSTRUCTION",
 	"CPU_READ_DATAH",
+	"CPU_READ_DATAL",
 	"CPU_STATE_PRE_RUN",
 	"CPU_READ_DATA",
 	"CPU_WRITE_DATA",
@@ -1029,8 +1030,12 @@ void CPUMain()
 			sram_write_req = 0;
 			if (rom_addrs == 0xFFF)
 			{
-				// Kick off the CPU state machine's pre-run stage
-				cpu_state = CPU_STATE_PRE_RUN;
+				rom_read_enable = 0;
+				sram_addr = 0; // Reset read address (not really required)
+				sram_write_req = 0;
+				sram_enable_byteaddress = 0;
+				sram_read_req = 1;
+				cpu_state = CPU_FETCH_INSTRUCTION;
 			}
 			else
 			{
@@ -1039,16 +1044,6 @@ void CPUMain()
 				sram_addr = sram_addr + 2; // Increment 2 bytes at a time
 				cpu_state = CPU_ROM_STEP;
 			}
-		break;
-
-		case CPU_STATE_PRE_RUN:
-			// Transitional state after ROM copy to shut off access to SRAM
-			rom_read_enable = 0;
-			sram_addr = 0; // Reset read address (not really required)
-			sram_write_req = 0;
-			sram_enable_byteaddress = 0;
-			sram_read_req = 1;
-			cpu_state = CPU_FETCH_INSTRUCTION;
 		break;
 
 		case CPU_FETCH_INSTRUCTION:
@@ -1094,10 +1089,10 @@ void CPUMain()
 		case CPU_READ_DATAH:
 			register_file[target_register] = (register_file[target_register]&0x0000FFFF) | (sram_rdata<<16);
 			sram_addr = sram_addr + 2;
-			cpu_state = CPU_READ_DATA;
+			cpu_state = CPU_READ_DATAL;
 		break;
 
-		case CPU_READ_DATA:
+		case CPU_READ_DATAL:
 			register_file[target_register] = (register_file[target_register]&0xFFFF0000) | sram_rdata;
 			sram_enable_byteaddress = 0;
 			sram_addr = IP;
@@ -1105,8 +1100,16 @@ void CPUMain()
 			cpu_state = CPU_FETCH_INSTRUCTION;
 		break;
 
+		case CPU_READ_DATA:
+			register_file[target_register] = sram_rdata;
+			sram_enable_byteaddress = 0;
+			sram_addr = IP;
+			sram_read_req = 1;
+			cpu_state = CPU_FETCH_INSTRUCTION;
+		break;
+
 		case CPU_READ_DATA_BYTE:
-			register_file[target_register] = (register_file[target_register]&0xFFFFFF00) | (sram_rdata&0x000000FF); // No C equivalent to partially assign
+			register_file[target_register] = sram_rdata&0x000000FF;
 			sram_enable_byteaddress = 0;
 			sram_addr = IP;
 			sram_read_req = 1;
@@ -1187,10 +1190,10 @@ void MemoryMain()
 	{
 		if (sram_enable_byteaddress)
 		{
-			uint16_t *sramasword = (uint16_t *)SRAM;
-			uint16_t val = sramasword[sram_addr>>1];
 			if (sram_read_req)
 			{
+				uint16_t *sramasword = (uint16_t *)SRAM;
+				uint16_t val = sramasword[sram_addr>>1];
 				sram_rdata = (sram_addr&1) ? val&0x00FF : (val&0xFF00)>>8;
 				//if (!rom_read_enable) printf("(R:B)0x%.8x -> 0x%.8x\n", sram_addr, sram_rdata);
 			}
@@ -1289,14 +1292,14 @@ bool StepEmulator()
 	MemoryMain();	// Update all memory (SRAM/VRAM) after video data is processed
 
 	static uint32_t K = 0;
-	if (K > 0xC000)
+	if (K > 0x12C00) // 320*240 pixel's worth of video clock
 	{
-		K -= 0xC000;
+		K -= 0x12C00;
 		SDL_UpdateWindowSurface(s_Window);
 		//static BITMAPINFO bmi = {{sizeof(BITMAPINFOHEADER),256,-192,1,8,BI_RGB,0,0,0,0,0},{0,0,0,0}};
 		//StretchDIBits(hDC, 64, 48, 512, 384, 0, 0, 256, 192, VRAM, &bmi, DIB_RGB_COLORS, SRCCOPY);
 	}
-	++K;
+	K+=s_VGAClockRisingEdge ? 1:0;
 
 #if !defined(DEBUG_EXECUTE)
 	if (vga_y == 502)
@@ -1391,7 +1394,7 @@ void TerminateEmulator()
 	delete []ROM;
 }
 
-int EmulateROMImage(char *_romname)
+int EmulateROMImage(const char *_romname)
 {
 	// Read ROM file
 	FILE *inputfile = fopen(_romname, "rb");

@@ -12,6 +12,7 @@ int main(int _argc, char **_argv)
 		printf("catnip inputfile.asm outputfile.rom - Generates a ROM file from assembly input for emulator\n");
 		printf("catnip inputfile.grm outputfile.rom - Directly compiles GrimR into a ROM file\n");
 		printf("catnip inputfile.grm outputfile.mif - Directly compiles GrimR into a memory initialization file for FPGA device\n");
+		printf("catnip inputfile.grm - Compiles/assembles and emulates GrimR code in one step\n");
 		printf("catnip inputfile.rom - Runs the emulator with given ROM file\n");
 		return 0;
 	}
@@ -19,15 +20,32 @@ int main(int _argc, char **_argv)
 	int retVal = 0;
 	if (strstr(_argv[1], ".grm"))
 	{
-		if (strstr(_argv[2], ".asm"))
-			retVal = CompileGrimR(_argv[1], _argv[2]);		// .GrimR -> .ASM
-		else
+		if (_argc>=3)
 		{
-			const char *tmpfile = tmpnam(nullptr);
-			retVal = CompileGrimR(_argv[1], tmpfile);		// .GrimR -> .ROM/.MIF
-			retVal = AssembleBinary(tmpfile, _argv[2]);
-			// Remove the temporary file
-			remove(tmpfile);
+			if (strstr(_argv[2], ".asm"))
+				retVal = CompileGrimR(_argv[1], _argv[2]);		// .GrimR -> .ASM
+			else
+			{
+				const char *tmpfile = tmpnam(nullptr);
+				retVal = CompileGrimR(_argv[1], tmpfile);		// .GrimR -> .ROM/.MIF
+				retVal = AssembleBinary(tmpfile, _argv[2]);
+				// Remove the temporary file
+				remove(tmpfile);
+			}
+		}
+		else	// .GrimR -> Emulator
+		{
+			const char *tmpfile1 = tmpnam(nullptr);
+			const char *tmpfile2 = tmpnam(nullptr);
+			char romfilename[512] = "";
+			strcat(romfilename, tmpfile2);
+			strcat(romfilename, ".rom");
+			retVal = CompileGrimR(_argv[1], tmpfile1);		// .GrimR -> .ROM/.MIF
+			retVal = AssembleBinary(tmpfile1, romfilename);
+			retVal = EmulateROMImage(romfilename);
+			// Remove the temporary files
+			remove(tmpfile1);
+			remove(romfilename);
 		}
 	}
 	else if (strstr(_argv[1], ".asm"))

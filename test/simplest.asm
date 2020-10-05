@@ -225,7 +225,7 @@ jmp beginwhile6
 @DW 0x0000 
 @LABEL main_posX
 # ref:0 dim:1 typename:word
-@DW 0x003A 
+@DW 0x0080 
 @LABEL main_dirX
 # ref:0 dim:1 typename:word
 @DW 0x0007 
