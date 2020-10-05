@@ -2,7 +2,7 @@
 
 @ORG 0x00000000
 
-branch main
+call main
 @LABEL infloop
 vsync
 jmp infloop
@@ -106,7 +106,7 @@ push r0
 lea r0, main_posY
 ld.w r0, [r0]
 push r0
-branch Sprite
+call Sprite
 lea r0, main_dirX
 ld.w r0, [r0]
 lea r1, main_posX

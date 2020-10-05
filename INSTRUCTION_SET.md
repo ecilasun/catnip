@@ -121,14 +121,14 @@ Neko has some GPRs that the user can access and some hidden ones that only the C
 * IP: Internal, Instruction Pointer, 32bit wide
 * SP: Internal, Stack Pointer, 32bit wide
 * FLAGS: Internal, comparison flag registers, 6bit wide
-* CALLSP: Internal, Branch Stack Pointer, 16bits wide
-* CALLSTACK[...]: Internal, Branch Stack (return addresses), 32bits wide per entry
-* BRANCHTARGET: Internal, Transient Branch Target Register, 32bits wide
+* CALLSP: Internal, Call Stack Pointer, 16bits wide
+* CALLSTACK[...]: Internal, Call Stack (return addresses), 32bits wide per entry
+* BRANCHTARGET: Internal, Transient call Target Register, 32bits wide
 * TARGETREGISTER: Internal, Transient Target Register Index, 3bits wide
 
 # Instruction Encoding
 
-Neko uses very few instruction formats, with all instructions sharing the same base rule: bottom 4 bits denote a 'macro' instruction, whereas the rest of the bits take on different meanings. It's quite common across instructions to encode register indices 0-7 as adjacent 3 bit groups. This gives Neko a limitation of 16 base instruction groups, though inside those groups encodings might differ, and more words might be fetched from memory as required. The longest instruction currently takes up 3 words in memory, which is the branch instruction group. This format contains the initial instruction word followed by two more words for the branch target address.
+Neko uses very few instruction formats, with all instructions sharing the same base rule: bottom 4 bits denote a 'macro' instruction, whereas the rest of the bits take on different meanings. It's quite common across instructions to encode register indices 0-7 as adjacent 3 bit groups. This gives Neko a limitation of 16 base instruction groups, though inside those groups encodings might differ, and more words might be fetched from memory as required. The longest instruction currently takes up 3 words in memory, which is the branch instruction group. This format contains the initial instruction word followed by two more words for the call target address.
 
 Therefore for majority of the cases a typical encoding would look like the following:
 ```
@@ -260,13 +260,17 @@ Branch instruction is a bit special since it needs to read two extra WORDs from 
 1:Jump via address at [IP+2:IP+4] (32 bits, 19 bits addressable (absolute))
 ```
 
-### BRANCH {address} / BRANCH rA
+### CALL {address} / CALL rA
 
-Pushes the next instuction's address onto the branch stack and sets the IP to the 2 words following this instruction or the contents of register rA.
+Pushes the next instuction's address onto the call stack and sets the IP to the 2 words following this instruction or the contents of register rA.
 
-### BRANCHIF {address} rB / BRANCHIF rA rB
+### CALLIF {address} rB / CALLIF rA rB
 
-Pushes the next instuction's address onto the branch stack and sets the IP to the 2 words following this instruction or the contents of register rA if the rB register is 1.
+Pushes the next instuction's address onto the call stack and sets the IP to the 2 words following this instruction or the contents of register rA if the rB register is 1.
+
+### CALLIFNOT {address} rB / CALLIFNOT rA rB
+
+Pushes the next instuction's address onto the call stack and sets the IP to the 2 words following this instruction or the contents of register rA if the rB register is 0.
 
 ### JMP {address} / JMP rA
 
@@ -467,7 +471,7 @@ The return base instruction also houses the CPU Halt instruction which acts as e
 ```
 
 ### RET
-Pops the return address from the branch stack and sets the new instruction pointer to this value, effectively returning to the valid instruction address of the caller's `BRANCH` or `BRANCHIF` instruction. This function cannot return if the branch was made using a `JMP` or `JMPIF` instruction since those instructions will not update the branch stack with the return address.
+Pops the return address from the call stack and sets the new instruction pointer to this value, effectively returning to the valid instruction address of the caller's `CALL`, `CALLIF` or `CALLIFNOT` instruction. This function cannot return if the call was made using a `JMP` or `JMPIF` instruction since those instructions will not update the call stack with the return address.
 
 ### HALT
 Stops the CPU entirely, going into an infinite loop. Currently, only a reset signal can recover the CPU from this state.
@@ -519,7 +523,7 @@ cmp r0,r0
 test r1, notzero
 jmpif SKIP, r1
 ```
-which is equal to `branch if r0 is not zero`
+which is equal to `jump if r0 is not zero`
 
 These masks can be combined by adding a space in between them after the instruction, such as `test less equal` where it makes sense. The actual test will then pass if _any_ of the bits was set in the FLAGS register in the previous compare instruction, therefore in this example we can read it as _'set r1 to one if comparison is less than or equal'_
 

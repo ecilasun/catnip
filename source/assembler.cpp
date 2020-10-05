@@ -24,7 +24,7 @@ struct SCodeBlock
 
 std::vector<SCodeBlock> m_codeBlocks;
 
-struct SBranchResolvePair
+struct SCallResolvePair
 {
 	unsigned int m_PatchAddressPointer;
 	SParserItem *m_LabelToResolve;
@@ -36,7 +36,7 @@ struct SLEAResolvePair
 	SParserItem *m_LabelToResolve;
 };
 
-std::vector<SBranchResolvePair> m_branchResolves;
+std::vector<SCallResolvePair> m_callResolves;
 std::vector<SLEAResolvePair> m_LEAResolves;
 std::vector<SLEAResolvePair> m_LDDResolves;
 std::vector<SLEAResolvePair> m_LDWResolves;
@@ -102,7 +102,7 @@ public:
 	}
 };
 
-// Branch target or address marker
+// Call target or address marker
 class CLabelOp : public CAssemblerTokenCompiler
 {
 public:
@@ -267,11 +267,11 @@ public:
 	}
 };
 
-// Branch ops
-class CBranchOp : public CAssemblerTokenCompiler
+// Call ops
+class CCallOp : public CAssemblerTokenCompiler
 {
 public:
-	CBranchOp(const unsigned short _opcode) { m_Opcode = _opcode; }
+	CCallOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
 	// INSTRUCTION: 0x00001
 	// jmp 0x0000 : short jump to label address in IP+1
@@ -279,15 +279,15 @@ public:
 	// jmpif 0x0000, r2 : short jump to label address in IP+1 if r2==1
 	// jmpif r1,r2 : jump to address in r1 if r2==1
 	// jmpifnot r1,r2 : jump to address in r1 if r2==0
-	// branch r1 : push IP+1 to branch stack, branch to address in r1:r2
-	// branchif r1,r2 : push IP+1 to branch stack, branch to address in r1 if r2==1
-	// branchifnot r1,r2 : push IP+1 to branch stack, branch to address in r1 if r2==0
+	// call r1 : push IP+1 to call stack, call to address in r1:r2
+	// callif r1,r2 : push IP+1 to call stack, call to address in r1 if r2==1
+	// callifnot r1,r2 : push IP+1 to call stack, call to address in r1 if r2==0
 	int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
 	{
-		// Long jump or branch
+		// Long jump or call
 		bool is_conditional = false;
 		bool is_reverse_conditional = false;
-		bool is_branch = false;
+		bool is_call = false;
 
 		if (strcmp(_parser_table[_current_parser_offset].m_Value, "jmpifnot")==0)
 		{
@@ -302,21 +302,21 @@ public:
 		}
 		else if (strcmp(_parser_table[_current_parser_offset].m_Value, "jmp")==0)
 			;//printf("Long jump to register pair: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
-		else if (strcmp(_parser_table[_current_parser_offset].m_Value, "branchifnot")==0)
+		else if (strcmp(_parser_table[_current_parser_offset].m_Value, "callifnot")==0)
 		{
-			is_branch = true;
+			is_call = true;
 			is_conditional = true;
 			is_reverse_conditional = true;
-			//printf("Long branch to register pair if TR==1: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
+			//printf("Long call to register pair if TR==1: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
 		}
-		else if (strcmp(_parser_table[_current_parser_offset].m_Value, "branchif")==0)
+		else if (strcmp(_parser_table[_current_parser_offset].m_Value, "callif")==0)
 		{
-			is_branch = true;
+			is_call = true;
 			is_conditional = true;
-			//printf("Long branch to register pair if TR==1: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
+			//printf("Long call to register pair if TR==1: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
 		}
-		else if (strcmp(_parser_table[_current_parser_offset].m_Value, "branch")==0)
-			is_branch = true;//printf("Long branch to register pair: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
+		else if (strcmp(_parser_table[_current_parser_offset].m_Value, "call")==0)
+			is_call = true;//printf("Long call to register pair: %s:%s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
 
 		if (_parser_table[_current_parser_offset+1].m_Value[0] == 'r')
 		{
@@ -324,7 +324,7 @@ public:
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 			if(is_conditional)
 				sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
-			unsigned short code = m_Opcode | (r1<<6) | (r2<<10) | (is_conditional ? 0x0010 : 0x0000) | (is_reverse_conditional ? 0x0020 : 0x0000) | (is_branch ? 0x4000 : 0x0000);
+			unsigned short code = m_Opcode | (r1<<6) | (r2<<10) | (is_conditional ? 0x0010 : 0x0000) | (is_reverse_conditional ? 0x0020 : 0x0000) | (is_call ? 0x4000 : 0x0000);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;
 			return is_conditional ? 3:2;
@@ -332,7 +332,7 @@ public:
 		else
 		{
 			// Scan from start of code for the given label
-			//unsigned int branchtarget = 0;
+			//unsigned int calltarget = 0;
 			unsigned int targetfound = 0;
 			for (unsigned int i=0; i<s_num_parser_entries; ++i)
 			{
@@ -343,25 +343,25 @@ public:
 						// Store unresolved labels for later resolve
 						//if (_parser_table[i].m_LabelMemoryOffset == 0xFFFFFFFF)
 						{
-							SBranchResolvePair postResolve;
+							SCallResolvePair postResolve;
 							postResolve.m_PatchAddressPointer = _current_binary_offset+2;
 							postResolve.m_LabelToResolve = &_parser_table[i];
-							m_branchResolves.emplace_back(postResolve);
+							m_callResolves.emplace_back(postResolve);
 						}
-						//branchtarget = _parser_table[i].m_LabelMemoryOffset; // For unresolved labels this is 0xFFFFFFFF
+						//calltarget = _parser_table[i].m_LabelMemoryOffset; // For unresolved labels this is 0xFFFFFFFF
 						++targetfound;
 						break;
 					}
 				}
 			}
 			if (targetfound==0)
-				printf("Branch target not found: %s\n", _parser_table[_current_parser_offset+1].m_Value);
+				printf("Call target not found: %s\n", _parser_table[_current_parser_offset+1].m_Value);
 
 			int r2 = 0;
 			if(is_conditional)
 				sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
 
-			unsigned short code = m_Opcode | 0x8000 | (r2<<10) | (is_conditional ? 0x0010 : 0x0000) | (is_reverse_conditional ? 0x0020 : 0x0000) | (is_branch ? 0x4000 : 0x0000);
+			unsigned short code = m_Opcode | 0x8000 | (r2<<10) | (is_conditional ? 0x0010 : 0x0000) | (is_reverse_conditional ? 0x0020 : 0x0000) | (is_call ? 0x4000 : 0x0000);
 
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;
@@ -1025,7 +1025,7 @@ CLogicOpBsl s_logicop_bsl(0x0000);
 CLogicOpBsr s_logicop_bsr(0x0000);
 CLogicOpBswap s_logicop_bswap(0x0000);
 CLogicOpNoop s_logicop_noop(0x0000);
-CBranchOp s_branchop(0x0001);
+CCallOp s_callop(0x0001);
 CMathOp s_mathop(0x0002);
 CLeaOp s_leaop(0x0003); // Not a real instruction!
 CLDBOp s_ldbop(0x0003);
@@ -1064,12 +1064,12 @@ const SAssemblerPair keywords[] =
 	{{"bswap"}, &s_logicop_bswap},
 	{{"noop"}, &s_logicop_noop},
 
-	{{"branch"}, &s_branchop},
-	{{"jmp"}, &s_branchop},
-	{{"branchif"}, &s_branchop},
-	{{"jmpif"}, &s_branchop},
-	{{"branchifnot"}, &s_branchop},
-	{{"jmpifnot"}, &s_branchop},
+	{{"call"}, &s_callop},
+	{{"jmp"}, &s_callop},
+	{{"callif"}, &s_callop},
+	{{"jmpif"}, &s_callop},
+	{{"callifnot"}, &s_callop},
+	{{"jmpifnot"}, &s_callop},
 
 	{{"iadd"}, &s_mathop},
 	{{"isub"}, &s_mathop},
@@ -1224,14 +1224,14 @@ int parse_nip(const char *_inputtext)
 			done = true;
 	}
 
-	for(auto &patch : m_branchResolves)
+	for(auto &patch : m_callResolves)
 	{
 		SParserItem *itm = patch.m_LabelToResolve;
-		uint32_t branchtarget = itm->m_LabelMemoryOffset;
-		s_binary_output[patch.m_PatchAddressPointer+0] = (branchtarget&0xFF000000)>>24;
-		s_binary_output[patch.m_PatchAddressPointer+1] = (branchtarget&0x00FF0000)>>16;
-		s_binary_output[patch.m_PatchAddressPointer+2] = (branchtarget&0x0000FF00)>>8;
-		s_binary_output[patch.m_PatchAddressPointer+3] = (branchtarget&0x000000FF);
+		uint32_t calltarget = itm->m_LabelMemoryOffset;
+		s_binary_output[patch.m_PatchAddressPointer+0] = (calltarget&0xFF000000)>>24;
+		s_binary_output[patch.m_PatchAddressPointer+1] = (calltarget&0x00FF0000)>>16;
+		s_binary_output[patch.m_PatchAddressPointer+2] = (calltarget&0x0000FF00)>>8;
+		s_binary_output[patch.m_PatchAddressPointer+3] = (calltarget&0x000000FF);
 	}
 
 	for (auto &patch : m_LEAResolves)

@@ -260,7 +260,7 @@ const std::string Opcodes[]={
 	"popregs",
 	"if",
 	"while",
-	"branch",
+	"call",
 	"push",
 	"pop",
 	"jmp",
@@ -977,15 +977,15 @@ if_statement
 																									g_ASC.PopNode();
 
 																									std::string label = g_ASC.PushLabel("endif");
-																									SASTNode *branchcode = new SASTNode(EN_JumpNZ, label);
-																									branchcode->m_Opcode = OP_JUMPIFNOT;
+																									SASTNode *callcode = new SASTNode(EN_JumpNZ, label);
+																									callcode->m_Opcode = OP_JUMPIFNOT;
 																									SASTNode *endlabel = new SASTNode(EN_Label, label);
 																									endlabel->m_Opcode = OP_LABEL;
 																									//g_ASC.PopLabel("endif");
 
 																									SASTNode *exprnode=g_ASC.PopNode();
 																									$$->PushNode(exprnode);
-																									$$->PushNode(branchcode);
+																									$$->PushNode(callcode);
 																									$$->PushNode(codeblocknode);
 																									//$$->PushNode(endcodeblocknode);
 																									$$->PushNode(endlabel);
@@ -1045,8 +1045,8 @@ if_statement
 
 																									std::string label = g_ASC.PushLabel("endif");
 																									std::string finallabel = g_ASC.PushLabel("exitif");
-																									SASTNode *branchcode = new SASTNode(EN_JumpNZ, label);
-																									branchcode->m_Opcode = OP_JUMPIFNOT;
+																									SASTNode *callcode = new SASTNode(EN_JumpNZ, label);
+																									callcode->m_Opcode = OP_JUMPIFNOT;
 																									SASTNode *endlabel = new SASTNode(EN_Label, label);
 																									endlabel->m_Opcode = OP_LABEL;
 																									SASTNode *exitlabel = new SASTNode(EN_Label, finallabel);
@@ -1058,7 +1058,7 @@ if_statement
 
 																									SASTNode *exprnode=g_ASC.PopNode();
 																									$$->PushNode(exprnode);
-																									$$->PushNode(branchcode);
+																									$$->PushNode(callcode);
 																									$$->PushNode(ifblocknode);
 																									//$$->PushNode(ifcodeblockendnode);
 																									$$->PushNode(jumpnode);
@@ -1102,10 +1102,10 @@ while_statement
 
 																									std::string startlabel = g_ASC.PushLabel("beginwhile");
 																									std::string label = g_ASC.PushLabel("endwhile");
-																									SASTNode *branchcode = new SASTNode(EN_JumpNZ, label);
-																									branchcode->m_Opcode = OP_JUMPIFNOT;
-																									SASTNode *branchcodeend = new SASTNode(EN_Jump, startlabel);
-																									branchcodeend->m_Opcode = OP_JUMP;
+																									SASTNode *callcode = new SASTNode(EN_JumpNZ, label);
+																									callcode->m_Opcode = OP_JUMPIFNOT;
+																									SASTNode *callcodeend = new SASTNode(EN_Jump, startlabel);
+																									callcodeend->m_Opcode = OP_JUMP;
 																									SASTNode *beginlabel = new SASTNode(EN_Label, startlabel);
 																									beginlabel->m_Opcode = OP_LABEL;
 																									SASTNode *endlabel = new SASTNode(EN_Label, label);
@@ -1114,10 +1114,10 @@ while_statement
 																									SASTNode *exprnode=g_ASC.PopNode();
 																									$$->PushNode(beginlabel);
 																									$$->PushNode(exprnode);
-																									$$->PushNode(branchcode);
+																									$$->PushNode(callcode);
 																									$$->PushNode(codeblocknode);
 																									//$$->PushNode(endcodeblocknode);
-																									$$->PushNode(branchcodeend);
+																									$$->PushNode(callcodeend);
 																									$$->PushNode(endlabel);
 																									//$$->m_Opcode = OP_WHILE;
 																									g_ASC.PushNode($$);
@@ -1949,7 +1949,7 @@ void CompileGrimR(const char *_filename)
 	// Dump asm code
 	fprintf(fp, "# Instruction count: %d\n\n", g_ASC.m_InstructionCount);
 	fprintf(fp, "@ORG 0x00000000\n\n");
-	fprintf(fp, "branch main\n");
+	fprintf(fp, "call main\n");
 	fprintf(fp, "@LABEL infloop\n");
 	fprintf(fp, "vsync\n");
 	fprintf(fp, "jmp infloop\n");
