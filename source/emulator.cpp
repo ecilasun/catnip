@@ -53,7 +53,7 @@
 #define INST_TEST						0b0110	// 6: test flags register against mask bits and set TR register to 1 or 0
 #define INST_CMP						0b0111	// 7: compare r1 with r2 and set flags register
 #define INST_IO							0b1000	// 8: wait for vsync signal / in / out to port
-#define INST_RELMOV						0b1001	// 9: same as mov, in relative addressing mode
+#define INST_I3							0b1001	// 9: TBD
 #define INST_I4							0b1010	// A: TBD
 #define INST_I5							0b1011	// B: TBD
 #define INST_I6							0b1100	// C: TBD
@@ -912,76 +912,6 @@ void execute(uint16_t instr)
 				}
 				break;
 			};
-		}
-		break;
-
-		case INST_RELMOV:
-		{
-			#if defined(DEBUG_EXECUTE)
-			printf("%.8X: relmov - not implemented\n", IP);
-			#endif
-			uint16_t op = (instr&0b0000000001110000)>>4; // [6:4]
-			//uint16_t r1 = (instr&0b0000011110000000)>>7; // [10:7]
-			//uint16_t r2 = (instr&0b0111100000000000)>>11; // [14:11]
-			switch (op)
-			{
-				case 0: // reserved
-					sram_addr = IP+2;
-					IP = IP + 2;
-					sram_enable_byteaddress = 0;
-					sram_read_req = 1;
-					cpu_state = CPU_FETCH_INSTRUCTION;
-				break;
-				case 1: // reserved
-					sram_addr = IP+2;
-					IP = IP + 2;
-					sram_enable_byteaddress = 0;
-					sram_read_req = 1;
-					cpu_state = CPU_FETCH_INSTRUCTION;
-				break;
-				case 2: // reserved
-					sram_addr = IP+2;
-					IP = IP + 2;
-					sram_enable_byteaddress = 0;
-					sram_read_req = 1;
-					cpu_state = CPU_FETCH_INSTRUCTION;
-				break;
-				case 3: // reserved
-					sram_addr = IP+2;
-					IP = IP + 2;
-					sram_enable_byteaddress = 0;
-					sram_read_req = 1;
-					cpu_state = CPU_FETCH_INSTRUCTION;
-				break;
-				case 4: // unused
-					sram_addr = IP+2;
-					IP = IP + 2;
-					sram_enable_byteaddress = 0;
-					sram_read_req = 1;
-					cpu_state = CPU_FETCH_INSTRUCTION;
-				break;
-				case 5: // unused
-					sram_addr = IP+2;
-					IP = IP + 2;
-					sram_enable_byteaddress = 0;
-					sram_read_req = 1;
-					cpu_state = CPU_FETCH_INSTRUCTION;
-				break;
-				case 6: // unused
-					sram_addr = IP+2;
-					IP = IP + 2;
-					sram_enable_byteaddress = 0;
-					sram_read_req = 1;
-					cpu_state = CPU_FETCH_INSTRUCTION;
-				break;
-				case 7: // unused
-					sram_addr = IP+2;
-					IP = IP + 2;
-					sram_enable_byteaddress = 0;
-					sram_read_req = 1;
-					cpu_state = CPU_FETCH_INSTRUCTION;
-				break;
-			}
 		}
 		break;
 
