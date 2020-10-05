@@ -55,10 +55,10 @@ def main()
 
     while(1)
     {
-        clf(0xFF);      // Clear framebuffer
-        BORDERCOLOR[0]=frame>>4;
+        clf(0xFF);
 
-        Sprite(posX,posY);
+        BORDERCOLOR[0] = frame>>4;
+        Sprite(posX, posY);
 
         posX = posX+dirX;
         posY = posY+dirY;
@@ -72,11 +72,11 @@ def main()
             dirX = -dirX;
         }
 
-        vsync();        // Wait for vsync
-        fsel(frame);    // Switch writes to 'frame'
+        vsync();
+        fsel(frame);
         frame = frame++;
     }
 
-    // return; //no return
+    // No return
 }
 
