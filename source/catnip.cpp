@@ -14,10 +14,26 @@ int main(int _argc, char **_argv)
 		return 0;
 	}
 
+	int retVal = 0;
 	if (strstr(_argv[1], ".grm"))
-		return CompileCode(_argv[1], _argv[2]);		// .GrimR -> .ASM
+	{
+		if (strstr(_argv[2], ".asm"))
+			retVal = CompileCode(_argv[1], _argv[2]);		// .GrimR -> .ASM
+		else
+		{
+			const char *tmpfile = tmpnam(nullptr);
+			retVal = CompileCode(_argv[1], tmpfile);		// .GrimR -> .ROM/.MIF
+			retVal = compile_asm(tmpfile, _argv[2]);
+		}
+	}
 	else if (strstr(_argv[1], ".asm"))
-		return compile_asm(_argv[1], _argv[2]);		// .ASM -> .ROM/.MIF
+	{
+		retVal = compile_asm(_argv[1], _argv[2]);		// .ASM -> .ROM/.MIF
+	}
 	else
-		return emulate_rom(_argv[1]);				// .ROM -> Emulator
+	{
+		retVal = emulate_rom(_argv[1]);				// .ROM -> Emulator
+	}
+
+	return retVal;
 }

@@ -4,7 +4,7 @@
 #include "../grammar/grimr.y.hpp"
 extern void CompileGrimR(const char *_filename);
 
-int CompileCode(char *_inputname, char *_outputname)
+int CompileCode(char *_inputname, const char *_outputname)
 {
 	// Test Flex/Bison code
 	extern FILE *yyin;
@@ -13,6 +13,7 @@ int CompileCode(char *_inputname, char *_outputname)
 	int result = yyparse();
 	fclose(yyin);
 
+	printf("Compiling: %s\n", _inputname);
 	CompileGrimR(_outputname);
 
 	return 0;
