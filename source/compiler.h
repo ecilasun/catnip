@@ -19,4 +19,4 @@
 // Compiler driver
 // ---------------------------------------------------------------------------
 
-int CompileCode(char *_inputname, const char *_outputname);
+int CompileGrimR(char *_inputname, const char *_outputname);

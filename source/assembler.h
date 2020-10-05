@@ -5,4 +5,4 @@
 #include "stdio.h"
 #endif
 #include "inttypes.h"
-int compile_asm(const char *_inputname, const char *_outputname);
+int AssembleBinary(const char *_inputname, const char *_outputname);

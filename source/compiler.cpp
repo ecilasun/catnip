@@ -4,7 +4,7 @@
 #include "../grammar/grimr.y.hpp"
 extern void CompileGrimR(const char *_filename);
 
-int CompileCode(char *_inputname, const char *_outputname)
+int CompileGrimR(char *_inputname, const char *_outputname)
 {
 	// Test Flex/Bison code
 	extern FILE *yyin;

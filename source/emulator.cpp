@@ -1391,7 +1391,7 @@ void TerminateEmulator()
 	delete []ROM;
 }
 
-int emulate_rom(char *_romname)
+int EmulateROMImage(char *_romname)
 {
 	// Read ROM file
 	FILE *inputfile = fopen(_romname, "rb");
