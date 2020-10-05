@@ -1,4 +1,4 @@
-# Instruction count: 186
+# Instruction count: 170
 
 @ORG 0x00000000
 
@@ -15,25 +15,25 @@ st.w r0, r1
 lea r0, Sprite_posX
 pop r1
 st.w r0, r1
-ld.w r0, 0x0
+ld.d r0, 0x0
 lea r1, Sprite_spanY
 st.w [r1], r0
 
 @LABEL beginwhile2
 lea r0, Sprite_spanY
 ld.w r0, [r0]
-ld.w r1, 0x17
+ld.d r1, 0x17
 cmp r0, r1
 test r0, less
 jmpifnot endwhile3, r0
-ld.w r0, 0x0
+ld.d r0, 0x0
 lea r1, Sprite_spanX
 st.w [r1], r0
 
 @LABEL beginwhile0
 lea r0, Sprite_spanX
 ld.w r0, [r0]
-ld.w r1, 0x10
+ld.d r1, 0x10
 cmp r0, r1
 test r0, less
 jmpifnot endwhile1, r0
@@ -41,7 +41,7 @@ lea r0, Sprite_spanX
 ld.w r0, [r0]
 lea r1, Sprite_spanY
 ld.w r1, [r1]
-ld.w r2, 0x4
+ld.d r2, 0x4
 bsl r1, r2
 iadd r0, r1
 lea r1, _sprite
@@ -52,7 +52,7 @@ ld.w r1, [r1]
 lea r2, Sprite_spanY
 ld.w r2, [r2]
 iadd r1, r2
-ld.w r2, 0x8
+ld.d r2, 0x8
 bsl r1, r2
 lea r2, Sprite_posX
 ld.w r2, [r2]
@@ -64,7 +64,7 @@ lea r2, _VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-ld.w r0, 0x1
+ld.d r0, 0x1
 lea r1, Sprite_spanX
 ld.w r1, [r1]
 iadd r0, r1
@@ -73,7 +73,7 @@ st.w [r1], r0
 jmp beginwhile0
 
 @LABEL endwhile1
-ld.w r0, 0x1
+ld.d r0, 0x1
 lea r1, Sprite_spanY
 ld.w r1, [r1]
 iadd r0, r1
@@ -86,16 +86,16 @@ ret
 
 @LABEL main
 
-@LABEL beginwhile8
-ld.w r0, 0x1
-jmpifnot endwhile9, r0
-ld.w r0, 0xff
+@LABEL beginwhile6
+ld.d r0, 0x1
+jmpifnot endwhile7, r0
+ld.d r0, 0xff
 clf r0
 lea r0, main_frame
 ld.w r0, [r0]
-ld.w r1, 0x4
+ld.d r1, 0x4
 bsr r0, r1
-ld.w r1, 0x0
+ld.d r1, 0x0
 lea r2, _BORDERCOLOR
 ld.d r2, [r2]
 iadd r1, r2
@@ -123,9 +123,15 @@ lea r1, main_posY
 st.w [r1], r0
 lea r0, main_posY
 ld.w r0, [r0]
-ld.w r1, 0xa7
+ld.d r1, 0xa7
 cmp r0, r1
 test r0, greater
+lea r1, main_posY
+ld.w r1, [r1]
+ld.d r2, 0x8
+cmp r1, r2
+test r1, less
+or r0, r1
 jmpifnot endif4, r0
 lea r0, main_dirY
 ld.w r0, [r0]
@@ -134,45 +140,25 @@ lea r1, main_dirY
 st.w [r1], r0
 
 @LABEL endif4
-lea r0, main_posY
+lea r0, main_posX
 ld.w r0, [r0]
-ld.w r1, 0x8
+ld.d r1, 0xee
 cmp r0, r1
-test r0, less
+test r0, greater
+lea r1, main_posX
+ld.w r1, [r1]
+ld.d r2, 0x8
+cmp r1, r2
+test r1, less
+or r0, r1
 jmpifnot endif5, r0
-lea r0, main_dirY
+lea r0, main_dirX
 ld.w r0, [r0]
 ineg r0
-lea r1, main_dirY
+lea r1, main_dirX
 st.w [r1], r0
 
 @LABEL endif5
-lea r0, main_posX
-ld.w r0, [r0]
-ld.w r1, 0xee
-cmp r0, r1
-test r0, greater
-jmpifnot endif6, r0
-lea r0, main_dirX
-ld.w r0, [r0]
-ineg r0
-lea r1, main_dirX
-st.w [r1], r0
-
-@LABEL endif6
-lea r0, main_posX
-ld.w r0, [r0]
-ld.w r1, 0x8
-cmp r0, r1
-test r0, less
-jmpifnot endif7, r0
-lea r0, main_dirX
-ld.w r0, [r0]
-ineg r0
-lea r1, main_dirX
-st.w [r1], r0
-
-@LABEL endif7
 vsync 
 lea r0, main_frame
 ld.w r0, [r0]
@@ -182,9 +168,9 @@ ld.w r0, [r0]
 inc r0
 lea r1, main_frame
 st.w [r1], r0
-jmp beginwhile8
+jmp beginwhile6
 
-@LABEL endwhile9
+@LABEL endwhile7
 
 #-------------Symbol Table-------------
 

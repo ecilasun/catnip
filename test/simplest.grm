@@ -63,19 +63,11 @@ def main()
         posX = posX+dirX;
         posY = posY+dirY;
 
-        if (posY > 167)
+        if (posY > 167 || posY < 8)
         {
             dirY = -dirY;
         }
-        if (posY < 8)
-        {
-            dirY = -dirY;
-        }
-        if (posX > 238)
-        {
-            dirX = -dirX;
-        }
-        if (posX < 8)
+        if (posX > 238 || posX < 8)
         {
             dirX = -dirX;
         }

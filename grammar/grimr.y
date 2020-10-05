@@ -1892,9 +1892,9 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string trg = g_ASC.PushRegister();
 			int value = strtol(node->m_Value.c_str(), nullptr, 16);
-			if (value <=65535 && value >=-65535)
+			/*if (value <=65535 && value >=-65535)
 				node->m_Instructions = Opcodes[node->m_Opcode] + ".w" + " " + trg + ", " + node->m_Value;
-			else
+			else*/
 				node->m_Instructions = Opcodes[node->m_Opcode] + ".d" + " " + trg + ", " + node->m_Value;
 			g_ASC.m_InstructionCount+=1;
 		}

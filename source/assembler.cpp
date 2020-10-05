@@ -581,9 +581,9 @@ public:
 	{
 		int r1 = 0, r2 = 0;
 		sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
-		uint32_t extra_dword = 0;
+		uint32_t extra_word = 0;
 		if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))				  // R1 <- IMMEDIATE(WORD)
-			sscanf(_parser_table[_current_parser_offset+2].m_Value, "%x", &extra_dword);
+			sscanf(_parser_table[_current_parser_offset+2].m_Value, "%x", &extra_word);
 		else if (strstr(_parser_table[_current_parser_offset+2].m_Value, "["))			  // R1 <- WORD [R2]
 		{
 			sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d]", &r2);
@@ -596,7 +596,7 @@ public:
 		}
 		else																				// R1 <- *LABEL
 		{
-			extra_dword = 0xFFFFFFFF; // To be patched later.
+			extra_word = 0x0000FFFF; // To be patched later.
 
 			bool labelfound = false;
 			for (unsigned int i=0; i<s_num_parser_entries; ++i)
@@ -622,8 +622,8 @@ public:
 		gencode = m_Opcode | (code<<4) | (r1<<8);
 		_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 		_binary_output[_current_binary_offset++] = gencode&0x00FF;
-		_binary_output[_current_binary_offset++] = (extra_dword&0x0000FF00)>>8;
-		_binary_output[_current_binary_offset++] = (extra_dword&0x000000FF);
+		_binary_output[_current_binary_offset++] = (extra_word&0x0000FF00)>>8;
+		_binary_output[_current_binary_offset++] = (extra_word&0x000000FF);
 
 		return 3;
 	}
@@ -638,9 +638,9 @@ public:
 	{
 		int r1 = 0, r2 = 0;
 		sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
-		uint32_t extra_dword = 0;
+		uint32_t extra_byte = 0;
 		if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))				  // R1 <- IMMEDIATE(BYTE - lower byte of following WORD)
-			sscanf(_parser_table[_current_parser_offset+2].m_Value, "%x", &extra_dword);
+			sscanf(_parser_table[_current_parser_offset+2].m_Value, "%x", &extra_byte);
 		else if (strstr(_parser_table[_current_parser_offset+2].m_Value, "["))			  // R1 <- BYTE [R2]
 		{
 			sscanf(_parser_table[_current_parser_offset+2].m_Value, "[r%d]", &r2);
@@ -653,7 +653,7 @@ public:
 		}
 		else																				// R1 <- *LABEL
 		{
-			extra_dword = 0xFFFFFFFF; // To be patched later.
+			extra_byte = 0x000000FF; // To be patched later.
 
 			bool labelfound = false;
 			for (unsigned int i=0; i<s_num_parser_entries; ++i)
@@ -679,8 +679,8 @@ public:
 		gencode = m_Opcode | (code<<4) | (r1<<8);
 		_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 		_binary_output[_current_binary_offset++] = gencode&0x00FF;
-		_binary_output[_current_binary_offset++] = (extra_dword&0x0000FF00)>>8;
-		_binary_output[_current_binary_offset++] = (extra_dword&0x000000FF);
+		_binary_output[_current_binary_offset++] = (extra_byte&0x0000FF00)>>8;
+		_binary_output[_current_binary_offset++] = (extra_byte&0x000000FF);
 
 		return 3;
 	}
@@ -864,11 +864,12 @@ public:
 	// INSTRUCTION: 0x00006
 	int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
 	{
-		int r1;
+		int r1 = 0;
 		sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 
 		unsigned int mask = 0;
 		int i = _current_parser_offset+2;
+
 		// Loop and gather mask from all non-keywords after this instruction
 		// ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL
 		do
@@ -915,7 +916,7 @@ public:
 
 		//printf("Compare register %s with register %s\n", _parser_table[_current_parser_offset+1].m_Value, _parser_table[_current_parser_offset+2].m_Value);
 
-		int r1, r2;
+		int r1=0, r2=0;
 		sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 		sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
 

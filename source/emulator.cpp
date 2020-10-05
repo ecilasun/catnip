@@ -114,7 +114,6 @@ uint32_t s_VGAClock = 0;
 uint32_t s_VGAClockRisingEdge = 0;
 uint32_t s_VGAClockFallingEdge = 0;
 
-
 // Video emulation
 int vga_x = 0;
 int vga_y = 0;
@@ -587,6 +586,8 @@ void execute(uint16_t instr)
 
 				case 3: // word2reg
 				{
+					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
+					printf("%.8X: ld.w r%d, %.4X\n", IP, r1, *wordsram0);
 					#if defined(DEBUG_EXECUTE)
 					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
 					printf("%.8X: ld.w r%d, %.4X\n", IP, r1, *wordsram0);
@@ -611,7 +612,7 @@ void execute(uint16_t instr)
 					sram_enable_byteaddress = 0;
 					sram_addr = IP + 2;
 					sram_read_req = 1;
-					IP = IP + 6; // Skip the WORDs we read plus the instruction
+					IP = IP + 6; // Skip the DWORD read read plus the instruction
 					cpu_state = CPU_READ_DATAH;
 				}
 				break;
@@ -799,7 +800,7 @@ void execute(uint16_t instr)
 			sram_read_req = 1;
 			cpu_state = CPU_FETCH_INSTRUCTION;
 			#if defined(DEBUG_EXECUTE)
-			printf("%.8X: test %d -> TR:%d\n", IP, msk, TR);
+			printf("%.8X: test %d -> r1==%d\n", IP, msk, register_file[r1]);
 			#endif
 		}
 		break;
@@ -812,12 +813,12 @@ void execute(uint16_t instr)
 			printf("%.8X: cmp r%d (%.8X), r%d  (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 			#endif
 			flags_register = 0;
-			flags_register |= (register_file[r1] == register_file[r2]) ? 1 : 0; // EQUAL
-			flags_register |= (register_file[r1] > register_file[r2]) ? 2 : 0; // GREATER
-			flags_register |= (register_file[r1] < register_file[r2]) ? 4 : 0; // LESS
-			flags_register |= (register_file[r1] != 0) ? 8 : 0; // NOTZERO
-			flags_register |= (register_file[r1] != register_file[r2]) ? 16 : 0; // NOTEQUAL
-			flags_register |= (register_file[r1] == 0) ? 32 : 0; // ZERO
+			flags_register |= (register_file[r1] == register_file[r2]) ? 1 : 0;		// EQUAL
+			flags_register |= (register_file[r1] > register_file[r2]) ? 2 : 0;		// GREATER
+			flags_register |= (register_file[r1] < register_file[r2]) ? 4 : 0;		// LESS
+			flags_register |= (register_file[r1] != 0) ? 8 : 0;						// NOTZERO
+			flags_register |= (register_file[r1] != register_file[r2]) ? 16 : 0;	// NOTEQUAL
+			flags_register |= (register_file[r1] == 0) ? 32 : 0;					// ZERO
 			sram_addr = IP+2;
 			IP = IP + 2;
 			sram_enable_byteaddress = 0;

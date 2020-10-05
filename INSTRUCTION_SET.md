@@ -506,7 +506,7 @@ Comparison consists of two base instructions. TEST base instruction is used to s
 ```
 ```
 ? 0000 000000 0110
-  |    |      TEST FLAG_MASK
+  |    |      TEST rA, FLAG_MASK
   rA   FLAG_MASK
        9:4
 ```
@@ -523,7 +523,7 @@ cmp r0,r0
 test r1, notzero
 jmpif SKIP, r1
 ```
-which is equal to `jump if r0 is not zero`
+which is equal to `jump if r0 is not zero (result in r1)`
 
 These masks can be combined by adding a space in between them after the instruction, such as `test less equal` where it makes sense. The actual test will then pass if _any_ of the bits was set in the FLAGS register in the previous compare instruction, therefore in this example we can read it as _'set r1 to one if comparison is less than or equal'_
 
