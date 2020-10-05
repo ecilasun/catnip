@@ -275,11 +275,13 @@ public:
 
 	// INSTRUCTION: 0x00001
 	// jmp 0x0000 : short jump to label address in IP+1
-	// jmp r1:r2 : jump to address in r1:r2
-	// jmpif 0x0000 : short jump to label address in IP+1 if TR==1
-	// jmpif r1:r2 : jump to address in r1:r2 if TR==1
-	// branch r1:r2 : push IP+1 to branch stack, branch to address in r1:r2
-	// branchif r1:r2 : push IP+1 to branch stack, branch to address in r1:r2 if TR==1
+	// jmp r1 : jump to address in r1
+	// jmpif 0x0000, r2 : short jump to label address in IP+1 if r2==1
+	// jmpif r1,r2 : jump to address in r1 if r2==1
+	// jmpifnot r1,r2 : jump to address in r1 if r2==0
+	// branch r1 : push IP+1 to branch stack, branch to address in r1:r2
+	// branchif r1,r2 : push IP+1 to branch stack, branch to address in r1 if r2==1
+	// branchifnot r1,r2 : push IP+1 to branch stack, branch to address in r1 if r2==0
 	int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
 	{
 		// Long jump or branch
