@@ -10,6 +10,8 @@ int main(int _argc, char **_argv)
 		printf("catnip inputfile.grm outputfile.asm - Generates assembly listing from GrimR code\n");
 		printf("catnip inputfile.asm outputfile.mif - Generates a memory initialization file from assembly input for FPGA device\n");
 		printf("catnip inputfile.asm outputfile.rom - Generates a ROM file from assembly input for emulator\n");
+		printf("catnip inputfile.grm outputfile.rom - Directly compiles GrimR into a ROM file\n");
+		printf("catnip inputfile.grm outputfile.mif - Directly compiles GrimR into a memory initialization file for FPGA device\n");
 		printf("catnip inputfile.rom - Runs the emulator with given ROM file\n");
 		return 0;
 	}
