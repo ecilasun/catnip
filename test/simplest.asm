@@ -1,4 +1,4 @@
-# Instruction count: 257
+# Instruction count: 262
 
 @ORG 0x00000000
 
@@ -16,30 +16,30 @@ lea r0, Sprite_posX
 pop r1
 st.w r0, r1
 ld.d r0, 0x0
-lea r1, Sprite_spanY
+lea r1, Sprite_y
 st.w [r1], r0
 
 @LABEL beginwhile2
-lea r0, Sprite_spanY
+lea r0, Sprite_y
 ld.w r0, [r0]
 ld.d r1, 0x17
 cmp r0, r1
 test r0, less
 jmpifnot endwhile3, r0
 ld.d r0, 0x0
-lea r1, Sprite_spanX
+lea r1, Sprite_x
 st.w [r1], r0
 
 @LABEL beginwhile0
-lea r0, Sprite_spanX
+lea r0, Sprite_x
 ld.w r0, [r0]
 ld.d r1, 0x10
 cmp r0, r1
 test r0, less
 jmpifnot endwhile1, r0
-lea r0, Sprite_spanX
+lea r0, Sprite_x
 ld.w r0, [r0]
-lea r1, Sprite_spanY
+lea r1, Sprite_y
 ld.w r1, [r1]
 ld.d r2, 0x4
 bsl r1, r2
@@ -49,14 +49,14 @@ iadd r0, r1
 ld.b r0, [r0] # RHS, valueof
 lea r1, Sprite_posY
 ld.w r1, [r1]
-lea r2, Sprite_spanY
+lea r2, Sprite_y
 ld.w r2, [r2]
 iadd r1, r2
 ld.d r2, 0x8
 bsl r1, r2
 lea r2, Sprite_posX
 ld.w r2, [r2]
-lea r3, Sprite_spanX
+lea r3, Sprite_x
 ld.w r3, [r3]
 iadd r2, r3
 iadd r1, r2
@@ -64,18 +64,18 @@ lea r2, _VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-lea r0, Sprite_spanX
+lea r0, Sprite_x
 ld.w r0, [r0]
 inc r0
-lea r1, Sprite_spanX
+lea r1, Sprite_x
 st.w [r1], r0
 jmp beginwhile0
 
 @LABEL endwhile1
-lea r0, Sprite_spanY
+lea r0, Sprite_y
 ld.w r0, [r0]
 inc r0
-lea r1, Sprite_spanY
+lea r1, Sprite_y
 st.w [r1], r0
 jmp beginwhile2
 
@@ -184,6 +184,11 @@ lea r2, _BORDERCOLOR
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
+ld.d r0, 0x30
+push r0
+ld.d r0, 0x30
+push r0
+call Sprite
 lea r0, main_posX
 ld.w r0, [r0]
 push r0
@@ -258,14 +263,17 @@ jmp beginwhile11
 
 #-------------Symbol Table-------------
 
+# function 'Sprite', hash: E90371F2, refcount: 1
+# function 'MaskedSprite', hash: 4978B879, refcount: 1
+# function 'main', hash: BC76E6BA, refcount: 1
 @LABEL _VRAM
-# ref:0 dim:1 typename:byteptr
+# dim:1 typename:byteptr refcount:4
 @DW 0x8000 0x0000
 @LABEL _BORDERCOLOR
-# ref:0 dim:1 typename:byteptr
+# dim:1 typename:byteptr refcount:2
 @DW 0x8000 0xC000
 @LABEL _sprite
-# ref:0 dim:368 typename:byte
+# dim:368 typename:byte refcount:4
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFF0B 0x1353 0x0B13 0xF6FF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFF01 0x134E 0x4E06 0x6E0E 0x04EE 0xFFFF 
@@ -289,45 +297,45 @@ jmp beginwhile11
 @DW 0xFFFF 0xFFFF 0x0013 0x090B 0x6E00 0x6C00 0xACFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0x0909 0x4911 0x0911 0x0909 0xEEFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
-@LABEL Sprite_spanX
-# ref:0 dim:1 typename:word
+@LABEL Sprite_x
+# dim:1 typename:word refcount:12
 @DW 0xCDCDCDCD 
-@LABEL Sprite_spanY
-# ref:0 dim:1 typename:word
+@LABEL Sprite_y
+# dim:1 typename:word refcount:12
 @DW 0xCDCDCDCD 
 @LABEL Sprite_posY
-# ref:0 dim:1 typename:word
+# dim:1 typename:word refcount:2
 @DW 0xCDCDCDCD 
 @LABEL Sprite_posX
-# ref:0 dim:1 typename:word
+# dim:1 typename:word refcount:2
 @DW 0xCDCDCDCD 
 @LABEL MaskedSprite_x
-# ref:0 dim:1 typename:word
+# dim:1 typename:word refcount:12
 @DW 0xCDCDCDCD 
 @LABEL MaskedSprite_y
-# ref:0 dim:1 typename:word
+# dim:1 typename:word refcount:12
 @DW 0xCDCDCDCD 
 @LABEL MaskedSprite_K
-# ref:0 dim:1 typename:word
+# dim:1 typename:word refcount:6
 @DW 0xCDCDCDCD 
 @LABEL MaskedSprite_posY
-# ref:0 dim:1 typename:word
+# dim:1 typename:word refcount:2
 @DW 0xCDCDCDCD 
 @LABEL MaskedSprite_posX
-# ref:0 dim:1 typename:word
+# dim:1 typename:word refcount:2
 @DW 0xCDCDCDCD 
 @LABEL main_frame
-# ref:0 dim:1 typename:word
+# dim:1 typename:word refcount:8
 @DW 0x0000 
 @LABEL main_posX
-# ref:0 dim:1 typename:word
+# dim:1 typename:word refcount:10
 @DW 0x0080 
 @LABEL main_dirX
-# ref:0 dim:1 typename:word
+# dim:1 typename:word refcount:6
 @DW 0x0001 
 @LABEL main_posY
-# ref:0 dim:1 typename:word
+# dim:1 typename:word refcount:10
 @DW 0x0040 
 @LABEL main_dirY
-# ref:0 dim:1 typename:word
+# dim:1 typename:word refcount:6
 @DW 0x0001 

@@ -1639,6 +1639,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			if(!var)
 				var = g_ASC.FindVariableMergedScope(namehash);
 		}
+		if (var)
+			var->m_RefCount++;
 		g_ASC.m_CurrentTypeName = var ? var->m_TypeName : TN_WORD;
 	}
 
@@ -1662,6 +1664,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 
 			if (var)
 			{
+				//var->m_RefCount++;
 				std::string val = g_ASC.PushRegister();
 				std::string trg = g_ASC.PushRegister();
 				node->m_Instructions = Opcodes[OP_LEA] + " " + val + ", " + var->m_Scope + "_" + var->m_Name;
@@ -1773,6 +1776,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 
 			if (var)
 			{
+				var->m_RefCount++;
 				//printf("arrayindex identifier type: %s[%d]\n", NodeTypes[node->m_Type], var->m_Dimension);
 				node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + ", " + var->m_Scope + "_" + var->m_Name;
 				// This is not a 'real' array, fetch data at address to treat as array base address
@@ -1823,6 +1827,9 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				if(!var)
 					var = g_ASC.FindVariableMergedScope(namehash);
 			}
+
+			if (var)
+				var->m_RefCount++;
 
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
@@ -1946,7 +1953,7 @@ void CompileGrimR(const char *_filename)
 	for (auto &node : g_ASC.m_ASTNodes)
 		AssignRegistersAndGenerateCode(fp, node);
 
-	// Dump asm code
+	// Add boot code
 	fprintf(fp, "# Instruction count: %d\n\n", g_ASC.m_InstructionCount);
 	fprintf(fp, "@ORG 0x00000000\n\n");
 	fprintf(fp, "call main\n");
@@ -1954,20 +1961,31 @@ void CompileGrimR(const char *_filename)
 	fprintf(fp, "vsync\n");
 	fprintf(fp, "jmp infloop\n");
 	fprintf(fp, "# End of program\n");
+
+	// Dump asm code
 	for (auto &node : g_ASC.m_ASTNodes)
 		DumpCode(fp, node);
 
+	// Increment ref count of 'main' (entry point) if there's one
+	uint32_t mainhash = HashString("main");
+	SFunction *func = g_ASC.FindFunction(mainhash);
+	if (func)
+		func->m_RefCount++;
+	else
+		printf("WARNING: No entry point (main) found in input file.\n");
+
 	// Dump symbol table
 	fprintf(fp, "\n#-------------Symbol Table-------------\n\n");
-	/*for (auto &func : g_ASC.m_Functions)
-		fprintf(fp, "# function '%s', hash: %.8X, refcount: %d\n", func->m_Name.c_str(), func->m_Hash, func->m_RefCount);*/
+
+	for (auto &func : g_ASC.m_Functions)
+		fprintf(fp, "# function '%s', hash: %.8X, refcount: %d\n", func->m_Name.c_str(), func->m_Hash, func->m_RefCount);
 
 	for (auto &var : g_ASC.m_Variables)
 	{
 		/*if (var->m_RefCount == 0)
 			continue;*/
 		fprintf(fp, "@LABEL %s_%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
-		fprintf(fp, "# ref:%d dim:%d typename:%s\n", var->m_RefCount, var->m_Dimension, TypeNames[var->m_TypeName]);
+		fprintf(fp, "# dim:%d typename:%s refcount:%d\n", var->m_Dimension, TypeNames[var->m_TypeName], var->m_RefCount);
 		{
 			if (var->m_TypeName == TN_WORD)
 			{
