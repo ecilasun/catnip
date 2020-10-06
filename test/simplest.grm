@@ -32,6 +32,7 @@ byte sprite[] = {
 def Sprite(word posX, word posY)
 {
     word spanX, spanY;
+    word K;
 
     spanY = 0;
     while (spanY<23)
@@ -39,7 +40,11 @@ def Sprite(word posX, word posY)
         spanX = 0;
         while (spanX<16)
         {
-            VRAM[spanX+posX + ((spanY+posY)<<8)] = sprite[(spanY<<4)+spanX];
+            K = sprite[(spanY<<4)+spanX]&0xFF;
+            if (K!=0xFF)
+            {
+                VRAM[spanX+posX + ((spanY+posY)<<8)] = K;
+            }
             spanX = ++spanX;
         }
         spanY = ++spanY;
@@ -50,8 +55,8 @@ def Sprite(word posX, word posY)
 def main()
 {
     word frame = 0;
-    word posX = 128, dirX = 3;
-    word posY = 64, dirY = 2;
+    word posX = 128, dirX = 1;
+    word posY = 64, dirY = 3;
 
     while(1)
     {

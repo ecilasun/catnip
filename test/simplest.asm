@@ -1,4 +1,4 @@
-# Instruction count: 168
+# Instruction count: 183
 
 @ORG 0x00000000
 
@@ -19,24 +19,24 @@ ld.d r0, 0x0
 lea r1, Sprite_spanY
 st.w [r1], r0
 
-@LABEL beginwhile2
+@LABEL beginwhile3
 lea r0, Sprite_spanY
 ld.w r0, [r0]
 ld.d r1, 0x17
 cmp r0, r1
 test r0, less
-jmpifnot endwhile3, r0
+jmpifnot endwhile4, r0
 ld.d r0, 0x0
 lea r1, Sprite_spanX
 st.w [r1], r0
 
-@LABEL beginwhile0
+@LABEL beginwhile1
 lea r0, Sprite_spanX
 ld.w r0, [r0]
 ld.d r1, 0x10
 cmp r0, r1
 test r0, less
-jmpifnot endwhile1, r0
+jmpifnot endwhile2, r0
 lea r0, Sprite_spanX
 ld.w r0, [r0]
 lea r1, Sprite_spanY
@@ -47,6 +47,18 @@ iadd r0, r1
 lea r1, _sprite
 iadd r0, r1
 ld.b r0, [r0] # RHS, valueof
+ld.d r1, 0xff
+and r0, r1
+lea r1, Sprite_K
+st.w [r1], r0
+lea r0, Sprite_K
+ld.w r0, [r0]
+ld.d r1, 0xff
+cmp r0, r1
+test r0, notequal
+jmpifnot endif0, r0
+lea r0, Sprite_K
+ld.w r0, [r0]
 lea r1, Sprite_posY
 ld.w r1, [r1]
 lea r2, Sprite_spanY
@@ -64,29 +76,31 @@ lea r2, _VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
+
+@LABEL endif0
 lea r0, Sprite_spanX
 ld.w r0, [r0]
 inc r0
 lea r1, Sprite_spanX
 st.w [r1], r0
-jmp beginwhile0
+jmp beginwhile1
 
-@LABEL endwhile1
+@LABEL endwhile2
 lea r0, Sprite_spanY
 ld.w r0, [r0]
 inc r0
 lea r1, Sprite_spanY
 st.w [r1], r0
-jmp beginwhile2
+jmp beginwhile3
 
-@LABEL endwhile3
+@LABEL endwhile4
 ret 
 
 @LABEL main
 
-@LABEL beginwhile6
+@LABEL beginwhile7
 ld.d r0, 0x1
-jmpifnot endwhile7, r0
+jmpifnot endwhile8, r0
 ld.d r0, 0xec
 clf r0
 lea r0, main_frame
@@ -130,14 +144,14 @@ ld.d r2, 0x8
 cmp r1, r2
 test r1, less
 or r0, r1
-jmpifnot endif4, r0
+jmpifnot endif5, r0
 lea r0, main_dirY
 ld.w r0, [r0]
 ineg r0
 lea r1, main_dirY
 st.w [r1], r0
 
-@LABEL endif4
+@LABEL endif5
 lea r0, main_posX
 ld.w r0, [r0]
 ld.d r1, 0xee
@@ -149,14 +163,14 @@ ld.d r2, 0x8
 cmp r1, r2
 test r1, less
 or r0, r1
-jmpifnot endif5, r0
+jmpifnot endif6, r0
 lea r0, main_dirX
 ld.w r0, [r0]
 ineg r0
 lea r1, main_dirX
 st.w [r1], r0
 
-@LABEL endif5
+@LABEL endif6
 vsync 
 lea r0, main_frame
 ld.w r0, [r0]
@@ -166,9 +180,9 @@ ld.w r0, [r0]
 inc r0
 lea r1, main_frame
 st.w [r1], r0
-jmp beginwhile6
+jmp beginwhile7
 
-@LABEL endwhile7
+@LABEL endwhile8
 
 #-------------Symbol Table-------------
 
@@ -212,6 +226,9 @@ jmp beginwhile6
 @LABEL Sprite_spanY
 # ref:0 dim:1 typename:word
 @DW 0xCDCDCDCD 
+@LABEL Sprite_K
+# ref:0 dim:1 typename:word
+@DW 0xCDCDCDCD 
 @LABEL Sprite_posY
 # ref:0 dim:1 typename:word
 @DW 0xCDCDCDCD 
@@ -226,10 +243,10 @@ jmp beginwhile6
 @DW 0x0080 
 @LABEL main_dirX
 # ref:0 dim:1 typename:word
-@DW 0x0003 
+@DW 0x0001 
 @LABEL main_posY
 # ref:0 dim:1 typename:word
 @DW 0x0040 
 @LABEL main_dirY
 # ref:0 dim:1 typename:word
-@DW 0x0002 
+@DW 0x0003 

@@ -1715,7 +1715,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string test = "notequal";
 			// Hardware has: ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL
 			//if (node->m_Opcode == OP_CMPZ) test = "zero";
-			if (node->m_Opcode == OP_CMPNE) test = "not equal";
+			if (node->m_Opcode == OP_CMPNE) test = "notequal";
 			//if (node->m_Opcode == OP_CMPNZ) test = "notzero";
 			if (node->m_Opcode == OP_CMPL) test = "less";
 			if (node->m_Opcode == OP_CMPG) test = "greater";
