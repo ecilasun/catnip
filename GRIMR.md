@@ -1,0 +1,3 @@
+# GrimR Manual
+
+## About GrimR
