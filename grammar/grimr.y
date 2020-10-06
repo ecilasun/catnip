@@ -233,7 +233,7 @@ const std::string Opcodes[]={
 	"nop",
 	"inc",
 	"dec",
-	"addrof",
+	"lea",
 	"valof",
 	"not",
 	"ineg",
@@ -445,7 +445,10 @@ struct SASTScanContext
 	std::string PushLabel(std::string labelname)
 	{
 		uint32_t r = m_CurrentAutoLabel++;
-		return std::string(labelname+std::to_string(r));
+		//return std::string(labelname+std::to_string(r));
+		std::stringstream stream;
+		stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << r;
+		return labelname+stream.str();
 	}
 
 	/*std::string PopLabel(std::string labelname)
@@ -671,7 +674,7 @@ unary_expression
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryAddressOf, "");
 																									$$->PushNode(unaryexpressionnode);
-																									$$->m_Opcode = OP_ADDRESSOF;
+																									unaryexpressionnode->m_Opcode = OP_ADDRESSOF;
 																									g_ASC.PushNode($$);
 																								}
 	| '*' unary_expression																		{
@@ -1813,6 +1816,25 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		}
 		break;
 
+		case OP_ADDRESSOF:
+		{
+			std::string trg = g_ASC.PushRegister();
+
+			uint32_t namehash = HashString(node->m_Value.c_str());
+			uint32_t scopehash = HashString(g_ASC.m_CurrentFunctionName.c_str());
+			uint32_t emptyhash = HashString("");
+			SVariable *var = g_ASC.FindVariable(namehash, scopehash);
+			if (!var)
+			{
+				var = g_ASC.FindVariable(namehash, emptyhash);
+				if(!var)
+					var = g_ASC.FindVariableMergedScope(namehash);
+			}
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + "_" + var->m_Name;
+			g_ASC.m_InstructionCount+=1;
+		}
+		break;
+
 		case OP_LEA:
 		{
 			std::string trg = g_ASC.PushRegister();
@@ -1956,7 +1978,7 @@ void CompileGrimR(const char *_filename)
 	// Add boot code
 	fprintf(fp, "# Instruction count: %d\n\n", g_ASC.m_InstructionCount);
 	fprintf(fp, "@ORG 0x00000000\n\n");
-	fprintf(fp, "call main\n");
+	fprintf(fp, "call main\n\n");
 	fprintf(fp, "@LABEL infloop\n");
 	fprintf(fp, "vsync\n");
 	fprintf(fp, "jmp infloop\n");
@@ -1982,10 +2004,10 @@ void CompileGrimR(const char *_filename)
 
 	for (auto &var : g_ASC.m_Variables)
 	{
-		/*if (var->m_RefCount == 0)
-			continue;*/
+		fprintf(fp, "# variable '%s', dim:%d typename:%s refcount:%d\n", var->m_Name.c_str(), var->m_Dimension, TypeNames[var->m_TypeName], var->m_RefCount);
+		if (var->m_RefCount == 0)
+			continue;
 		fprintf(fp, "@LABEL %s_%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
-		fprintf(fp, "# dim:%d typename:%s refcount:%d\n", var->m_Dimension, TypeNames[var->m_TypeName], var->m_RefCount);
 		{
 			if (var->m_TypeName == TN_WORD)
 			{

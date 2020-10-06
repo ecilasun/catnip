@@ -30,8 +30,8 @@ void stripquotes(char *string);
 %option noyywrap
 
 %%
-"##"						{ comment(); }
-"#"[^\n]*					{ /* consume //-comment */ }
+"/*"						{ comment(); }
+"//"[^\n]*					{ /* consume //-comment */ }
 
 "word"						{ count();  return(WORD); }
 "byte"						{ count();  return(BYTE); }
@@ -138,7 +138,7 @@ void comment()
 	char c, prev = 0;
 	while ((c = yyinput()) != 0)      /* (EOF maps to 0) */
 	{
-		if (c == '#' && prev == '#')
+		if (c == '/' && prev == '*')
 			return;
 		prev = c;
 	}

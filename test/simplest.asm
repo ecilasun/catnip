@@ -1,8 +1,9 @@
-# Instruction count: 262
+# Instruction count: 267
 
 @ORG 0x00000000
 
 call main
+
 @LABEL infloop
 vsync
 jmp infloop
@@ -19,24 +20,24 @@ ld.d r0, 0x0
 lea r1, Sprite_y
 st.w [r1], r0
 
-@LABEL beginwhile2
+@LABEL beginwhile00000002
 lea r0, Sprite_y
 ld.w r0, [r0]
 ld.d r1, 0x17
 cmp r0, r1
 test r0, less
-jmpifnot endwhile3, r0
+jmpifnot endwhile00000003, r0
 ld.d r0, 0x0
 lea r1, Sprite_x
 st.w [r1], r0
 
-@LABEL beginwhile0
+@LABEL beginwhile00000000
 lea r0, Sprite_x
 ld.w r0, [r0]
 ld.d r1, 0x10
 cmp r0, r1
 test r0, less
-jmpifnot endwhile1, r0
+jmpifnot endwhile00000001, r0
 lea r0, Sprite_x
 ld.w r0, [r0]
 lea r1, Sprite_y
@@ -69,17 +70,17 @@ ld.w r0, [r0]
 inc r0
 lea r1, Sprite_x
 st.w [r1], r0
-jmp beginwhile0
+jmp beginwhile00000000
 
-@LABEL endwhile1
+@LABEL endwhile00000001
 lea r0, Sprite_y
 ld.w r0, [r0]
 inc r0
 lea r1, Sprite_y
 st.w [r1], r0
-jmp beginwhile2
+jmp beginwhile00000002
 
-@LABEL endwhile3
+@LABEL endwhile00000003
 ret 
 
 @LABEL MaskedSprite
@@ -93,24 +94,24 @@ ld.d r0, 0x0
 lea r1, MaskedSprite_y
 st.w [r1], r0
 
-@LABEL beginwhile7
+@LABEL beginwhile00000007
 lea r0, MaskedSprite_y
 ld.w r0, [r0]
 ld.d r1, 0x17
 cmp r0, r1
 test r0, less
-jmpifnot endwhile8, r0
+jmpifnot endwhile00000008, r0
 ld.d r0, 0x0
 lea r1, MaskedSprite_x
 st.w [r1], r0
 
-@LABEL beginwhile5
+@LABEL beginwhile00000005
 lea r0, MaskedSprite_x
 ld.w r0, [r0]
 ld.d r1, 0x10
 cmp r0, r1
 test r0, less
-jmpifnot endwhile6, r0
+jmpifnot endwhile00000006, r0
 lea r0, MaskedSprite_x
 ld.w r0, [r0]
 lea r1, MaskedSprite_y
@@ -128,7 +129,7 @@ ld.w r0, [r0]
 ld.d r1, 0xff
 cmp r0, r1
 test r0, notequal
-jmpifnot endif4, r0
+jmpifnot endif00000004, r0
 lea r0, MaskedSprite_K
 ld.w r0, [r0]
 lea r1, MaskedSprite_posY
@@ -149,30 +150,30 @@ ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
 
-@LABEL endif4
+@LABEL endif00000004
 lea r0, MaskedSprite_x
 ld.w r0, [r0]
 inc r0
 lea r1, MaskedSprite_x
 st.w [r1], r0
-jmp beginwhile5
+jmp beginwhile00000005
 
-@LABEL endwhile6
+@LABEL endwhile00000006
 lea r0, MaskedSprite_y
 ld.w r0, [r0]
 inc r0
 lea r1, MaskedSprite_y
 st.w [r1], r0
-jmp beginwhile7
+jmp beginwhile00000007
 
-@LABEL endwhile8
+@LABEL endwhile00000008
 ret 
 
 @LABEL main
 
-@LABEL beginwhile11
+@LABEL beginwhile0000000b
 ld.d r0, 0x1
-jmpifnot endwhile12, r0
+jmpifnot endwhile0000000c, r0
 ld.d r0, 0xec
 clf r0
 lea r0, main_frame
@@ -196,6 +197,11 @@ lea r0, main_posY
 ld.w r0, [r0]
 push r0
 call MaskedSprite
+ld.d r0, 0x36
+push r0
+ld.d r0, 0x36
+push r0
+call Sprite
 lea r0, main_dirX
 ld.w r0, [r0]
 lea r1, main_posX
@@ -221,14 +227,14 @@ ld.d r2, 0x8
 cmp r1, r2
 test r1, less
 or r0, r1
-jmpifnot endif9, r0
+jmpifnot endif00000009, r0
 lea r0, main_dirY
 ld.w r0, [r0]
 ineg r0
 lea r1, main_dirY
 st.w [r1], r0
 
-@LABEL endif9
+@LABEL endif00000009
 lea r0, main_posX
 ld.w r0, [r0]
 ld.d r1, 0xf0
@@ -240,14 +246,14 @@ ld.d r2, 0x1
 cmp r1, r2
 test r1, less
 or r0, r1
-jmpifnot endif10, r0
+jmpifnot endif0000000a, r0
 lea r0, main_dirX
 ld.w r0, [r0]
 ineg r0
 lea r1, main_dirX
 st.w [r1], r0
 
-@LABEL endif10
+@LABEL endif0000000a
 vsync 
 lea r0, main_frame
 ld.w r0, [r0]
@@ -257,23 +263,23 @@ ld.w r0, [r0]
 inc r0
 lea r1, main_frame
 st.w [r1], r0
-jmp beginwhile11
+jmp beginwhile0000000b
 
-@LABEL endwhile12
+@LABEL endwhile0000000c
 
 #-------------Symbol Table-------------
 
-# function 'Sprite', hash: E90371F2, refcount: 1
+# function 'Sprite', hash: E90371F2, refcount: 2
 # function 'MaskedSprite', hash: 4978B879, refcount: 1
 # function 'main', hash: BC76E6BA, refcount: 1
+# variable 'VRAM', dim:1 typename:byteptr refcount:2
 @LABEL _VRAM
-# dim:1 typename:byteptr refcount:2
 @DW 0x8000 0x0000
+# variable 'BORDERCOLOR', dim:1 typename:byteptr refcount:1
 @LABEL _BORDERCOLOR
-# dim:1 typename:byteptr refcount:1
 @DW 0x8000 0xC000
+# variable 'sprite', dim:368 typename:byte refcount:2
 @LABEL _sprite
-# dim:368 typename:byte refcount:2
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFF0B 0x1353 0x0B13 0xF6FF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFF01 0x134E 0x4E06 0x6E0E 0x04EE 0xFFFF 
@@ -293,49 +299,49 @@ jmp beginwhile11
 @DW 0xFFFF 0xFF0B 0xFEFE 0xF60B 0xF6F6 0xF4FE 0x89EC 0xFFFF 
 @DW 0xFFFF 0xFF03 0xFEFE 0x03E9 0xA188 0xABE9 0x93F6 0xFFFF 
 @DW 0xFFFF 0xFF24 0xB6F7 0x1363 0x5149 0x5093 0xF6FF 0xFFFF 
-@DW 0xFFFF 0xFFFF 0x0114 0x1414 0x110B 0x1364 0xFEFF 0xFFFF 
+@DW 0xFFFF 0xFFFF 0x0114 0x1414 0x110B 0x1364 0xFFFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0x0013 0x090B 0x6E00 0x6C00 0xACFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0x0909 0x4911 0x0911 0x0909 0xEEFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
+# variable 'x', dim:1 typename:word refcount:6
 @LABEL Sprite_x
-# dim:1 typename:word refcount:6
 @DW 0xCDCDCDCD 
+# variable 'y', dim:1 typename:word refcount:6
 @LABEL Sprite_y
-# dim:1 typename:word refcount:6
 @DW 0xCDCDCDCD 
+# variable 'posY', dim:1 typename:word refcount:1
 @LABEL Sprite_posY
-# dim:1 typename:word refcount:1
 @DW 0xCDCDCDCD 
+# variable 'posX', dim:1 typename:word refcount:1
 @LABEL Sprite_posX
-# dim:1 typename:word refcount:1
 @DW 0xCDCDCDCD 
+# variable 'x', dim:1 typename:word refcount:6
 @LABEL MaskedSprite_x
-# dim:1 typename:word refcount:6
 @DW 0xCDCDCDCD 
+# variable 'y', dim:1 typename:word refcount:6
 @LABEL MaskedSprite_y
-# dim:1 typename:word refcount:6
 @DW 0xCDCDCDCD 
+# variable 'K', dim:1 typename:word refcount:3
 @LABEL MaskedSprite_K
-# dim:1 typename:word refcount:3
 @DW 0xCDCDCDCD 
+# variable 'posY', dim:1 typename:word refcount:1
 @LABEL MaskedSprite_posY
-# dim:1 typename:word refcount:1
 @DW 0xCDCDCDCD 
+# variable 'posX', dim:1 typename:word refcount:1
 @LABEL MaskedSprite_posX
-# dim:1 typename:word refcount:1
 @DW 0xCDCDCDCD 
+# variable 'frame', dim:1 typename:word refcount:4
 @LABEL main_frame
-# dim:1 typename:word refcount:4
 @DW 0x0000 
+# variable 'posX', dim:1 typename:word refcount:5
 @LABEL main_posX
-# dim:1 typename:word refcount:5
 @DW 0x0080 
+# variable 'dirX', dim:1 typename:word refcount:3
 @LABEL main_dirX
-# dim:1 typename:word refcount:3
 @DW 0x0001 
+# variable 'posY', dim:1 typename:word refcount:5
 @LABEL main_posY
-# dim:1 typename:word refcount:5
 @DW 0x0040 
+# variable 'dirY', dim:1 typename:word refcount:3
 @LABEL main_dirY
-# dim:1 typename:word refcount:3
-@DW 0x0001 
+@DW 0x0003 
