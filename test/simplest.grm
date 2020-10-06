@@ -1,4 +1,4 @@
-// GrimR language test file
+# GrimR language test file
 
 byteptr VRAM = 0x80000000;
 byteptr BORDERCOLOR = 0x8000C000;
@@ -77,6 +77,5 @@ def main()
         frame = frame++;
     }
 
-    // No return
+    # No return
 }
-
