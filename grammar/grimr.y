@@ -1776,7 +1776,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 
 			if (var)
 			{
-				var->m_RefCount++;
+				//var->m_RefCount++;
 				//printf("arrayindex identifier type: %s[%d]\n", NodeTypes[node->m_Type], var->m_Dimension);
 				node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + ", " + var->m_Scope + "_" + var->m_Name;
 				// This is not a 'real' array, fetch data at address to treat as array base address
@@ -1828,8 +1828,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 					var = g_ASC.FindVariableMergedScope(namehash);
 			}
 
-			if (var)
-				var->m_RefCount++;
+			//if (var)
+			//	var->m_RefCount++;
 
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{

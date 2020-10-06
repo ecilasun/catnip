@@ -267,13 +267,13 @@ jmp beginwhile11
 # function 'MaskedSprite', hash: 4978B879, refcount: 1
 # function 'main', hash: BC76E6BA, refcount: 1
 @LABEL _VRAM
-# dim:1 typename:byteptr refcount:4
+# dim:1 typename:byteptr refcount:2
 @DW 0x8000 0x0000
 @LABEL _BORDERCOLOR
-# dim:1 typename:byteptr refcount:2
+# dim:1 typename:byteptr refcount:1
 @DW 0x8000 0xC000
 @LABEL _sprite
-# dim:368 typename:byte refcount:4
+# dim:368 typename:byte refcount:2
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFF0B 0x1353 0x0B13 0xF6FF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFF01 0x134E 0x4E06 0x6E0E 0x04EE 0xFFFF 
@@ -298,44 +298,44 @@ jmp beginwhile11
 @DW 0xFFFF 0xFFFF 0x0909 0x4911 0x0911 0x0909 0xEEFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
 @LABEL Sprite_x
-# dim:1 typename:word refcount:12
+# dim:1 typename:word refcount:6
 @DW 0xCDCDCDCD 
 @LABEL Sprite_y
-# dim:1 typename:word refcount:12
+# dim:1 typename:word refcount:6
 @DW 0xCDCDCDCD 
 @LABEL Sprite_posY
-# dim:1 typename:word refcount:2
+# dim:1 typename:word refcount:1
 @DW 0xCDCDCDCD 
 @LABEL Sprite_posX
-# dim:1 typename:word refcount:2
+# dim:1 typename:word refcount:1
 @DW 0xCDCDCDCD 
 @LABEL MaskedSprite_x
-# dim:1 typename:word refcount:12
+# dim:1 typename:word refcount:6
 @DW 0xCDCDCDCD 
 @LABEL MaskedSprite_y
-# dim:1 typename:word refcount:12
+# dim:1 typename:word refcount:6
 @DW 0xCDCDCDCD 
 @LABEL MaskedSprite_K
-# dim:1 typename:word refcount:6
+# dim:1 typename:word refcount:3
 @DW 0xCDCDCDCD 
 @LABEL MaskedSprite_posY
-# dim:1 typename:word refcount:2
+# dim:1 typename:word refcount:1
 @DW 0xCDCDCDCD 
 @LABEL MaskedSprite_posX
-# dim:1 typename:word refcount:2
+# dim:1 typename:word refcount:1
 @DW 0xCDCDCDCD 
 @LABEL main_frame
-# dim:1 typename:word refcount:8
+# dim:1 typename:word refcount:4
 @DW 0x0000 
 @LABEL main_posX
-# dim:1 typename:word refcount:10
+# dim:1 typename:word refcount:5
 @DW 0x0080 
 @LABEL main_dirX
-# dim:1 typename:word refcount:6
+# dim:1 typename:word refcount:3
 @DW 0x0001 
 @LABEL main_posY
-# dim:1 typename:word refcount:10
+# dim:1 typename:word refcount:5
 @DW 0x0040 
 @LABEL main_dirY
-# dim:1 typename:word refcount:6
+# dim:1 typename:word refcount:3
 @DW 0x0001 
