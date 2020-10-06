@@ -1,6 +1,6 @@
 # CatNip
 
-CatNip is an assembler and emulator that generates code for a custom CPU used in Project Neko, and can emulate the generated binary as close to hardware as possible.
+CatNip is a compiler/assembler/emulator triplet that generates code for a custom CPU used in Project Neko, and can emulate the generated binary as close to hardware as possible. It can either accept asm input or input in the form of the language GrimR.
 
 ## Building the assembler/emulator
 
