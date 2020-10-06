@@ -87,6 +87,10 @@ The CPU emulation actually emulates all the state machine stages of Neko CPU, th
 
 This project currently uses WAF as its build system for portability, and SDL2 as its graphics output, which might change in the future. For the compiler, bison and flex tools are either provided (for Windows), or expected to be installed by the user (Linux/MacOS) to generate the grammar code for the language GrimR.
 
+## The instruction set for Neko
+
+You can find a detailed instruction set manual here: [Neko Instruction Set](instruction_set.md)
+
 ## About GrimR
 
 The language GrimR is a very simple one. It's sole purpose is to run on very simple embedded systems with no dynamic memory allocation, with no code relocation possible. A typical scenario is an FPGA device like Neko where the memory is very limited and is made of SRAM resources or internal FPGA block memory, with address decoder providing facilities to route memory access to either the SRAM or to VRAM for video output.
