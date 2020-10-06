@@ -2,7 +2,6 @@
 
 byteptr VRAM = 0x80000000;
 byteptr BORDERCOLOR = 0x8000C000;
-word loword = 0;
 
 byte sprite[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
@@ -40,7 +39,7 @@ def Sprite(word posX, word posY)
         spanX = 0;
         while (spanX<16)
         {
-            K = sprite[(spanY<<4)+spanX]&0xFF;
+            K = sprite[(spanY<<4)+spanX];
             if (K!=0xFF)
             {
                 VRAM[spanX+posX + ((spanY+posY)<<8)] = K;
@@ -56,7 +55,7 @@ def main()
 {
     word frame = 0;
     word posX = 128, dirX = 1;
-    word posY = 64, dirY = 3;
+    word posY = 64, dirY = 1;
 
     while(1)
     {
@@ -68,12 +67,12 @@ def main()
         posX = posX + dirX;
         posY = posY + dirY;
 
-        if (posY > 167 || posY < 8)
+        if (posY > 169 || posY < 8)
         {
             dirY = -dirY;
         }
 
-        if (posX > 238 || posX < 8)
+        if (posX > 240 || posX < 1)
         {
             dirX = -dirX;
         }
