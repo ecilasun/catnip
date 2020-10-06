@@ -89,7 +89,7 @@ This project currently uses WAF as its build system for portability, and SDL2 as
 
 ## The instruction set for Neko
 
-You can find a detailed instruction set manual here: [Neko Instruction Set](instruction_set.md)
+You can find a detailed instruction set manual here: [Neko Instruction Set](https://github.com/ecilasun/catnip/blob/master/INSTRUCTION_SET.md)
 
 ## About GrimR
 
