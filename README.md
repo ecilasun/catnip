@@ -96,3 +96,4 @@ You can find a detailed instruction set manual here: [Neko Instruction Set](http
 The language GrimR is a very simple one. It's sole purpose is to run on very simple embedded systems with no dynamic memory allocation, with no code relocation possible. A typical scenario is an FPGA device like Neko where the memory is very limited and is made of SRAM resources or internal FPGA block memory, with address decoder providing facilities to route memory access to either the SRAM or to VRAM for video output.
 In such a scenario, GrimR tries to provide only the most basic support as a high level language versus having to type in manual assembly, and might not be as powerful as C or any other language just yet.
 In time, more features will be added as long as they stay within the above limitations.
+For the time being you can refer to this manual for GrimR reference: [GrimR Manual](https://github.com/ecilasun/catnip/blob/master/GRIMR.md)
