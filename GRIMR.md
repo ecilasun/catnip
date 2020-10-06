@@ -26,8 +26,8 @@ In addition, the following operators are reserved and can't be overriden:
 * % Modulus
 * \+ Addition
 * \- Subtraction
-* ++ Increment (without assignment)
-* -- Decrement (without assignment)
+* ++ Increment (prefix, without assignment)
+* -- Decrement (prefix, without assignment)
 * = Assignment
 * == Equality
 * != Inequality

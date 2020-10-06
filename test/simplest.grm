@@ -40,9 +40,9 @@ def Sprite(word posX, word posY)
         while (spanX<16)
         {
             VRAM[spanX+posX + ((spanY+posY)<<8)] = sprite[(spanY<<4)+spanX];
-            spanX = spanX++;
+            spanX = ++spanX;
         }
-        spanY = spanY++;
+        spanY = ++spanY;
     }
     return;
 }
@@ -50,12 +50,12 @@ def Sprite(word posX, word posY)
 def main()
 {
     word frame = 0;
-    word posX = 128, dirX = 7;
-    word posY = 64, dirY = 8;
+    word posX = 128, dirX = 3;
+    word posY = 64, dirY = 2;
 
     while(1)
     {
-        clf(0xFF);
+        clf(0xEC);
 
         BORDERCOLOR[0] = frame>>4;
         Sprite(posX, posY);
@@ -67,6 +67,7 @@ def main()
         {
             dirY = -dirY;
         }
+
         if (posX > 238 || posX < 8)
         {
             dirX = -dirX;
@@ -74,7 +75,7 @@ def main()
 
         vsync();
         fsel(frame);
-        frame = frame++;
+        frame = ++frame;
     }
 
     # No return

@@ -70,8 +70,8 @@ enum EASTNodeType
 	EN_BitAnd,
 	EN_BitOr,
 	EN_BitXor,
-	EN_PostfixInc,
-	EN_PostfixDec,
+	EN_PrefixInc,
+	EN_PrefixDec,
 	EN_ConditionalExpr,
 	EN_LogicAnd,
 	EN_LogicOr,
@@ -138,8 +138,8 @@ const char* NodeTypes[]=
 	"EN_BitAnd                    ",
 	"EN_BitOr                     ",
 	"EN_BitXor                    ",
-	"EN_PostfixInc                ",
-	"EN_PostfixDec                ",
+	"EN_PrefixInc                 ",
+	"EN_PrefixDec                 ",
 	"EN_ConditionalExpr           ",
 	"EN_LogicAnd                  ",
 	"EN_LogicOr                   ",
@@ -642,20 +642,6 @@ postfix_expression
 																									exprnode->m_Opcode = OP_ARRAYINDEX;
 																									g_ASC.PushNode($$);
 																								}
-	| postfix_expression INC_OP																	{
-																									SASTNode *exprnode = g_ASC.PopNode();
-																									$$ = new SASTNode(EN_PostfixInc, "");
-																									$$->PushNode(exprnode);
-																									$$->m_Opcode = OP_INC;
-																									g_ASC.PushNode($$);
-																								}
-	| postfix_expression DEC_OP																	{
-																									SASTNode *exprnode = g_ASC.PopNode();
-																									$$ = new SASTNode(EN_PostfixDec, "");
-																									$$->PushNode(exprnode);
-																									$$->m_Opcode = OP_DEC;
-																									g_ASC.PushNode($$);
-																								}
 	;
 
 unary_expression
@@ -693,6 +679,20 @@ unary_expression
 																									$$ = new SASTNode(EN_UnaryValueOf, "");
 																									$$->PushNode(n0);
 																									$$->m_Opcode = OP_VALUEOF;
+																									g_ASC.PushNode($$);
+																								}
+	| INC_OP unary_expression																	{
+																									SASTNode *exprnode = g_ASC.PopNode();
+																									$$ = new SASTNode(EN_PrefixInc, "");
+																									$$->PushNode(exprnode);
+																									$$->m_Opcode = OP_INC;
+																									g_ASC.PushNode($$);
+																								}
+	| DEC_OP unary_expression																	{
+																									SASTNode *exprnode = g_ASC.PopNode();
+																									$$ = new SASTNode(EN_PrefixDec, "");
+																									$$->PushNode(exprnode);
+																									$$->m_Opcode = OP_DEC;
 																									g_ASC.PushNode($$);
 																								}
 	;

@@ -87,7 +87,7 @@ ret
 @LABEL beginwhile6
 ld.d r0, 0x1
 jmpifnot endwhile7, r0
-ld.d r0, 0xff
+ld.d r0, 0xec
 clf r0
 lea r0, main_frame
 ld.w r0, [r0]
@@ -226,10 +226,10 @@ jmp beginwhile6
 @DW 0x0080 
 @LABEL main_dirX
 # ref:0 dim:1 typename:word
-@DW 0x0007 
+@DW 0x0003 
 @LABEL main_posY
 # ref:0 dim:1 typename:word
 @DW 0x0040 
 @LABEL main_dirY
 # ref:0 dim:1 typename:word
-@DW 0x0008 
+@DW 0x0002 
