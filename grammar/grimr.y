@@ -739,8 +739,8 @@ additive_expression
 																									$$ = new SASTNode(EN_Add, "");
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
-																									$$->PushNode(rightnode);
 																									$$->PushNode(leftnode);
+																									$$->PushNode(rightnode);
 																									$$->m_Opcode = OP_ADD;
 																									g_ASC.PushNode($$);
 																								}
@@ -748,8 +748,8 @@ additive_expression
 																									$$ = new SASTNode(EN_Sub, "");
 																									SASTNode *rightnode = g_ASC.PopNode();
 																									SASTNode *leftnode = g_ASC.PopNode();
-																									$$->PushNode(rightnode);
 																									$$->PushNode(leftnode);
+																									$$->PushNode(rightnode);
 																									$$->m_Opcode = OP_SUB;
 																									g_ASC.PushNode($$);
 																								}
