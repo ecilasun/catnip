@@ -30,23 +30,41 @@ byte sprite[] = {
 
 def Sprite(word posX, word posY)
 {
-    word spanX, spanY;
+    word x, y;
+
+    y = 0;
+    while (y<23)
+    {
+        x = 0;
+        while (x<16)
+        {
+            VRAM[x+posX + ((y+posY)<<8)] = sprite[(y<<4)+x];
+            x = ++x;
+        }
+        y = ++y;
+    }
+    return;
+}
+
+def MaskedSprite(word posX, word posY)
+{
+    word x, y;
     word K;
 
-    spanY = 0;
-    while (spanY<23)
+    y = 0;
+    while (y<23)
     {
-        spanX = 0;
-        while (spanX<16)
+        x = 0;
+        while (x<16)
         {
-            K = sprite[(spanY<<4)+spanX];
+            K = sprite[(y<<4)+x];
             if (K!=0xFF)
             {
-                VRAM[spanX+posX + ((spanY+posY)<<8)] = K;
+                VRAM[x+posX + ((y+posY)<<8)] = K;
             }
-            spanX = ++spanX;
+            x = ++x;
         }
-        spanY = ++spanY;
+        y = ++y;
     }
     return;
 }
@@ -62,7 +80,8 @@ def main()
         clf(0xEC);
 
         BORDERCOLOR[0] = frame>>4;
-        Sprite(posX, posY);
+        Sprite(48, 48);
+        MaskedSprite(posX, posY);
 
         posX = posX + dirX;
         posY = posY + dirY;
