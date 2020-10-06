@@ -1,4 +1,4 @@
-# Instruction count: 170
+# Instruction count: 168
 
 @ORG 0x00000000
 
@@ -64,19 +64,17 @@ lea r2, _VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-ld.d r0, 0x1
-lea r1, Sprite_spanX
-ld.w r1, [r1]
-iadd r0, r1
+lea r0, Sprite_spanX
+ld.w r0, [r0]
+inc r0
 lea r1, Sprite_spanX
 st.w [r1], r0
 jmp beginwhile0
 
 @LABEL endwhile1
-ld.d r0, 0x1
-lea r1, Sprite_spanY
-ld.w r1, [r1]
-iadd r0, r1
+lea r0, Sprite_spanY
+ld.w r0, [r0]
+inc r0
 lea r1, Sprite_spanY
 st.w [r1], r0
 jmp beginwhile2
