@@ -55,13 +55,19 @@ To emulate the generated ROM file, assuming you're at the root directory of the 
 .\build\release\catnip.exe .\test\video.rom
 ```
 
-To compile a .c file into an .asm file, use the following command line:
+To compile a .grm file into an .asm file, use the following command line:
 
 ```
-.\build\release\catnip.exe .\test\simplest.c .\tes\simplest.asm
+.\build\release\catnip.exe .\test\simplest.grm .\tes\simplest.asm
 ```
 
-NOTE: For the time being the compiler is still in the works and won't actually output correct (or perhaps any) assembly file.
+Alternatively, you can use the following shortcut to directly compile and launch a temporary ROM image from an input .grm file:
+
+```
+.\build\release\catnip.exe .\test\simplest.grm
+```
+
+Please use catnip.exe without any input parameters for a full list of command line options.
 
 ## Emulator shortcuts
 
@@ -71,12 +77,18 @@ To 'reset' the CPU, you can hit the `SPACE` key which will rewind CPU state to I
 
 ## Known issues
 
-CatNip emulator will currently not give warnings about code execution errors, neither it will do safety checks while executing code, which might result in the emulator to unexpectedly shut down.
+CatNip emulator will currently not give warnings about code execution errors except illegal instructions, neither it will do safety checks while executing code, which might result in the emulator to unexpectedly shut down.
 
-The CPU timing is not 1:1, so your software might run a little faster than it should. However, the timing between the VGA module and the CPU is somewhat close to the actual hardware, though it still requires fine tuning.
+Also, the CPU timing is not 1:1 yet, therefore your software might run a little faster than it should. However, the timing between the VGA module and the CPU is somewhat close to the actual hardware, though it still requires fine tuning.
 
 The CPU emulation actually emulates all the state machine stages of Neko CPU, therefore it should be as close as possible to the actual hardware in its capabilities.
 
 ## 3rd party libraries / tools
 
-This project currently uses WAF as its build system for portability, and SDL2 as its graphics output, which might change in the future. For the compiler, bison and flex tools are either provided (for Windows), or expected to be installed by the user (Linux/MacOS)
+This project currently uses WAF as its build system for portability, and SDL2 as its graphics output, which might change in the future. For the compiler, bison and flex tools are either provided (for Windows), or expected to be installed by the user (Linux/MacOS) to generate the grammar code for the language GrimR.
+
+## About GrimR
+
+The language GrimR is a very simple one. It's sole purpose is to run on very simple embedded systems with no dynamic memory allocation, with no code relocation possible. A typical scenario is an FPGA device like Neko where the memory is very limited and is made of SRAM resources or internal FPGA block memory, with address decoder providing facilities to route memory access to either the SRAM or to VRAM for video output.
+In such a scenario, GrimR tries to provide only the most basic support as a high level language versus having to type in manual assembly, and might not be as powerful as C or any other language just yet.
+In time, more features will be added as long as they stay within the above limitations.
