@@ -28,7 +28,8 @@ int main(int _argc, char **_argv)
 			{
 				const char *tmpfile = tmpnam(nullptr);
 				retVal = CompileGrimR(_argv[1], tmpfile);		// .GrimR -> .ROM/.MIF
-				retVal = AssembleBinary(tmpfile, _argv[2]);
+				if (retVal==0)
+					retVal = AssembleBinary(tmpfile, _argv[2]);
 				// Remove the temporary file
 				remove(tmpfile);
 			}
@@ -41,8 +42,12 @@ int main(int _argc, char **_argv)
 			strcat(romfilename, tmpfile2);
 			strcat(romfilename, ".rom");
 			retVal = CompileGrimR(_argv[1], tmpfile1);		// .GrimR -> .ROM/.MIF
-			retVal = AssembleBinary(tmpfile1, romfilename);
-			retVal = EmulateROMImage(romfilename);
+			if (retVal==0)
+			{
+				retVal = AssembleBinary(tmpfile1, romfilename);
+				if (retVal==0)
+					retVal = EmulateROMImage(romfilename);
+			}
 			// Remove the temporary files
 			remove(tmpfile1);
 			remove(romfilename);
