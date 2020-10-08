@@ -1,4 +1,4 @@
-# Instruction count: 267
+# Instruction count: 270
 
 @ORG 0x00000000
 
