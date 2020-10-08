@@ -491,6 +491,7 @@ struct SASTScanContext
 	int m_CurrentRegister{0};
 	int m_CurrentAutoLabel{0};
 	int m_InstructionCount{0};
+	bool m_CompileFailed{false};
 };
 
 typedef void (*FVisitCallback)(SASTNode *node);
@@ -1424,7 +1425,10 @@ functioncall_statement
 																									if (func)
 																										func->m_RefCount++;
 																									else
+																									{
 																										printf("ERROR: Function %s not declared before use\n", namenode->m_Value.c_str());
+																										g_ASC.m_CompileFailed = true;
+																									}
 																									//$$->PushNode(namenode); // No need to push name node, this is part of the 'call' opcode (as a target label)
 																									$$->m_Opcode = OP_CALL;
 																									$$->m_Value = namenode->m_Value;
@@ -1644,6 +1648,11 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		}
 		if (var)
 			var->m_RefCount++;
+		if (!var)
+		{
+			printf("ERROR: Variable %s not declared before use\n", node->m_Value.c_str());
+			g_ASC.m_CompileFailed = true;
+		}
 		g_ASC.m_CurrentTypeName = var ? var->m_TypeName : TN_WORD;
 	}
 
@@ -1679,7 +1688,10 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				g_ASC.m_InstructionCount+=3;
 			}
 			else
-				node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
+			{
+				printf("ERROR: Variable %s not declared before use\n", node->m_Value.c_str());
+				g_ASC.m_CompileFailed = true;
+			}
 		}
 		break;
 
@@ -1792,7 +1804,10 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				}
 			}
 			else
+			{
 				node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
+				g_ASC.m_CompileFailed = true;
+			}
 
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();
@@ -1864,7 +1879,10 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 					g_ASC.m_InstructionCount+=2;
 				}
 				else
+				{
 					node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
+					g_ASC.m_CompileFailed = true;
+				}
 			}
 			else
 			{
@@ -1966,7 +1984,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		node->m_Instructions.c_str());*/
 }
 
-void CompileGrimR(const char *_filename)
+bool CompileGrimR(const char *_filename)
 {
 	FILE *fp = fopen(_filename, "w");
 
@@ -2063,6 +2081,8 @@ void CompileGrimR(const char *_filename)
 		}
 	}
 	fclose(fp);
+
+	return g_ASC.m_CompileFailed;
 }
 
 void yyerror(const char *s) {

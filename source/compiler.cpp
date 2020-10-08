@@ -2,7 +2,7 @@
 
 // GrimR : Person Wearing A Mask / Helmet / The Fierce One
 #include "../grammar/grimr.y.hpp"
-extern void CompileGrimR(const char *_filename);
+extern bool CompileGrimR(const char *_filename);
 
 int CompileGrimR(char *_inputname, const char *_outputname)
 {
@@ -14,7 +14,7 @@ int CompileGrimR(char *_inputname, const char *_outputname)
 	fclose(yyin);
 
 	printf("Compiling: %s\n", _inputname);
-	CompileGrimR(_outputname);
+	bool failed = CompileGrimR(_outputname);
 
-	return 0;
+	return failed ? -1 : 0;
 }
