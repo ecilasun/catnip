@@ -1,4 +1,4 @@
-# Instruction count: 270
+# Instruction count: 337
 
 @ORG 0x00000000
 
@@ -9,172 +9,98 @@ vsync
 jmp infloop
 # End of program
 
-@LABEL Sprite
-lea r0, Sprite_spriteindex
+@LABEL DrawBackdrop
+lea r0, DrawBackdrop_spriteindex
 pop r1
 st.w r0, r1
-lea r0, Sprite_spriteindex
-ld.w r0, [r0]
-ld.d r1, 0x3
-imul r0, r1
-ld.d r1, 0x0
+ld.d r0, 0x0
+lea r1, DrawBackdrop_spriteindex
+ld.w r1, [r1]
+ld.d r2, 0x6
+imul r1, r2
 iadd r0, r1
 lea r1, _spriteinfo
 iadd r0, r1
 ld.w r0, [r0] # RHS, valueof
-lea r1, Sprite_posX
+lea r1, DrawBackdrop_posY
 st.w [r1], r0
-lea r0, Sprite_spriteindex
-ld.w r0, [r0]
-ld.d r1, 0x3
-imul r0, r1
-ld.d r1, 0x1
+ld.d r0, 0x2
+lea r1, DrawBackdrop_spriteindex
+ld.w r1, [r1]
+ld.d r2, 0x6
+imul r1, r2
 iadd r0, r1
 lea r1, _spriteinfo
 iadd r0, r1
 ld.w r0, [r0] # RHS, valueof
-lea r1, Sprite_posY
+lea r1, DrawBackdrop_posX
 st.w [r1], r0
-lea r0, Sprite_spriteindex
-ld.w r0, [r0]
-ld.d r1, 0x3
-imul r0, r1
-ld.d r1, 0x2
+ld.d r0, 0x4
+lea r1, DrawBackdrop_spriteindex
+ld.w r1, [r1]
+ld.d r2, 0x6
+imul r1, r2
 iadd r0, r1
 lea r1, _spriteinfo
 iadd r0, r1
 ld.w r0, [r0] # RHS, valueof
 ld.d r1, 0x8
 bsl r0, r1
-lea r1, Sprite_id
+lea r1, DrawBackdrop_id
 st.w [r1], r0
 ld.d r0, 0x0
-lea r1, Sprite_y
+lea r1, DrawBackdrop_y
 st.w [r1], r0
 
-@LABEL beginwhile00000002
-lea r0, Sprite_y
+@LABEL beginwhile00000003
+lea r0, DrawBackdrop_y
 ld.w r0, [r0]
 ld.d r1, 0x10
 cmp r0, r1
 test r0, less
-jmpifnot endwhile00000003, r0
+jmpifnot endwhile00000004, r0
 ld.d r0, 0x0
-lea r1, Sprite_x
+lea r1, DrawBackdrop_x
 st.w [r1], r0
 
-@LABEL beginwhile00000000
-lea r0, Sprite_x
+@LABEL beginwhile00000001
+lea r0, DrawBackdrop_x
 ld.w r0, [r0]
 ld.d r1, 0x10
 cmp r0, r1
 test r0, less
-jmpifnot endwhile00000001, r0
-lea r0, Sprite_id
+jmpifnot endwhile00000002, r0
+lea r0, DrawBackdrop_id
 ld.w r0, [r0]
-lea r1, Sprite_y
+lea r1, DrawBackdrop_y
 ld.w r1, [r1]
 ld.d r2, 0x4
 bsl r1, r2
 iadd r0, r1
-lea r1, Sprite_x
+lea r1, DrawBackdrop_x
 ld.w r1, [r1]
 iadd r0, r1
 lea r1, _spritesheet
 iadd r0, r1
 ld.b r0, [r0] # RHS, valueof
-lea r1, Sprite_x
-ld.w r1, [r1]
-lea r2, Sprite_posX
-ld.w r2, [r2]
-iadd r1, r2
-lea r2, Sprite_y
-ld.w r2, [r2]
-lea r3, Sprite_posY
-ld.w r3, [r3]
-iadd r2, r3
-ld.d r3, 0x8
-bsl r2, r3
-iadd r1, r2
-lea r2, _VRAM
-ld.d r2, [r2]
-iadd r1, r2
-st.b [r1], r0
-lea r0, Sprite_x
-ld.w r0, [r0]
-inc r0
-lea r1, Sprite_x
+lea r1, DrawBackdrop_K
 st.w [r1], r0
-jmp beginwhile00000000
-
-@LABEL endwhile00000001
-lea r0, Sprite_y
-ld.w r0, [r0]
-inc r0
-lea r1, Sprite_y
-st.w [r1], r0
-jmp beginwhile00000002
-
-@LABEL endwhile00000003
-ret 
-
-@LABEL MaskedSprite
-lea r0, MaskedSprite_posY
-pop r1
-st.w r0, r1
-lea r0, MaskedSprite_posX
-pop r1
-st.w r0, r1
-ld.d r0, 0x0
-lea r1, MaskedSprite_y
-st.w [r1], r0
-
-@LABEL beginwhile00000007
-lea r0, MaskedSprite_y
-ld.w r0, [r0]
-ld.d r1, 0x17
-cmp r0, r1
-test r0, less
-jmpifnot endwhile00000008, r0
-ld.d r0, 0x0
-lea r1, MaskedSprite_x
-st.w [r1], r0
-
-@LABEL beginwhile00000005
-lea r0, MaskedSprite_x
-ld.w r0, [r0]
-ld.d r1, 0x10
-cmp r0, r1
-test r0, less
-jmpifnot endwhile00000006, r0
-lea r0, MaskedSprite_y
-ld.w r0, [r0]
-ld.d r1, 0x4
-bsl r0, r1
-lea r1, MaskedSprite_x
-ld.w r1, [r1]
-iadd r0, r1
-lea r1, _sprite
-iadd r0, r1
-ld.b r0, [r0] # RHS, valueof
-lea r1, MaskedSprite_K
-st.w [r1], r0
-lea r0, MaskedSprite_K
+lea r0, DrawBackdrop_K
 ld.w r0, [r0]
 ld.d r1, 0xff
 cmp r0, r1
 test r0, notequal
-jmpifnot endif00000004, r0
-lea r0, MaskedSprite_K
+jmpifnot endif00000000, r0
+lea r0, DrawBackdrop_K
 ld.w r0, [r0]
-lea r1, MaskedSprite_x
+lea r1, DrawBackdrop_x
 ld.w r1, [r1]
-lea r2, MaskedSprite_posX
+lea r2, DrawBackdrop_posX
 ld.w r2, [r2]
 iadd r1, r2
-lea r2, MaskedSprite_y
+lea r2, DrawBackdrop_y
 ld.w r2, [r2]
-lea r3, MaskedSprite_posY
+lea r3, DrawBackdrop_posY
 ld.w r3, [r3]
 iadd r2, r3
 ld.d r3, 0x8
@@ -185,32 +111,141 @@ ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
 
-@LABEL endif00000004
-lea r0, MaskedSprite_x
+@LABEL endif00000000
+lea r0, DrawBackdrop_x
 ld.w r0, [r0]
 inc r0
-lea r1, MaskedSprite_x
+lea r1, DrawBackdrop_x
 st.w [r1], r0
-jmp beginwhile00000005
+jmp beginwhile00000001
 
-@LABEL endwhile00000006
-lea r0, MaskedSprite_y
+@LABEL endwhile00000002
+lea r0, DrawBackdrop_y
 ld.w r0, [r0]
 inc r0
-lea r1, MaskedSprite_y
+lea r1, DrawBackdrop_y
 st.w [r1], r0
-jmp beginwhile00000007
+jmp beginwhile00000003
 
-@LABEL endwhile00000008
+@LABEL endwhile00000004
+ret 
+
+@LABEL DrawCharacter
+lea r0, DrawCharacter_posY
+pop r1
+st.w r0, r1
+lea r0, DrawCharacter_posX
+pop r1
+st.w r0, r1
+ld.d r0, 0x0
+lea r1, DrawCharacter_y
+st.w [r1], r0
+
+@LABEL beginwhile00000008
+lea r0, DrawCharacter_y
+ld.w r0, [r0]
+ld.d r1, 0x17
+cmp r0, r1
+test r0, less
+jmpifnot endwhile00000009, r0
+ld.d r0, 0x0
+lea r1, DrawCharacter_x
+st.w [r1], r0
+
+@LABEL beginwhile00000006
+lea r0, DrawCharacter_x
+ld.w r0, [r0]
+ld.d r1, 0x10
+cmp r0, r1
+test r0, less
+jmpifnot endwhile00000007, r0
+lea r0, DrawCharacter_y
+ld.w r0, [r0]
+ld.d r1, 0x4
+bsl r0, r1
+lea r1, DrawCharacter_x
+ld.w r1, [r1]
+iadd r0, r1
+lea r1, _character
+iadd r0, r1
+ld.b r0, [r0] # RHS, valueof
+lea r1, DrawCharacter_K
+st.w [r1], r0
+lea r0, DrawCharacter_K
+ld.w r0, [r0]
+ld.d r1, 0xff
+cmp r0, r1
+test r0, notequal
+jmpifnot endif00000005, r0
+lea r0, DrawCharacter_K
+ld.w r0, [r0]
+lea r1, DrawCharacter_x
+ld.w r1, [r1]
+lea r2, DrawCharacter_posX
+ld.w r2, [r2]
+iadd r1, r2
+lea r2, DrawCharacter_y
+ld.w r2, [r2]
+lea r3, DrawCharacter_posY
+ld.w r3, [r3]
+iadd r2, r3
+ld.d r3, 0x8
+bsl r2, r3
+iadd r1, r2
+lea r2, _VRAM
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0
+
+@LABEL endif00000005
+lea r0, DrawCharacter_x
+ld.w r0, [r0]
+inc r0
+lea r1, DrawCharacter_x
+st.w [r1], r0
+jmp beginwhile00000006
+
+@LABEL endwhile00000007
+lea r0, DrawCharacter_y
+ld.w r0, [r0]
+inc r0
+lea r1, DrawCharacter_y
+st.w [r1], r0
+jmp beginwhile00000008
+
+@LABEL endwhile00000009
 ret 
 
 @LABEL main
 
-@LABEL beginwhile0000000b
+@LABEL beginwhile0000000e
 ld.d r0, 0x1
-jmpifnot endwhile0000000c, r0
+jmpifnot endwhile0000000f, r0
 ld.d r0, 0xec
 clf r0
+ld.d r0, 0x0
+lea r1, main_s
+st.w [r1], r0
+
+@LABEL beginwhile0000000a
+lea r0, main_s
+ld.w r0, [r0]
+ld.d r1, 0x54
+cmp r0, r1
+test r0, less
+jmpifnot endwhile0000000b, r0
+lea r0, main_s
+ld.w r0, [r0]
+push r0
+call DrawBackdrop
+lea r0, main_s
+ld.w r0, [r0]
+inc r0
+lea r1, main_s
+st.w [r1], r0
+jmp beginwhile0000000a
+
+@LABEL endwhile0000000b
 lea r0, main_frame
 ld.w r0, [r0]
 ld.d r1, 0x4
@@ -220,16 +255,13 @@ lea r2, _BORDERCOLOR
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-ld.d r0, 0x0
-push r0
-call Sprite
 lea r0, main_posX
 ld.w r0, [r0]
 push r0
 lea r0, main_posY
 ld.w r0, [r0]
 push r0
-call MaskedSprite
+call DrawCharacter
 lea r0, main_posX
 ld.w r0, [r0]
 lea r1, main_dirX
@@ -251,18 +283,18 @@ cmp r0, r1
 test r0, greater
 lea r1, main_posY
 ld.w r1, [r1]
-ld.d r2, 0x8
+ld.d r2, 0x1
 cmp r1, r2
 test r1, less
 or r0, r1
-jmpifnot endif00000009, r0
+jmpifnot endif0000000c, r0
 lea r0, main_dirY
 ld.w r0, [r0]
 ineg r0
 lea r1, main_dirY
 st.w [r1], r0
 
-@LABEL endif00000009
+@LABEL endif0000000c
 lea r0, main_posX
 ld.w r0, [r0]
 ld.d r1, 0xf0
@@ -274,14 +306,14 @@ ld.d r2, 0x1
 cmp r1, r2
 test r1, less
 or r0, r1
-jmpifnot endif0000000a, r0
+jmpifnot endif0000000d, r0
 lea r0, main_dirX
 ld.w r0, [r0]
 ineg r0
 lea r1, main_dirX
 st.w [r1], r0
 
-@LABEL endif0000000a
+@LABEL endif0000000d
 vsync 
 lea r0, main_frame
 ld.w r0, [r0]
@@ -291,14 +323,14 @@ ld.w r0, [r0]
 inc r0
 lea r1, main_frame
 st.w [r1], r0
-jmp beginwhile0000000b
+jmp beginwhile0000000e
 
-@LABEL endwhile0000000c
+@LABEL endwhile0000000f
 
 #-------------Symbol Table-------------
 
-# function 'Sprite', hash: E90371F2, refcount: 1
-# function 'MaskedSprite', hash: 4978B879, refcount: 1
+# function 'DrawBackdrop', hash: A1A08995, refcount: 1
+# function 'DrawCharacter', hash: BADD3E78, refcount: 1
 # function 'main', hash: BC76E6BA, refcount: 1
 # variable 'VRAM', dim:1 typename:byteptr refcount:2
 @LABEL _VRAM
@@ -306,8 +338,8 @@ jmp beginwhile0000000b
 # variable 'BORDERCOLOR', dim:1 typename:byteptr refcount:1
 @LABEL _BORDERCOLOR
 @DW 0x8000 0xC000
-# variable 'sprite', dim:368 typename:byte refcount:1
-@LABEL _sprite
+# variable 'character', dim:368 typename:byte refcount:1
+@LABEL _character
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFF0B 0x1353 0x0B13 0xF6FF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFF01 0x134E 0x4E06 0x6E0E 0x04EE 0xFFFF 
@@ -331,9 +363,9 @@ jmp beginwhile0000000b
 @DW 0xFFFF 0xFFFF 0x0013 0x090B 0x6E00 0x6C00 0xACFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0x0909 0x4911 0x0911 0x0909 0xEEFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
-# variable 'spriteinfo', dim:48 typename:word refcount:3
+# variable 'spriteinfo', dim:258 typename:word refcount:3
 @LABEL _spriteinfo
-@DW 0x0000 0x0000 0x0006 0x0000 0x0010 0x0006 0x0000 0x0020 0x0006 0x0000 0x0030 0x0006 0x0000 0x0040 0x0006 0x0000 0x0050 0x0006 0x0000 0x0060 0x0006 0x0000 0x0070 0x0006 0x0000 0x0080 0x0006 0x0000 0x0090 0x0006 0x0000 0x00A0 0x0006 0x0000 0x00B0 0x0006 0x0000 0x00C0 0x0006 0x0000 0x00D0 0x0006 0x0000 0x00E0 0x0006 0x0000 0x00F0 0x0006 
+@DW 0x0000 0x0000 0x0006 0x0000 0x0010 0x0006 0x0000 0x0020 0x0006 0x0000 0x0030 0x0006 0x0000 0x0040 0x0006 0x0000 0x0050 0x0006 0x0000 0x0060 0x0006 0x0000 0x0070 0x0006 0x0000 0x0080 0x0006 0x0000 0x0090 0x0006 0x0000 0x00A0 0x0006 0x0000 0x00B0 0x0006 0x0000 0x00C0 0x0006 0x0000 0x00D0 0x0006 0x0000 0x00E0 0x0006 0x0000 0x00F0 0x0006 0x0010 0x0000 0x0006 0x0010 0x0010 0x0006 0x0010 0x0020 0x0006 0x0010 0x0030 0x0006 0x0010 0x0040 0x0006 0x0010 0x0050 0x0006 0x0010 0x0060 0x0006 0x0010 0x0070 0x0006 0x0010 0x0080 0x0006 0x0010 0x0090 0x0006 0x0010 0x00A0 0x0006 0x0010 0x00B0 0x0006 0x0010 0x00C0 0x0006 0x0010 0x00D0 0x0006 0x0010 0x00E0 0x0006 0x0010 0x00F0 0x0006 0x0020 0x0000 0x0006 0x0020 0x0010 0x0006 0x0020 0x0020 0x0006 0x0020 0x0030 0x0006 0x0020 0x0040 0x0006 0x0020 0x0050 0x0006 0x0020 0x0060 0x0006 0x0020 0x0070 0x0006 0x0020 0x0080 0x0006 0x0020 0x0090 0x0006 0x0020 0x00A0 0x0006 0x0020 0x00B0 0x0006 0x0020 0x00C0 0x0006 0x0020 0x00D0 0x0006 0x0020 0x00E0 0x0006 0x0020 0x00F0 0x0006 0x0030 0x0000 0x0006 0x0030 0x0010 0x0006 0x0030 0x0020 0x0006 0x0030 0x0030 0x0006 0x0030 0x0040 0x0006 0x0030 0x0050 0x0006 0x0030 0x0060 0x0006 0x0030 0x0070 0x0006 0x0030 0x0080 0x0006 0x0030 0x0090 0x0006 0x0030 0x00A0 0x0006 0x0030 0x00B0 0x0006 0x0030 0x00C0 0x0006 0x0030 0x00D0 0x0006 0x0030 0x00E0 0x0006 0x0030 0x00F0 0x0006 0x0040 0x0000 0x0006 0x0040 0x0010 0x0006 0x0040 0x0020 0x0006 0x0040 0x0030 0x0006 0x0040 0x0040 0x0006 0x0040 0x0050 0x0006 0x0040 0x0060 0x0006 0x0040 0x0070 0x0006 0x0040 0x0080 0x0006 0x0040 0x0090 0x0006 0x0040 0x00A0 0x0006 0x0040 0x00B0 0x0006 0x0040 0x00C0 0x0006 0x0040 0x00D0 0x0006 0x0040 0x00E0 0x0006 0x0040 0x00F0 0x0006 0x0000 0x0000 0x0000 0x0010 0x0000 0x0001 0x0000 0x0010 0x0002 0x0010 0x0010 0x0003 0x000F 0x0015 0x0004 0x001F 0x0015 0x0005 
 # variable 'spritesheet', dim:1792 typename:byte refcount:1
 @LABEL _spritesheet
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
@@ -449,37 +481,40 @@ jmp beginwhile0000000b
 @DW 0x5D5D 0x5D5D 0x5D5D 0x5D5D 0x5D5D 0x5D6F 0x5D5D 0x5D5D 
 @DW 0x5D5D 0x5D5D 0x5D5D 0x5D5D 0x5D5D 0x5D6F 0x5D5D 0x5D5D 
 # variable 'x', dim:1 typename:word refcount:6
-@LABEL Sprite_x
+@LABEL DrawBackdrop_x
 @DW 0xCDCDCDCD 
 # variable 'y', dim:1 typename:word refcount:6
-@LABEL Sprite_y
+@LABEL DrawBackdrop_y
 @DW 0xCDCDCDCD 
 # variable 'posX', dim:1 typename:word refcount:2
-@LABEL Sprite_posX
+@LABEL DrawBackdrop_posX
 @DW 0xCDCDCDCD 
 # variable 'posY', dim:1 typename:word refcount:2
-@LABEL Sprite_posY
+@LABEL DrawBackdrop_posY
 @DW 0xCDCDCDCD 
 # variable 'id', dim:1 typename:word refcount:2
-@LABEL Sprite_id
-@DW 0xCDCDCDCD 
-# variable 'spriteindex', dim:1 typename:word refcount:3
-@LABEL Sprite_spriteindex
-@DW 0xCDCDCDCD 
-# variable 'x', dim:1 typename:word refcount:6
-@LABEL MaskedSprite_x
-@DW 0xCDCDCDCD 
-# variable 'y', dim:1 typename:word refcount:6
-@LABEL MaskedSprite_y
+@LABEL DrawBackdrop_id
 @DW 0xCDCDCDCD 
 # variable 'K', dim:1 typename:word refcount:3
-@LABEL MaskedSprite_K
+@LABEL DrawBackdrop_K
+@DW 0xCDCDCDCD 
+# variable 'spriteindex', dim:1 typename:word refcount:3
+@LABEL DrawBackdrop_spriteindex
+@DW 0xCDCDCDCD 
+# variable 'x', dim:1 typename:word refcount:6
+@LABEL DrawCharacter_x
+@DW 0xCDCDCDCD 
+# variable 'y', dim:1 typename:word refcount:6
+@LABEL DrawCharacter_y
+@DW 0xCDCDCDCD 
+# variable 'K', dim:1 typename:word refcount:3
+@LABEL DrawCharacter_K
 @DW 0xCDCDCDCD 
 # variable 'posY', dim:1 typename:word refcount:1
-@LABEL MaskedSprite_posY
+@LABEL DrawCharacter_posY
 @DW 0xCDCDCDCD 
 # variable 'posX', dim:1 typename:word refcount:1
-@LABEL MaskedSprite_posX
+@LABEL DrawCharacter_posX
 @DW 0xCDCDCDCD 
 # variable 'frame', dim:1 typename:word refcount:4
 @LABEL main_frame
@@ -495,4 +530,7 @@ jmp beginwhile0000000b
 @DW 0x0040 
 # variable 'dirY', dim:1 typename:word refcount:3
 @LABEL main_dirY
-@DW 0x0003 
+@DW 0x0001 
+# variable 's', dim:1 typename:word refcount:5
+@LABEL main_s
+@DW 0xCDCDCDCD 
