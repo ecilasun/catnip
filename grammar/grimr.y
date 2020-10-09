@@ -491,6 +491,7 @@ struct SASTScanContext
 	int m_CurrentRegister{0};
 	int m_CurrentAutoLabel{0};
 	int m_InstructionCount{0};
+	bool m_CompileFailed{false};
 };
 
 typedef void (*FVisitCallback)(SASTNode *node);
@@ -1424,7 +1425,10 @@ functioncall_statement
 																									if (func)
 																										func->m_RefCount++;
 																									else
+																									{
 																										printf("ERROR: Function %s not declared before use\n", namenode->m_Value.c_str());
+																										g_ASC.m_CompileFailed = true;
+																									}
 																									//$$->PushNode(namenode); // No need to push name node, this is part of the 'call' opcode (as a target label)
 																									$$->m_Opcode = OP_CALL;
 																									$$->m_Value = namenode->m_Value;
@@ -1644,6 +1648,11 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		}
 		if (var)
 			var->m_RefCount++;
+		if (!var)
+		{
+			printf("ERROR: Variable %s not declared before use\n", node->m_Value.c_str());
+			g_ASC.m_CompileFailed = true;
+		}
 		g_ASC.m_CurrentTypeName = var ? var->m_TypeName : TN_WORD;
 	}
 
@@ -1679,7 +1688,10 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				g_ASC.m_InstructionCount+=3;
 			}
 			else
-				node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
+			{
+				printf("ERROR: Variable %s not declared before use\n", node->m_Value.c_str());
+				g_ASC.m_CompileFailed = true;
+			}
 		}
 		break;
 
@@ -1782,16 +1794,20 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				//var->m_RefCount++;
 				//printf("arrayindex identifier type: %s[%d]\n", NodeTypes[node->m_Type], var->m_Dimension);
 				node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + ", " + var->m_Scope + "_" + var->m_Name;
+				g_ASC.m_InstructionCount+=1;
 				// This is not a 'real' array, fetch data at address to treat as array base address
 				if (var->m_Dimension <= 1)
 				{
 					std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
 					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + tgt + ", [" + tgt + "]";
+					g_ASC.m_InstructionCount+=1;
 				}
 			}
 			else
+			{
 				node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
-			g_ASC.m_InstructionCount+=1;
+				g_ASC.m_CompileFailed = true;
+			}
 
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();
@@ -1863,19 +1879,25 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 					g_ASC.m_InstructionCount+=2;
 				}
 				else
+				{
 					node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
+					g_ASC.m_CompileFailed = true;
+				}
 			}
 			else
 			{
 				if (var)
 				{
 					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + "_" + var->m_Name;
+					g_ASC.m_InstructionCount+=1;
 					//std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
 					//node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + trg + ", [" + trg + "]";
 				}
 				else
+				{
 					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + node->m_Value;
-				g_ASC.m_InstructionCount+=1;
+					g_ASC.m_InstructionCount+=1;
+				}
 			}
 		}
 		break;
@@ -1962,7 +1984,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		node->m_Instructions.c_str());*/
 }
 
-void CompileGrimR(const char *_filename)
+bool CompileGrimR(const char *_filename)
 {
 	FILE *fp = fopen(_filename, "w");
 
@@ -2059,6 +2081,8 @@ void CompileGrimR(const char *_filename)
 		}
 	}
 	fclose(fp);
+
+	return g_ASC.m_CompileFailed;
 }
 
 void yyerror(const char *s) {
