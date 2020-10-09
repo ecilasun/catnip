@@ -62,10 +62,10 @@
 #define INST_I9							0b1111	// F: TBD
 
 // CPU unit
-uint32_t BRANCHTARGET;		  // Branch target
+uint32_t BRANCHTARGET;			// Branch target
 uint32_t IP;					// Instruction pointer
 uint32_t SP;					// Stack pointer
-uint16_t instruction;		   // Current instruction
+uint16_t instruction;			// Current instruction
 uint32_t register_file[16];		// Array of 16 x 32bit registers (r15=IP, r14=SP, r13=FP)
 uint16_t flags_register;	   	// Flag registers [ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL]
 uint16_t target_register;		// Target for some memory read operations
@@ -74,20 +74,12 @@ uint16_t cpu_state = CPU_INIT;	// Default state to boot from
 uint16_t CALLSP;				// Branch stack pointer
 uint32_t CALLSTACK[16];			// Branch stack
 
-uint8_t *SRAM;				  // SRAM
-
 uint32_t sram_addr;
 uint16_t sram_read_req;
 uint16_t sram_rdata;
 uint16_t sram_wdata;
 uint16_t sram_write_req;
 uint16_t sram_enable_byteaddress;
-
-// Video unit
-#define RGBCOLOR(_r,_g,_b) (_r | (_g<<3) | (_b<<6))
-static const int FRAME_WIDTH = 256;
-static const int FRAME_HEIGHT = 192;
-static uint8_t *VRAM; // Larger than FRAME_HEIGHT, including top and bottom borders
 
 uint16_t framebuffer_select;
 uint16_t framebuffer_address;
@@ -96,15 +88,9 @@ uint8_t framebuffer_data;
 uint16_t cpu_lane_mask;
 
 // ROM unit
-uint16_t *ROM;
 uint16_t rom_out;
 uint16_t rom_addrs;
 uint16_t rom_read_enable;
-
-// SDL
-SDL_Window *s_Window;
-SDL_Surface *s_Surface;
-//HDC hDC;
 
 // Global clock
 uint32_t s_SystemClock = 0;
@@ -114,9 +100,17 @@ uint32_t s_VGAClock = 0;
 uint32_t s_VGAClockRisingEdge = 0;
 uint32_t s_VGAClockFallingEdge = 0;
 
-// Video emulation
+// Emulation
+uint16_t *ROM;					// ROM
+uint8_t *SRAM;					// SRAM
+static uint8_t *VRAM;			// VRAM (Larger than FRAME_HEIGHT, including top and bottom borders)
 int vga_x = 0;
 int vga_y = 0;
+SDL_Window *s_Window;
+SDL_Surface *s_Surface;
+#define RGBCOLOR(_r,_g,_b) (_r | (_g<<3) | (_b<<6))
+static const int FRAME_WIDTH = 256;
+static const int FRAME_HEIGHT = 192;
 
 const char *s_state_string[]={
 	"CPU_INIT",
@@ -157,8 +151,8 @@ void execute(uint16_t instr)
 	uint16_t baseopcode = instr&0x000F;
 
 #if defined(DEBUG_EXECUTE)
-	int breakpoint = 0xBE;
-	bool break_loop = IP != breakpoint ? true : false;
+	//int breakpoint = 0xBE;
+	bool break_loop = false;//IP != breakpoint ? true : false;
 #endif
 
 	switch(baseopcode)
@@ -587,7 +581,6 @@ void execute(uint16_t instr)
 
 				case 3: // word2reg
 				{
-					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
 					#if defined(DEBUG_EXECUTE)
 					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
 					printf("%.8X: ld.w r%d, %.4X\n", IP, r1, *wordsram0);
@@ -1148,7 +1141,7 @@ void CPUMain()
 
 		case CPU_CLEARVRAM:
 		{
-			if (framebuffer_address != 0xBFFF) // NOTE: hardware clears only 0x1000 but on 12 parallel memory units
+			if (framebuffer_address != 0xBFFF) // NOTE: Hardware version clears only 0x1000 entries x 12 in parallel
 			{
 				framebuffer_writeena = 1;
 				framebuffer_address = framebuffer_address+1;
@@ -1333,15 +1326,17 @@ bool InitEmulator(uint16_t *_rom_binary)
 	vga_x = 0;
 	vga_y = 0;
 
-	// Initialize NEKO cpu, framebuffer and other devices
+	// Init VRAM with default 'NEKOv1' pattern
 	VRAM = new uint8_t[0xFFFF * 2];
 	for (uint32_t i=0;i<0xFFFF * 2;++i)
-		VRAM[i] = RGBCOLOR(0,0,0);
+		VRAM[i] = RGBCOLOR(i%3,(i>>1)%3,(i>>2)%2);
 
+	// Init SRAM to all zeros
 	SRAM = new uint8_t[0x7FFFF];
 	for (uint32_t i=0;i<0x7FFFF;++i)
 		SRAM[i] = 0x00;
 
+	// Init ROM to binary from file
 	ROM = new uint16_t[0x7FFFF];
 	uint16_t *romdata = (uint16_t*)_rom_binary;
 	for (uint32_t i=0;i<0x7FFFF;++i)
