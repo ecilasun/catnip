@@ -1287,7 +1287,7 @@ bool StepEmulator()
 {
 	ClockMain();	// Clock ticks first (rising/falling edge)
 	CPUMain();		// CPU state machine
-	VideoMain();	// Video scan out (to tie it with 'read old data' in dualport VRAM in hardware)
+	VideoMain();	// Video scan out (to tie it with 'read old data' in dualport VRAM in hardware, memory writes come after)
 	MemoryMain();	// Update all memory (SRAM/VRAM) after video data is processed
 
 	static uint32_t K = 0;
