@@ -1291,7 +1291,7 @@ bool StepEmulator()
 		//static BITMAPINFO bmi = {{sizeof(BITMAPINFOHEADER),256,-192,1,8,BI_RGB,0,0,0,0,0},{0,0,0,0}};
 		//StretchDIBits(hDC, 64, 48, 512, 384, 0, 0, 256, 192, VRAM, &bmi, DIB_RGB_COLORS, SRCCOPY);
 	}
-	K+=s_VGAClockRisingEdge ? 1:0;
+	K += s_VGAClockRisingEdge ? 1:0;
 
 #if !defined(DEBUG_EXECUTE)
 	if (vga_y == 502)
