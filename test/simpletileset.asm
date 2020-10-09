@@ -59,7 +59,7 @@ ld.w r4, 0x0002
     iadd r6, r4
     ld.w r0, [r6]
     push r0 # Sprite#
-    branch DrawSprite
+    call DrawSprite
     pop r4
     pop r5
     iadd r6, r4
@@ -122,7 +122,7 @@ ld.w r4, 0x0100
 imul r5, r4              # spriteindex*256
 iadd r2, r5
 
-ld.w r4, 0x0010          # column counter (sprite is 16 pixels wide, but has 18 pixel stride)
+ld.w r4, 0x0010          # column counter (sprite is 16 pixels wide)
 ld.w r5, 0x0010          # row counter (16 pixels)
 xor r6, r6               # clear r6 to zero
 
@@ -144,7 +144,7 @@ xor r6, r6               # clear r6 to zero
     jmpif INNERLOOP             # repeat while we have more pixels on this row
 
     # for each row
-    ld.w r4, 0x0010             # reset column counter back to 17
+    ld.w r4, 0x0010             # reset column counter back to 16
     ld.w r7, 0x00F0             # set row stride (256-16==240)
     iadd r0, r7                 # move to next scanline
     dec r5

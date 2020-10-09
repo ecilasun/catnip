@@ -588,7 +588,6 @@ void execute(uint16_t instr)
 				case 3: // word2reg
 				{
 					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
-					printf("%.8X: ld.w r%d, %.4X\n", IP, r1, *wordsram0);
 					#if defined(DEBUG_EXECUTE)
 					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
 					printf("%.8X: ld.w r%d, %.4X\n", IP, r1, *wordsram0);
@@ -1244,14 +1243,14 @@ void VideoMain()
 
 	int32_t scanline = vga_y-(V_FRONT_PORCH+V_SYNC+V_BACK_PORCH);
 
-	if (vga_x>=H_FRONT_PORCH+H_SYNC+H_BACK_PORCH+64 && vga_x<H_SYNC_TICKS-64 && vga_y>=V_FRONT_PORCH+V_SYNC+V_BACK_PORCH+48 && vga_y<V_SYNC_TICKS-60) // Inside active region
+	if (vga_x>=H_FRONT_PORCH+H_SYNC+H_BACK_PORCH+64 && vga_x<H_SYNC_TICKS-64 && vga_y>=V_FRONT_PORCH+V_SYNC+V_BACK_PORCH+48 && vga_y<V_SYNC_TICKS-48) // Inside active region
 	{
 		uint8_t* pixels = (uint8_t*)s_Surface->pixels;
 
 		// VRAM section
 		int32_t y = scanline-48;
 		int32_t actual_scanline = scanline>>1;
-		int32_t actual_y = actual_scanline-18;
+		int32_t actual_y = actual_scanline-24;
 		uint32_t x = vga_x-(H_FRONT_PORCH+H_SYNC+H_BACK_PORCH);
 		int32_t actual_x = x-64;
 		uint32_t vram_out = (actual_x>>1) | (actual_y<<8);
