@@ -37,11 +37,11 @@
 #define CPU_READ_DATAL					0b1000
 #define CPU_READ_DATA					0b1001
 #define CPU_WRITE_DATA					0b1010
-#define CPU_SET_BRANCH_ADDRESSA			0b1011
+#define CPU_SET_BRANCH_ADDRESSH			0b1011
 #define CPU_FETCH_ADDRESS_AND_BRANCH	0b1100
 #define CPU_WAIT_VSYNC					0b1101
 #define CPU_READ_DATA_BYTE				0b1110
-#define CPU_SET_BRANCH_ADDRESSB			0b1111
+#define CPU_UNUSED0						0b1111	// TBD
 
 // CPU instructions
 #define INST_LOGIC						0b0000	// 0: run logic operation and/or/xor/not/bsl/bsr on r1 and r2, write result to r3 
@@ -51,15 +51,15 @@
 #define INST_RET						0b0100	// 4: ret/halt
 #define INST_STACK						0b0101	// 5: push/pop register to stack
 #define INST_TEST						0b0110	// 6: test flags register against mask bits and set TR register to 1 or 0
-#define INST_CMP						0b0111	// 7: compare r1 with r2 and set flags register
-#define INST_IO							0b1000	// 8: wait for vsync signal / in / out to port
-#define INST_I3							0b1001	// 9: TBD
-#define INST_I4							0b1010	// A: TBD
-#define INST_I5							0b1011	// B: TBD
-#define INST_I6							0b1100	// C: TBD
-#define INST_I7							0b1101	// D: TBD
-#define INST_I8							0b1110	// E: TBD
-#define INST_I9							0b1111	// F: TBD
+#define INST_CMP						0b0111	// 7: compare r1 with r2 and set flags in given register
+#define INST_IO							0b1000	// 8: wait for vsync signal / in / out to port / clear frame / frame select
+#define INST_UNUSED0					0b1001	// 9: TBD
+#define INST_UNUSED1					0b1010	// A: TBD
+#define INST_UNUSED2					0b1011	// B: TBD
+#define INST_UNUSED3					0b1100	// C: TBD
+#define INST_UNUSED4					0b1101	// D: TBD
+#define INST_UNUSED5					0b1110	// E: TBD
+#define INST_UNUSED6					0b1111	// F: TBD
 
 // CPU unit
 uint32_t BRANCHTARGET;			// Branch target
@@ -125,11 +125,11 @@ const char *s_state_string[]={
 	"CPU_STATE_PRE_RUN",
 	"CPU_READ_DATA",
 	"CPU_WRITE_DATA",
-	"CPU_SET_BRANCH_ADDRESSA",
+	"CPU_UNUSED0",
 	"CPU_FETCH_ADDRESS_AND_BRANCH",
 	"CPU_WAIT_VSYNC",
 	"CPU_READ_DATA_BYTE",
-	"CPU_SET_BRANCH_ADDRESSB"
+	"CPU_SET_BRANCH_ADDRESSH"
 };
 
 void ClockMain()
@@ -268,7 +268,10 @@ void execute(uint16_t instr)
 						#endif
 						// Read branch address from next WORD in memory (short jump, only 16 bits)
 						IP = IP + 2; // CALL WORD
-						cpu_state = CPU_SET_BRANCH_ADDRESSA;
+						sram_enable_byteaddress = 0;
+						sram_addr = IP;
+						sram_read_req = 1;
+						cpu_state = CPU_SET_BRANCH_ADDRESSH;
 					}
 					else
 					{
@@ -298,7 +301,10 @@ void execute(uint16_t instr)
 							#endif
 							// Read branch address from next WORD in memory (short jump, only 16 bits)
 							IP = IP + 2; // CALL WORD
-							cpu_state = CPU_SET_BRANCH_ADDRESSA;
+							sram_enable_byteaddress = 0;
+							sram_addr = IP;
+							sram_read_req = 1;
+							cpu_state = CPU_SET_BRANCH_ADDRESSH;
 						}
 						else
 						{
@@ -366,7 +372,10 @@ void execute(uint16_t instr)
 							#endif
 							// Read branch address from next WORD in memory (short jump, only 16 bits)
 							IP = IP + 2; // CALL WORD
-							cpu_state = CPU_SET_BRANCH_ADDRESSA;
+							sram_enable_byteaddress = 0;
+							sram_addr = IP;
+							sram_read_req = 1;
+							cpu_state = CPU_SET_BRANCH_ADDRESSH;
 						}
 						else
 						{
@@ -1051,14 +1060,12 @@ void CPUMain()
 			}
 		break;
 
-		case CPU_SET_BRANCH_ADDRESSA:
-			sram_enable_byteaddress = 0;
-			sram_addr = IP;
-			sram_read_req = 1;
-			cpu_state = CPU_SET_BRANCH_ADDRESSB;
+		case CPU_UNUSED0:
+			// Spin here
+			cpu_state = CPU_UNUSED0;
 		break;
 
-		case CPU_SET_BRANCH_ADDRESSB:
+		case CPU_SET_BRANCH_ADDRESSH:
 			BRANCHTARGET = sram_rdata;
 			sram_enable_byteaddress = 0;
 			sram_addr = IP+2;
