@@ -996,6 +996,18 @@ public:
 			return 3;
 		}
 
+		if(strcmp(_parser_table[_current_parser_offset].m_Value, "sprite") == 0)
+		{
+			int r1, r2;
+			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+			sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
+
+			unsigned short code = m_Opcode | 0x0020 | (r1<<7) | (r2<<11);
+			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
+			_binary_output[_current_binary_offset++] = code&0x00FF;
+			return 3;
+		}
+
 		printf("ERROR: Unknown variant in CIOOp class of instructions\n");
 		return -1;
 	}
@@ -1110,6 +1122,7 @@ const SAssemblerPair keywords[] =
 	{{"out"}, &s_ioop},
 	{{"fsel"}, &s_ioop},
 	{{"clf"}, &s_ioop},
+	{{"sprite"}, &s_ioop},
 
 	{{"unused1"}, &s_nilop},
 	{{"unused2"}, &s_nilop},

@@ -1920,8 +1920,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 
 		case OP_SPRITE:
 		{
-			std::string srcA = g_ASC.PopRegister();
 			std::string srcB = g_ASC.PopRegister();
+			std::string srcA = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcB;
 			g_ASC.m_InstructionCount+=1;
 		}

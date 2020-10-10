@@ -555,16 +555,16 @@ test r2, greater equal
 ---
 ## IO Operations
 ```
-????? 0000 000 1000
-      |    |   IO
-      rA   000:VSYNC
-      A:7  001:IN rA PORTADDRESS(next WORD in memory)
-           010:OUT rA PORTADDRESS(next WORD in memory)
-           011:FSEL rA
-           100:CLS rA
-           101:SPRITE rA, rB
-           110:reserved
-           111:reserved
+? 0000 0000 000 1000
+  |    |    |   IO
+  rB   rA   000:VSYNC
+       A:7  001:IN rA PORTADDRESS(next WORD in memory)
+            010:OUT rA PORTADDRESS(next WORD in memory)
+            011:FSEL rA
+            100:CLS rA
+            101:SPRITE rA, rB
+            110:reserved
+            111:reserved
 ```
 
 ### VSYNC
