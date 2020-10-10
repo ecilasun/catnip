@@ -1131,8 +1131,8 @@ void CPUMain()
 		break;
 			
 		case CPU_WAIT_VSYNC:
-			//if (vga_y>=V_FRONT_PORCH && vga_y<(V_FRONT_PORCH+V_SYNC))
-			if (vga_y==0) // Wait for beam to reach top of horizontal pass
+			//if (vga_y>=V_FRONT_PORCH && vga_y<(V_FRONT_PORCH+V_SYNC)) // Wait for beam to reach vsync region
+			if (vga_y==0)
 			{
 				sram_enable_byteaddress = 0;
 				sram_addr = IP;
@@ -1297,12 +1297,8 @@ bool StepEmulator()
 		SDL_UpdateWindowSurface(s_Window);
 		//static BITMAPINFO bmi = {{sizeof(BITMAPINFOHEADER),256,-192,1,8,BI_RGB,0,0,0,0,0},{0,0,0,0}};
 		//StretchDIBits(hDC, 64, 48, 512, 384, 0, 0, 256, 192, VRAM, &bmi, DIB_RGB_COLORS, SRCCOPY);
-	}
-	K += s_VGAClockRisingEdge ? 1:0;
 
 #if !defined(DEBUG_EXECUTE)
-	if (vga_y == 502)
-	{
 		SDL_Event event;
 		while(SDL_PollEvent(&event))
 		{
@@ -1316,8 +1312,9 @@ bool StepEmulator()
 					return false;
 			}
 		}
-	}
 #endif
+	}
+	K += s_VGAClockRisingEdge ? 1:0;
 
 	return true;
 }
