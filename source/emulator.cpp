@@ -66,7 +66,7 @@ uint32_t BRANCHTARGET;			// Branch target
 uint32_t IP;					// Instruction pointer
 uint32_t SP;					// Stack pointer
 uint16_t instruction;			// Current instruction
-uint32_t register_file[16];		// Array of 16 x 32bit registers (r15=IP, r14=SP, r13=FP)
+uint32_t register_file[16];		// Array of 16 x 32bit registers
 uint16_t flags_register;	   	// Flag registers [ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL]
 uint16_t target_register;		// Target for some memory read operations
 uint16_t target_registerH;		// Target for some memory read operations (high word)
@@ -507,7 +507,7 @@ void execute(uint16_t instr)
 			uint16_t r2 = (instr&0b1111000000000000)>>12; // [15:12]
 			switch (op)
 			{
-				case 0: // reg2mem
+				case 0: // [r1] <- (word)r2
 				{
 					bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
 					if (is_vram_address) // VRAM write (address>=0x80000000)
@@ -559,7 +559,7 @@ void execute(uint16_t instr)
 				}
 				break;
 
-				case 1: // mem2reg
+				case 1: // r1 <- (word)[r2]
 				{
 					// NOTE: VRAM reads are not possible at the moment
 					#if defined(DEBUG_EXECUTE)
@@ -574,7 +574,7 @@ void execute(uint16_t instr)
 				}
 				break;
 
-				case 2: // reg2reg
+				case 2: // r1 <- (dword)r2
 				{
 					#if defined(DEBUG_EXECUTE)
 					printf("%.8X: reg2reg(sram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
@@ -588,7 +588,7 @@ void execute(uint16_t instr)
 				}
 				break;
 
-				case 3: // word2reg
+				case 3: // r1 <- (word)[IP+2]
 				{
 					#if defined(DEBUG_EXECUTE)
 					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
@@ -603,7 +603,7 @@ void execute(uint16_t instr)
 				}
 				break;
 
-				case 4: // dword2reg
+				case 4: // r1 <- (dword)([IP+2],[IP+4])
 				{
 					#if defined(DEBUG_EXECUTE)
 					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
@@ -619,7 +619,7 @@ void execute(uint16_t instr)
 				}
 				break;
 
-				case 5: // reg2mem (byte)
+				case 5: // [r1] <- (byte)r2
 				{
 					bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
 					if (is_vram_address) // VRAM write (address>=0x80000000)
@@ -671,7 +671,7 @@ void execute(uint16_t instr)
 				}
 				break;
 
-				case 6: // mem2reg (byte)
+				case 6: // r1 <- (byte)[r2]
 				{
 					// NOTE: VRAM reads are not possible at the moment
 					#if defined(DEBUG_EXECUTE)
@@ -686,7 +686,7 @@ void execute(uint16_t instr)
 				}
 				break;
 
-				case 7: // byte2reg
+				case 7: // r1 <- (byte)[IP+2]
 				{
 					#if defined(DEBUG_EXECUTE)
 					printf("%.8X: byte2reg(sram,byte) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
@@ -700,7 +700,7 @@ void execute(uint16_t instr)
 				}
 				break;
 
-				case 8: // dwmem2reg (dword)
+				case 8: // r1 <- (dword)[r2]
 				{
 					// NOTE: VRAM reads are not possible at the moment
 					#if defined(DEBUG_EXECUTE)
@@ -1291,9 +1291,9 @@ bool StepEmulator()
 	MemoryMain();	// Update all memory (SRAM/VRAM) after video data is processed
 
 	static uint32_t K = 0;
-	if (K > 0x12C00) // 320*240 pixel's worth of video clock
+	if (K > 0x623E0) // 800*503 pixel's worth of video clock (full VGA clock cycle for one frame for 640*480 image)
 	{
-		K -= 0x12C00;
+		K -= 0x623E0;
 		SDL_UpdateWindowSurface(s_Window);
 		//static BITMAPINFO bmi = {{sizeof(BITMAPINFOHEADER),256,-192,1,8,BI_RGB,0,0,0,0,0},{0,0,0,0}};
 		//StretchDIBits(hDC, 64, 48, 512, 384, 0, 0, 256, 192, VRAM, &bmi, DIB_RGB_COLORS, SRCCOPY);
