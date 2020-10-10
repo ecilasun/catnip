@@ -423,6 +423,8 @@ def main()
     {
         clf(0xEC);
 
+        // TODO: replace following loop with intrinsic:
+        // sprite(&spriteinfo,0xC4);
         s = 0;
         while(s<0xC4)
         {

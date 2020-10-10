@@ -901,6 +901,16 @@ void execute(uint16_t instr)
 					cpu_state = CPU_CLEARVRAM;
 				}
 				break;
+				case 0b101: // SPRITE
+				{
+					#if defined(DEBUG_EXECUTE)
+					printf("%.8X: sprite r%d, r%d\n", IP, r1, r2);
+					#endif
+					// TODO: Kick sprite table DMA
+					IP = IP + 2;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				}
+				break;
 				default: // Reserved
 				{
 					#if defined(DEBUG_EXECUTE)

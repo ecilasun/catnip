@@ -200,6 +200,7 @@ enum EOpcode
 	OP_RETURN,
 	OP_FSEL,
 	OP_CLF,
+	OP_SPRITE,
 	OP_VSYNC,
 	OP_PUSHCONTEXT,
 	OP_POPCONTEXT,
@@ -253,6 +254,7 @@ const std::string Opcodes[]={
 	"ret",
 	"fsel",
 	"clf",
+	"sprite",
 	"vsync",
 	"pushcontext",
 	"popcontext",
@@ -540,7 +542,7 @@ SASTScanContext g_ASC;
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
 %token WORD BYTE WORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
-%token VSYNC FSEL CLF
+%token VSYNC FSEL CLF SPRITE
 %token INC_OP DEC_OP
 
 %type <astnode> simple_identifier
@@ -1466,6 +1468,11 @@ builtin_statement
 																									$$->m_Opcode = OP_CLF;
 																									g_ASC.PushNode($$);
 																								}
+	| SPRITE '(' expression ',' expression ')' ';'												{
+																									$$ = new SASTNode(EN_ClearFrame, "");
+																									$$->m_Opcode = OP_SPRITE;
+																									g_ASC.PushNode($$);
+																								}
 	| VSYNC '(' ')' ';'																			{
 																									$$ = new SASTNode(EN_Vsync, "");
 																									$$->m_Opcode = OP_VSYNC;
@@ -1907,6 +1914,15 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string srcA = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA;
+			g_ASC.m_InstructionCount+=1;
+		}
+		break;
+
+		case OP_SPRITE:
+		{
+			std::string srcA = g_ASC.PopRegister();
+			std::string srcB = g_ASC.PopRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcB;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
