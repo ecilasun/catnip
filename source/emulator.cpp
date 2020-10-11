@@ -8,6 +8,14 @@
 #endif
 #include "emulator.h"
 
+#include <xmmintrin.h>
+#include <intrin.h>
+
+#if !defined(__clang__)
+#pragma intrinsic(_mm_pause)
+#endif
+#define ECPUIdle _mm_pause
+
 // Neko emulator
 
 // Enable this to switch to single-step mode
@@ -116,6 +124,7 @@ SDL_Surface *s_Surface;
 #define RGBCOLOR(_r,_g,_b) (_r | (_g<<3) | (_b<<6))
 static const int FRAME_WIDTH = 256;
 static const int FRAME_HEIGHT = 192;
+static bool s_Done = false;
 
 const char *s_state_string[]={
 	"CPU_INIT",
@@ -1359,42 +1368,48 @@ void SpriteMain()
 	}
 }
 
+int RunDevice(void *data)
+{
+	while(!s_Done)
+	{
+		ClockMain();	// Clock ticks first (rising/falling edge)
+		CPUMain();		// CPU state machine
+		VideoMain();	// Video scan out (to tie it with 'read old data' in dualport VRAM in hardware, memory writes come after)
+		SpriteMain();	// Handle current sprite list DMA requests to VRAM
+		MemoryMain();	// Update all memory (SRAM/VRAM) after video data is processed
+	}
+	return 0;
+}
+
 // NOTE: Return 'true' for 'still running'
 bool StepEmulator()
 {
-	ClockMain();	// Clock ticks first (rising/falling edge)
-	CPUMain();		// CPU state machine
-	VideoMain();	// Video scan out (to tie it with 'read old data' in dualport VRAM in hardware, memory writes come after)
-	SpriteMain();	// Handle current sprite list DMA requests to VRAM
-	MemoryMain();	// Update all memory (SRAM/VRAM) after video data is processed
-
 	static uint32_t K = 0;
 	if (K > 0x623E0) // 800*503 pixel's worth of video clock (full VGA clock cycle for one frame for 640*480 image)
 	{
+		ECPUIdle();
 		K -= 0x623E0;
 		SDL_UpdateWindowSurface(s_Window);
-		//static BITMAPINFO bmi = {{sizeof(BITMAPINFOHEADER),256,-192,1,8,BI_RGB,0,0,0,0,0},{0,0,0,0}};
-		//StretchDIBits(hDC, 64, 48, 512, 384, 0, 0, 256, 192, VRAM, &bmi, DIB_RGB_COLORS, SRCCOPY);
 
 #if !defined(DEBUG_EXECUTE)
 		SDL_Event event;
 		while(SDL_PollEvent(&event))
 		{
 			if(event.type == SDL_QUIT)
-				return false;
+				s_Done = true;
 			if(event.type == SDL_KEYUP)
 			{
 				if(event.key.keysym.sym == SDLK_SPACE)
 					cpu_state = CPU_INIT;
 				if(event.key.keysym.sym == SDLK_ESCAPE)
-					return false;
+					s_Done = true;
 			}
 		}
 #endif
 	}
 	K += s_VGAClockRisingEdge ? 1:0;
 
-	return true;
+	return s_Done ? false : true;
 }
 
 bool InitEmulator(uint16_t *_rom_binary)
@@ -1451,6 +1466,8 @@ bool InitEmulator(uint16_t *_rom_binary)
 
 	 if (SDL_MUSTLOCK(s_Surface))
 		 SDL_LockSurface(s_Surface);
+
+	SDL_CreateThread(RunDevice, "RunDevice", nullptr);
 
 	return true;
 }

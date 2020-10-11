@@ -1,4 +1,4 @@
-# Instruction count: 133
+# Instruction count: 143
 
 @ORG 0x00000000
 
@@ -19,10 +19,8 @@ jmpifnot endwhile00000003, r0
 lea r0, _spritelist
 ld.d r1, 0xc8
 sprite r0, r1
-lea r0, main_frame
+lea r0, main_bcolor
 ld.w r0, [r0]
-ld.d r1, 0x4
-bsr r0, r1
 ld.d r1, 0x0
 lea r2, _BORDERCOLOR
 ld.d r2, [r2]
@@ -59,6 +57,11 @@ ld.w r0, [r0]
 ineg r0
 lea r1, main_dirY
 st.w [r1], r0
+lea r0, main_bcolor
+ld.w r0, [r0]
+inc r0
+lea r1, main_bcolor
+st.w [r1], r0
 
 @LABEL endif00000000
 lea r0, main_posX
@@ -77,6 +80,11 @@ lea r0, main_dirX
 ld.w r0, [r0]
 ineg r0
 lea r1, main_dirX
+st.w [r1], r0
+lea r0, main_bcolor
+ld.w r0, [r0]
+inc r0
+lea r1, main_bcolor
 st.w [r1], r0
 
 @LABEL endif00000001
@@ -283,7 +291,7 @@ jmp beginwhile00000002
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
-# variable 'frame', dim:1 typename:word refcount:4
+# variable 'frame', dim:1 typename:word refcount:3
 @LABEL main_frame
 @DW 0x0000 
 # variable 'posX', dim:1 typename:word refcount:6
@@ -298,3 +306,6 @@ jmp beginwhile00000002
 # variable 'dirY', dim:1 typename:word refcount:3
 @LABEL main_dirY
 @DW 0x0001 
+# variable 'bcolor', dim:1 typename:word refcount:5
+@LABEL main_bcolor
+@DW 0x0000 
