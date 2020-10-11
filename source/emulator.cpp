@@ -1183,6 +1183,11 @@ void CPUMain()
 			//if (vga_y>=V_FRONT_PORCH && vga_y<(V_FRONT_PORCH+V_SYNC)) // Wait for beam to reach vsync region
 			if (vga_y==0)
 			{
+				// TODO: Kick vblank handler here?
+				// Will resume from next instruction
+				// CALLSTACK[CALLSP] = IP + 2;
+				// CALLSP = CALLSP + 1;
+
 				sram_enable_byteaddress = 0;
 				sram_addr = IP;
 				sram_read_req = 1;

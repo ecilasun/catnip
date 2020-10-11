@@ -2040,11 +2040,15 @@ bool CompileGrimR(const char *_filename)
 
 	// Increment ref count of 'main' (entry point) if there's one
 	uint32_t mainhash = HashString("main");
-	SFunction *func = g_ASC.FindFunction(mainhash);
-	if (func)
-		func->m_RefCount++;
+	SFunction *mainfunc = g_ASC.FindFunction(mainhash);
+	if (mainfunc)
+		mainfunc->m_RefCount++;
 	else
 		printf("WARNING: No entry point (main) found in input file.\n");
+
+	/* uint32_t interruptservice = HashString("vblank");
+	if (interruptservice)
+		printf("Found a vblank interrupt service\n"); */
 
 	// Dump symbol table
 	fprintf(fp, "\n#-------------Symbol Table-------------\n\n");
@@ -2062,8 +2066,14 @@ bool CompileGrimR(const char *_filename)
 			if (var->m_TypeName == TN_WORD)
 			{
 				fprintf(fp, "@DW ");
+				int i=0;
 				for (auto &data : var->m_InitialValues)
+				{
+					if (i%8 == 0 && i!=0)
+						fprintf(fp, "\n@DW ");
 					fprintf(fp, "0x%.4X ", data);
+					++i;
+				}
 				if (var->m_InitialValues.size()==0)
 				{
 					for (int i=0;i<var->m_Dimension;++i)
@@ -2097,8 +2107,14 @@ bool CompileGrimR(const char *_filename)
 			if (var->m_TypeName == TN_WORDPTR || var->m_TypeName == TN_BYTEPTR)
 			{
 				fprintf(fp, "@DW ");
+				int i=0;
 				for (auto &data : var->m_InitialValues)
+				{
+					if (i%8 == 0 && i!=0)
+						fprintf(fp, "\n@DW ");
 					fprintf(fp, "0x%.4X 0x%.4X", (data&0xFFFF0000)>>16, data&0x0000FFFF);
+					++i;
+				}
 				if (var->m_InitialValues.size()==0)
 				{
 					for (int i=0;i<var->m_Dimension;++i)
