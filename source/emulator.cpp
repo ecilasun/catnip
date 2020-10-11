@@ -85,7 +85,6 @@ uint32_t sprite_list_addr;
 uint32_t sprite_list_count;
 uint32_t sprite_sheet;
 uint32_t sprite_pending;
-uint32_t sprites_done;
 
 uint16_t framebuffer_select;
 uint16_t framebuffer_address;
@@ -915,7 +914,6 @@ void execute(uint16_t instr)
 					#endif
 					// Kick sprite table DMA
 					sprite_list_addr = register_file[r1];
-					sprites_done = 0;
 					sprite_list_count = register_file[r2];
 					sprite_pending = 1;
 					sram_addr = IP+2;
@@ -1008,7 +1006,6 @@ void CPUMain()
 			sprite_list_count = 0x00000000;
 			sprite_sheet = 0x00000000;
 			sprite_pending = 0;
-			sprites_done = 0;
 
 			// Clear instruction and instruction data word
 			instruction = 0xFFFF;
@@ -1327,7 +1324,7 @@ void VideoMain()
 
 void SpriteMain()
 {
-	if (!s_SystemClockFallingEdge)
+	if (!s_SystemClockRisingEdge)
 		return;
 
 	// NOTE: In real hardware, this is done x12 times in parallel for each slice of the screen,
@@ -1335,7 +1332,6 @@ void SpriteMain()
 	if (sprite_pending)
 	{
 		for (uint32_t spriteEntry=0; spriteEntry<sprite_list_count; ++spriteEntry)
-		//uint32_t spriteEntry = sprites_done;
 		{
 			uint16_t *descriptor = (uint16_t *)&SRAM[sprite_list_addr + spriteEntry*sizeof(uint16_t)*3];
 
@@ -1359,9 +1355,7 @@ void SpriteMain()
 			}
 		}
 
-		//++sprites_done;
-		//if (sprites_done==sprite_list_count)
-			sprite_pending = 0;
+		sprite_pending = 0;
 	}
 }
 

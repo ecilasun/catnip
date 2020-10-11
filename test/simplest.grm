@@ -377,12 +377,12 @@ def main()
     word frame = 0;
     word posX = 128, dirX = 1;
     word posY = 64, dirY = 1;
-    word s;
 
     // No return
     while(1)
     {
-        clf(0xEC);
+        // If we're filling the whole screen there's no need for a CLF
+        //clf(0xEC);
 
         // Draw all sprites
         spritesheet(&mysprites);

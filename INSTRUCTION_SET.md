@@ -566,7 +566,7 @@ test r2, greater equal
        A:7  001:IN rA PORTADDRESS(next WORD in memory)
             010:OUT rA PORTADDRESS(next WORD in memory)
             011:FSEL rA
-            100:CLS rA
+            100:CLF rA
             101:SPRITE rA, rB
             110:SPRITESHEET rA
             111:reserved

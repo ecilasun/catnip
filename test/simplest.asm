@@ -1,4 +1,4 @@
-# Instruction count: 135
+# Instruction count: 133
 
 @ORG 0x00000000
 
@@ -14,8 +14,6 @@ jmp infloop
 @LABEL beginwhile00000002
 ld.d r0, 0x1
 jmpifnot endwhile00000003, r0
-ld.d r0, 0xec
-clf r0
 lea r0, _mysprites
 spritesheet r0
 lea r0, _spriteinfo
@@ -300,4 +298,3 @@ jmp beginwhile00000002
 # variable 'dirY', dim:1 typename:word refcount:3
 @LABEL main_dirY
 @DW 0x0001 
-# variable 's', dim:1 typename:word refcount:0
