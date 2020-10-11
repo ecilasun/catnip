@@ -69,16 +69,18 @@ Following diagram shows the uses of each byte starting at the device control add
 |----------------| 
 | BORDER COLOR   | 0x8000C000 - Color to use outside drawable area
 |----------------| 
-| TBD            | 0x8000C001
+| VBSENABLE      | 0x8000C001 - VBlank service control, non-zero if VBLANKSERVICE is to be used
 |----------------| 
-| TBD            | 0x8000C002
+| UNUSED         | 0x8000C002
 |----------------| 
-| TBD            | 0x8000C003
+| UNUSED         | 0x8000C003
 |----------------| 
-| TBD            | 0x8000C004
+| VBLANKSERVICE  | 0x8000C004:0x8000C007 - Address of the vblank service function
+|----------------| 
+| UNUSED         | 0x8000C008
 ~                ~
 |----------------| 
-| TBD            | 0x8000D000
+| UNUSED         | 0x8000D000
 ```
 
 # Video output
@@ -146,7 +148,7 @@ Therefore for majority of the cases a typical encoding would look like the follo
 ```
 ???? ???? ???? 0000
           |    |
-          |    Instruction bits
+          |    Base instruction bits
           Registers or sub-instructions, and other instruction mode flags
 ```
 
@@ -184,7 +186,7 @@ The instruction encoding for the LOGICOP base instruction is as follows
             100:BSL rA,rB
             101:BSR rA,rB
             110:BSWAP rA, rB
-            111:reserved
+            111: RESERVED
 ```
 
 Note that it is perfectly valid to use the same register as target in above instructions where rC is mentioned. For example, `BSWAP` can accept the same register both as input and output, effectively doing an in-place swap as in the following example:
@@ -263,7 +265,7 @@ Branch instruction is a bit special since it needs to read two extra WORDs from 
 | | rB   rA   |
 | |      9:6  00:UNCONDITIONAL
 | |           01:CONDITIONAL based on rB set
-| |           10:UNDEFINED
+| |           10: RESERVED
 | |           11:INVCONDITIONAL based on rB not set
 | 0:JMP
 | 1:CALL
@@ -515,7 +517,7 @@ Comparison consists of two base instructions. TEST base instruction is used to s
 ? 0000 000000 0110
   |    |      TEST rA, FLAG_MASK
   rA   FLAG_MASK
-       9:4
+  D:A  9:4
 ```
 
 The bit order of the FLAGS register is as follows (LSB on the right)
@@ -563,13 +565,13 @@ test r2, greater equal
 ? 0000 0000 000 1000
   |    |    |   IO
   rB   rA   000:VSYNC
-       A:7  001:IN rA PORTADDRESS(next WORD in memory)
+  E:B  A:7  001:IN rA PORTADDRESS(next WORD in memory)
             010:OUT rA PORTADDRESS(next WORD in memory)
             011:FSEL rA
             100:CLF rA
             101:SPRITE rA, rB
             110:SPRITESHEET rA
-            111:reserved
+            111: RESERVED
 ```
 
 ### VSYNC

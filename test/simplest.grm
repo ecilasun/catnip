@@ -5,6 +5,8 @@
 
 byteptr VRAM = 0x80000000;
 byteptr BORDERCOLOR = 0x8000C000;
+byteptr VBSENABLE = 0x8000C001;
+dwordptr VBLANKSERVICE = 0x8000C004;
 word bcolor = 0;
 
 word spritelist[] = {
@@ -218,8 +220,8 @@ word spritelist[] = {
     0x0000, 0x0010, 0x0002,
     0x0010, 0x0010, 0x0003,
     // Potted plant
-    0x000F, 0x0015, 0x0004,
-    0x001F, 0x0015, 0x0005,
+    0x001A, 0x0015, 0x0004,
+    0x002A, 0x0015, 0x0005,
     // Character
     0x000F, 0x0025, 0x0007,
     0x001F, 0x0025, 0x0008
@@ -373,11 +375,21 @@ byte mysprites[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
+def vblank()
+{
+    return;
+}
+
 def main()
 {
     word frame = 0;
     word posX = 128, dirX = 1;
     word posY = 64, dirY = 1;
+
+    // Set up vblank service function address
+    VBLANKSERVICE = &vblank;
+    // Enable vblank service
+    VBSENABLE[0] = 1;
 
     // Sample uses only one sprite sheet, so we set it once
     spritesheet(&mysprites);
@@ -387,9 +399,6 @@ def main()
     {
         // If we're filling the whole screen there's no need for a CLF
         //clf(0xEC);
-
-        // Draw all sprites in the list
-        sprite(&spritelist, 0xC8);
 
         // Set border color
         BORDERCOLOR[0] = bcolor;
@@ -418,6 +427,9 @@ def main()
         spritelist[0x4A4+2] = posX;
         spritelist[0x4AA+0] = posY+16;
         spritelist[0x4AA+2] = posX;
+
+        // Draw all sprites in the list
+        sprite(&spritelist, 0xC8);
 
         // Advance frame counter, wait for vsync
         frame = ++frame;

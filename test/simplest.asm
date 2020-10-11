@@ -1,4 +1,4 @@
-# Instruction count: 143
+# Instruction count: 159
 
 @ORG 0x00000000
 
@@ -9,16 +9,25 @@ vsync
 jmp infloop
 # End of program
 
+@LABEL vblank
+ret 
+
 @LABEL main
+lea r0, vblank
+lea r1, _VBLANKSERVICE
+st.d [r1], r0
+ld.d r0, 0x1
+ld.d r1, 0x0
+lea r2, _VBSENABLE
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0
 lea r0, _mysprites
 spritesheet r0
 
 @LABEL beginwhile00000002
 ld.d r0, 0x1
 jmpifnot endwhile00000003, r0
-lea r0, _spritelist
-ld.d r1, 0xc8
-sprite r0, r1
 lea r0, _bcolor
 ld.w r0, [r0]
 ld.d r1, 0x0
@@ -122,6 +131,9 @@ iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
+lea r0, _spritelist
+ld.d r1, 0xc8
+sprite r0, r1
 lea r0, main_frame
 ld.w r0, [r0]
 inc r0
@@ -137,11 +149,18 @@ jmp beginwhile00000002
 
 #-------------Symbol Table-------------
 
+# function 'vblank', hash: D127AEAD, refcount: 2
 # function 'main', hash: BC76E6BA, refcount: 1
 # variable 'VRAM', dim:1 typename:byteptr refcount:0
 # variable 'BORDERCOLOR', dim:1 typename:byteptr refcount:1
 @LABEL _BORDERCOLOR
 @DW 0x8000 0xC000
+# variable 'VBSENABLE', dim:1 typename:byteptr refcount:1
+@LABEL _VBSENABLE
+@DW 0x8000 0xC001
+# variable 'VBLANKSERVICE', dim:1 typename:dwordptr refcount:1
+@LABEL _VBLANKSERVICE
+@DW 0x8000 0xC004
 # variable 'bcolor', dim:1 typename:word refcount:5
 @LABEL _bcolor
 @DW 0x0000 
@@ -220,7 +239,7 @@ jmp beginwhile00000002
 @DW 0x0006 0x00B0 0x00B0 0x0006 0x00B0 0x00C0 0x0006 0x00B0 
 @DW 0x00D0 0x0006 0x00B0 0x00E0 0x0006 0x00B0 0x00F0 0x0006 
 @DW 0x0000 0x0000 0x0000 0x0010 0x0000 0x0001 0x0000 0x0010 
-@DW 0x0002 0x0010 0x0010 0x0003 0x000F 0x0015 0x0004 0x001F 
+@DW 0x0002 0x0010 0x0010 0x0003 0x001A 0x0015 0x0004 0x002A 
 @DW 0x0015 0x0005 0x000F 0x0025 0x0007 0x001F 0x0025 0x0008 
 # variable 'mysprites', dim:2304 typename:byte refcount:1
 @LABEL _mysprites

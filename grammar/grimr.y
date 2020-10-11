@@ -305,19 +305,21 @@ struct SString
 
 enum ETypeName
 {
+	TN_DWORD,
 	TN_WORD,
 	TN_BYTE,
+	TN_DWORDPTR,
 	TN_WORDPTR,
 	TN_BYTEPTR,
-	TN_DWORD,
 };
 
 const char* TypeNames[]={
+	"dword",
 	"word",
 	"byte",
+	"dwordptr",
 	"wordptr",
 	"byteptr",
-	"dword",
 };
 
 struct SVariable
@@ -547,7 +549,7 @@ SASTScanContext g_ASC;
 
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
-%token WORD BYTE WORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
+%token DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
 %token VSYNC FSEL CLF SPRITE SPRITESHEET
 %token INC_OP DEC_OP
 
@@ -1234,8 +1236,10 @@ variable_declaration_item
 	;
 
 type_name
-	: WORD																						{ g_ASC.m_CurrentTypeName = TN_WORD;  }
+	: DWORD																						{ g_ASC.m_CurrentTypeName = TN_DWORD;  }
+	| WORD																						{ g_ASC.m_CurrentTypeName = TN_WORD;  }
 	| BYTE																						{ g_ASC.m_CurrentTypeName = TN_BYTE;  }
+	| DWORDPTR																					{ g_ASC.m_CurrentTypeName = TN_DWORDPTR;  }
 	| WORDPTR																					{ g_ASC.m_CurrentTypeName = TN_WORDPTR;  }
 	| BYTEPTR																					{ g_ASC.m_CurrentTypeName = TN_BYTEPTR;  }
 	;
@@ -1665,13 +1669,24 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				var = g_ASC.FindVariableMergedScope(namehash);
 		}
 		if (var)
+		{
 			var->m_RefCount++;
+			g_ASC.m_CurrentTypeName = var->m_TypeName;
+		}
 		if (!var)
 		{
-			printf("ERROR: Variable %s not declared before use\n", node->m_Value.c_str());
-			g_ASC.m_CompileFailed = true;
+			SFunction *func = g_ASC.FindFunction(namehash);
+			if (!func)
+			{
+				printf("ERROR: Variable or function %s not declared before use (1)\n", node->m_Value.c_str());
+				g_ASC.m_CompileFailed = true;
+			}
+			else
+			{
+				func->m_RefCount++;
+				g_ASC.m_CurrentTypeName = TN_DWORD;
+			}
 		}
-		g_ASC.m_CurrentTypeName = var ? var->m_TypeName : TN_WORD;
 	}
 
 	for (auto &subnode : node->m_ASTNodes)
@@ -1707,7 +1722,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			}
 			else
 			{
-				printf("ERROR: Variable %s not declared before use\n", node->m_Value.c_str());
+				printf("ERROR: Variable %s not declared before use (2)\n", node->m_Value.c_str());
 				g_ASC.m_CompileFailed = true;
 			}
 		}
@@ -1823,7 +1838,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			}
 			else
 			{
-				node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
+				printf("ERROR: Variable %s not declared before use (3)\n", node->m_Value.c_str());
 				g_ASC.m_CompileFailed = true;
 			}
 
@@ -1864,8 +1879,26 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				if(!var)
 					var = g_ASC.FindVariableMergedScope(namehash);
 			}
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + "_" + var->m_Name;
-			g_ASC.m_InstructionCount+=1;
+			if (!var)
+			{
+				SFunction *func = g_ASC.FindFunction(namehash);
+				if (!func)
+				{
+					printf("ERROR: Variable or function %s not declared before use (4)\n", node->m_Value.c_str());
+					g_ASC.m_CompileFailed = true;
+				}
+				else
+				{
+					func->m_RefCount++;
+					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + func->m_Name;
+					g_ASC.m_InstructionCount+=1;
+				}
+			}
+			else
+			{
+				node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + "_" + var->m_Name;
+				g_ASC.m_InstructionCount+=1;
+			}
 		}
 		break;
 
@@ -1985,7 +2018,9 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
 			std::string srcA = g_ASC.PopRegister();
 			//std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : (g_ASC.m_CurrentTypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
-			std::string width = (g_ASC.m_CurrentTypeName == TN_WORD || g_ASC.m_CurrentTypeName == TN_WORDPTR) ? ".w" : ".b"; // pointer types are always DWORD
+			std::string width = 
+			(g_ASC.m_CurrentTypeName == TN_DWORD || g_ASC.m_CurrentTypeName == TN_DWORDPTR) ? ".d" : 
+			((g_ASC.m_CurrentTypeName == TN_WORD || g_ASC.m_CurrentTypeName == TN_WORDPTR) ? ".w" : ".b");
 			node->m_Instructions = Opcodes[node->m_Opcode] + width + " [" + trg + "], " + srcA;
 			g_ASC.m_InstructionCount+=1;
 		}
@@ -2077,7 +2112,7 @@ bool CompileGrimR(const char *_filename)
 				if (var->m_InitialValues.size()==0)
 				{
 					for (int i=0;i<var->m_Dimension;++i)
-						fprintf(fp, "0xCDCDCDCD ");
+						fprintf(fp, "0xCDCD 0xCDCD ");
 				}
 				fprintf(fp, "\n");
 			}
@@ -2100,11 +2135,29 @@ bool CompileGrimR(const char *_filename)
 				if (var->m_InitialValues.size()==0)
 				{
 					for (int i=0;i<var->m_Dimension;++i)
-						fprintf(fp, "0xCDCDCDCD ");
+						fprintf(fp, "0xCDCD 0xCDCD ");
 				}
 				fprintf(fp, "\n");
 			}
 			if (var->m_TypeName == TN_WORDPTR || var->m_TypeName == TN_BYTEPTR)
+			{
+				fprintf(fp, "@DW ");
+				int i=0;
+				for (auto &data : var->m_InitialValues)
+				{
+					if (i%8 == 0 && i!=0)
+						fprintf(fp, "\n@DW ");
+					fprintf(fp, "0x%.4X 0x%.4X", (data&0xFFFF0000)>>16, data&0x0000FFFF);
+					++i;
+				}
+				if (var->m_InitialValues.size()==0)
+				{
+					for (int i=0;i<var->m_Dimension;++i)
+						fprintf(fp, "0xCDCD 0xCDCD ");
+				}
+				fprintf(fp, "\n");
+			}
+			if (var->m_TypeName == TN_DWORDPTR || var->m_TypeName == TN_DWORD)
 			{
 				fprintf(fp, "@DW ");
 				int i=0;
