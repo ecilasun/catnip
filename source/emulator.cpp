@@ -77,7 +77,6 @@ uint16_t instruction;			// Current instruction
 uint32_t register_file[16];		// Array of 16 x 32bit registers
 uint16_t flags_register;	   	// Flag registers [ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL]
 uint16_t target_register;		// Target for some memory read operations
-uint16_t target_registerH;		// Target for some memory read operations (high word)
 uint16_t cpu_state = CPU_INIT;	// Default state to boot from
 uint16_t CALLSP;				// Branch stack pointer
 uint32_t CALLSTACK[16];			// Branch stack
@@ -302,7 +301,7 @@ void execute(uint16_t instr)
 				}
 				break;
 
-				case 0b01: // When test register (TR) is true - jmp/branch if
+				case 0b01: // When tested register is true - jmp/branch if
 				{
 					if (register_file[r2] == 1)
 					{
@@ -373,7 +372,7 @@ void execute(uint16_t instr)
 				}
 				break;
 
-				case 0b11: // When test register (TR) is false - jmp/branch ifnot
+				case 0b11: // When tested register is false - jmp/branch ifnot
 				{
 					if (register_file[r2] == 0)
 					{
@@ -1001,6 +1000,7 @@ void CPUMain()
 	switch (cpu_state)
 	{
 		case CPU_INIT:
+		{
 			IP = 0;
 			SP = 0x7FFF0;
 			
@@ -1028,6 +1028,14 @@ void CPUMain()
 			register_file[5] = 0x00000000;
 			register_file[6] = 0x00000000;
 			register_file[7] = 0x00000000;
+			register_file[8] = 0x00000000;
+			register_file[9] = 0x00000000;
+			register_file[10] = 0x00000000;
+			register_file[11] = 0x00000000;
+			register_file[12] = 0x00000000;
+			register_file[13] = 0x00000000;
+			register_file[14] = 0x00000000;
+			register_file[15] = 0x00000000;
 
 			CALLSTACK[0] = 0;
 			CALLSTACK[1] = 0;
@@ -1048,7 +1056,6 @@ void CPUMain()
 			CALLSP = 0;
 
 			target_register = 0;
-			target_registerH = 0;
 			BRANCHTARGET = 0;
 
 			// Clear status flags and Test register
@@ -1067,16 +1074,20 @@ void CPUMain()
 			
 			// Set next state to copy BIOS to top of SRAM
 			cpu_state = CPU_ROM_STEP;
+		}
 		break;
 
 		case CPU_ROM_STEP:
+		{
 			// Copy current ROM data to ROM shadow address
 			sram_wdata = rom_out;
 			sram_write_req = 1;
 			cpu_state = CPU_ROM_FETCH;
+		}
 		break;
 
 		case CPU_ROM_FETCH:
+		{
 			sram_write_req = 0;
 			if (rom_addrs == 0xFFF)
 			{
@@ -1094,9 +1105,11 @@ void CPUMain()
 				sram_addr = sram_addr + 2; // Increment 2 bytes at a time
 				cpu_state = CPU_ROM_STEP;
 			}
+		}
 		break;
 
 		case CPU_FETCH_INSTRUCTION:
+		{
 			target_register = 0;
 			sram_read_req = 0;
 			framebuffer_writeena = 0;
@@ -1107,79 +1120,101 @@ void CPUMain()
 				instruction = sram_rdata;
 				cpu_state = CPU_EXECUTE_INSTRUCTION;
 			}
+		}
 		break;
 
 		case CPU_UNUSED0:
+		{
 			// Spin here
 			cpu_state = CPU_UNUSED0;
+		}
 		break;
 
 		case CPU_SET_BRANCH_ADDRESSH:
+		{
 			BRANCHTARGET = sram_rdata;
 			sram_enable_byteaddress = 0;
 			sram_addr = IP+2;
 			sram_read_req = 1;
 			cpu_state = CPU_FETCH_ADDRESS_AND_BRANCH;
+		}
 		break;
 
 		case CPU_FETCH_ADDRESS_AND_BRANCH:
+		{
 			IP = (BRANCHTARGET<<16) | sram_rdata; // Top 3 bits are not available from a 16bit read
 			sram_enable_byteaddress = 0;
 			sram_addr = (BRANCHTARGET<<16) | sram_rdata;
 			sram_read_req = 1;
 			cpu_state = CPU_FETCH_INSTRUCTION;
+		}
 		break;
 
 		case CPU_EXECUTE_INSTRUCTION:
+		{
 			execute(instruction);
+		}
 		break;
 
 		case CPU_READ_DATAH:
+		{
 			register_file[target_register] = (register_file[target_register]&0x0000FFFF) | (sram_rdata<<16);
 			sram_addr = sram_addr + 2;
 			cpu_state = CPU_READ_DATAL;
+		}
 		break;
 
 		case CPU_READ_DATAL:
+		{
 			register_file[target_register] = (register_file[target_register]&0xFFFF0000) | sram_rdata;
 			sram_enable_byteaddress = 0;
 			sram_addr = IP;
 			sram_read_req = 1;
 			cpu_state = CPU_FETCH_INSTRUCTION;
+		}
 		break;
 
 		case CPU_READ_DATA:
+		{
 			register_file[target_register] = sram_rdata;
 			sram_enable_byteaddress = 0;
 			sram_addr = IP;
 			sram_read_req = 1;
 			cpu_state = CPU_FETCH_INSTRUCTION;
+		}
 		break;
 
 		case CPU_READ_DATA_BYTE:
+		{
 			register_file[target_register] = sram_rdata&0x000000FF;
 			sram_enable_byteaddress = 0;
 			sram_addr = IP;
 			sram_read_req = 1;
 			cpu_state = CPU_FETCH_INSTRUCTION;
+		}
 		break;
 
 		case CPU_WRITE_DATAH:
+		{
 			sram_addr = sram_addr + 2;
 			// Write the low word next
 			sram_wdata = register_file[target_register]&0x0000FFFF;
 			cpu_state = CPU_WRITE_DATA;
+		}
 		break;
 
 		case CPU_WRITE_DATA:
+		{
 			sram_write_req = 0;
 			sram_enable_byteaddress = 0;
 			sram_addr = IP;
 			sram_read_req = 1;
 			cpu_state = CPU_FETCH_INSTRUCTION;
+		}
 		break;
 			
 		case CPU_WAIT_VSYNC:
+		{
 			//if (vga_y>=V_FRONT_PORCH && vga_y<(V_FRONT_PORCH+V_SYNC)) // Wait for beam to reach vsync region
 			if (vga_y==0)
 			{
@@ -1198,6 +1233,7 @@ void CPUMain()
 				// Spin
 				cpu_state = CPU_WAIT_VSYNC;
 			}
+		}
 		break;
 
 		case CPU_CLEARVRAM:
