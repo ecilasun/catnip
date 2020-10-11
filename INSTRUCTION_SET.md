@@ -116,16 +116,37 @@ The video hardware actually splits this 192 pixel region into 12 bands, 256*16 p
 
 The reason for the banded approach is simply for fast clears; each band in hardware is enabled for writes simultaneously using a lane mask, and only 0x1000 writes are made instead of 0xC000 writes giving a speedup of x12 for a single color VRAM clear operation.
 
+# Vertical blank service
+A vertical blank service routine can be installed by setting up the VBLANKSERVICE memory location (0x8000C004) with the address of a function, then enabling the VBSENABLE byte at 0x8000C001. This will take effect immediately, and at every VBLANK start, a branch will be taken to this routine. The CPU will treat this as a regular branch operation, and will properly restore all registers to their previous contents. Disabling the vblank service during its execution won't immediately stop it, and the service function will run to completion one last time. Please note that care must be taken to set the address first, then enable the service, as this might happen during a vblank which may trigger a branch to an illegal memory location if enable is set first.
+
+To show how this can be achieved, check the following example:
+```c
+// Set vblank service address
+lea r0, myvblankservice
+ld.d r1, 0x8000C0004
+st.w [r1], r0
+// Enable vblank service
+ld.b r0, 0x01
+ld.d r1, 0x8000C0001
+st.b [r1],r0
+```
+
 # Sprites
-Neko supports 16x16 hardware sprites, controlled by a sprite table in SRAM. To select the table and its length, a single instruction can be used as follows:
+Neko supports 16x16 hardware sprites, controlled by a sprite table in SRAM. To select the table and its length, a pair of instructions can be used as follows:
 ```c
 // R1 points at the sprite sheet to use for a series of sprites
-spritesheet r1, mysprites
-// R1 points at the sprite table, r2 contains the length of the table
-sprite r1, r2
-// Sprite bitmaps
+lea r1, mysprites
+spritesheet r1
+// R2 points at the sprite table, R3 contains the length of the table
+lea r2, mysprietable
+ld.w r3, 0xC8
+sprite r2, r3
+// Sprite bitmaps (3:3:2 RGB colors, 16x16 (256) bytes for each sprite)
 @ORG mysprites
 @DW 0xFFFF, ...
+// Sprite control table (Y/X/id)
+@ORG myspritetable
+@DW 0x0000 0x0000 0x0001
 ```
 
 # Registers
