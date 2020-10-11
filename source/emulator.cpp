@@ -81,6 +81,12 @@ uint16_t sram_wdata;
 uint16_t sram_write_req;
 uint16_t sram_enable_byteaddress;
 
+uint32_t sprite_list_addr;
+uint32_t sprite_list_count;
+uint32_t sprite_sheet;
+uint32_t sprite_pending;
+uint32_t sprites_done;
+
 uint16_t framebuffer_select;
 uint16_t framebuffer_address;
 uint16_t framebuffer_writeena;
@@ -518,7 +524,7 @@ void execute(uint16_t instr)
 							printf("%.8X: st.w(vram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 							#endif
 							// NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
-							// other attributes such as border color, sprite tables and such
+							// other attributes such as border color etc
 							framebuffer_address = register_file[r1]&0x0000FFFF;
 							framebuffer_writeena = 1;
 							// TODO: Somehow need to implement a WORD mov to VRAM
@@ -630,7 +636,7 @@ void execute(uint16_t instr)
 							printf("%.8X: st.b(vram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 							#endif
 							// NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
-							// other attributes such as border color, sprite tables and such
+							// other attributes such as border color etc
 							framebuffer_address = register_file[r1]&0x0000FFFF;
 							framebuffer_writeena = 1;
 							// TODO: Somehow need to implement a WORD mov to VRAM
@@ -833,6 +839,7 @@ void execute(uint16_t instr)
 		{
 			uint16_t sub = (instr&0b0000000001110000)>>4; // [6:4]
 			uint16_t r1  = (instr&0b0000011110000000)>>7; // [10:7]
+			uint16_t r2  = (instr&0b0111100000000000)>>11; // [14:11]
 			switch(sub)
 			{
 				case 0b000: // VSYNC
@@ -906,8 +913,28 @@ void execute(uint16_t instr)
 					#if defined(DEBUG_EXECUTE)
 					printf("%.8X: sprite r%d, r%d\n", IP, r1, r2);
 					#endif
-					// TODO: Kick sprite table DMA
+					// Kick sprite table DMA
+					sprite_list_addr = register_file[r1];
+					sprites_done = 0;
+					sprite_list_count = register_file[r2];
+					sprite_pending = 1;
+					sram_addr = IP+2;
 					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				}
+				break;
+				case 0b110: // SPRITESHEET
+				{
+					#if defined(DEBUG_EXECUTE)
+					printf("%.8X: spritesheet r%d\n", IP, r1);
+					#endif
+					sprite_sheet = register_file[r1];
+					sram_addr = IP+2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
 					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
@@ -976,6 +1003,12 @@ void CPUMain()
 			framebuffer_writeena = 0;
 			framebuffer_data = 0;
 			cpu_lane_mask = 0x0000;
+
+			sprite_list_addr = 0x00000000;
+			sprite_list_count = 0x00000000;
+			sprite_sheet = 0x00000000;
+			sprite_pending = 0;
+			sprites_done = 0;
 
 			// Clear instruction and instruction data word
 			instruction = 0xFFFF;
@@ -1292,12 +1325,53 @@ void VideoMain()
 	}
 }
 
+void SpriteMain()
+{
+	if (!s_SystemClockFallingEdge)
+		return;
+
+	// NOTE: In real hardware, this is done x12 times in parallel for each slice of the screen,
+	// for each sprite that falls within the slice bounds.
+	if (sprite_pending)
+	{
+		for (uint32_t spriteEntry=0; spriteEntry<sprite_list_count; ++spriteEntry)
+		//uint32_t spriteEntry = sprites_done;
+		{
+			uint16_t *descriptor = (uint16_t *)&SRAM[sprite_list_addr + spriteEntry*sizeof(uint16_t)*3];
+
+			uint32_t posY = descriptor[0];
+			uint32_t posX = descriptor[1];
+			uint32_t spriteoffset = sprite_sheet + (descriptor[2]<<8);
+
+			for (uint32_t y=0; y<16; ++y)
+			{
+				for (uint32_t x=0; x<16; ++x)
+				{
+					uint16_t *sramasword = (uint16_t *)SRAM;
+					uint32_t sram_addr = spriteoffset + (y<<4)+x;
+					uint16_t val = sramasword[sram_addr>>1];
+					uint8_t K = (sram_addr&1) ? val&0x00FF : (val&0xFF00)>>8;
+					if (x+posX>256 || y+posY>192)
+						break;
+					if (K!=0xFF)
+						VRAM[(1-framebuffer_select)*0xFFFF + x+posX + ((y+posY)<<8)] = K;
+				}
+			}
+		}
+
+		//++sprites_done;
+		//if (sprites_done==sprite_list_count)
+			sprite_pending = 0;
+	}
+}
+
 // NOTE: Return 'true' for 'still running'
 bool StepEmulator()
 {
 	ClockMain();	// Clock ticks first (rising/falling edge)
 	CPUMain();		// CPU state machine
 	VideoMain();	// Video scan out (to tie it with 'read old data' in dualport VRAM in hardware, memory writes come after)
+	SpriteMain();	// Handle current sprite list DMA requests to VRAM
 	MemoryMain();	// Update all memory (SRAM/VRAM) after video data is processed
 
 	static uint32_t K = 0;

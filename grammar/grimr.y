@@ -88,6 +88,8 @@ enum EASTNodeType
 	EN_Return,
 	EN_FrameSelect,
 	EN_ClearFrame,
+	EN_Sprite,
+	EN_SpriteSheet,
 	EN_Vsync,
 	EN_EndCodeBlock,
 	EN_BeginCodeBlock,
@@ -156,6 +158,8 @@ const char* NodeTypes[]=
 	"EN_Return                    ",
 	"EN_FrameSelect               ",
 	"EN_ClearFrame                ",
+	"EN_Sprite                    ",
+	"EN_SpriteSheet               ",
 	"EN_Vsync                     ",
 	"EN_EndCodeBlock              ",
 	"EN_BeginCodeBlock            ",
@@ -201,6 +205,7 @@ enum EOpcode
 	OP_FSEL,
 	OP_CLF,
 	OP_SPRITE,
+	OP_SPRITESHEET,
 	OP_VSYNC,
 	OP_PUSHCONTEXT,
 	OP_POPCONTEXT,
@@ -255,6 +260,7 @@ const std::string Opcodes[]={
 	"fsel",
 	"clf",
 	"sprite",
+	"spritesheet",
 	"vsync",
 	"pushcontext",
 	"popcontext",
@@ -542,7 +548,7 @@ SASTScanContext g_ASC;
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
 %token WORD BYTE WORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
-%token VSYNC FSEL CLF SPRITE
+%token VSYNC FSEL CLF SPRITE SPRITESHEET
 %token INC_OP DEC_OP
 
 %type <astnode> simple_identifier
@@ -1469,8 +1475,13 @@ builtin_statement
 																									g_ASC.PushNode($$);
 																								}
 	| SPRITE '(' expression ',' expression ')' ';'												{
-																									$$ = new SASTNode(EN_ClearFrame, "");
+																									$$ = new SASTNode(EN_Sprite, "");
 																									$$->m_Opcode = OP_SPRITE;
+																									g_ASC.PushNode($$);
+																								}
+	| SPRITESHEET '(' expression ')' ';'														{
+																									$$ = new SASTNode(EN_SpriteSheet, "");
+																									$$->m_Opcode = OP_SPRITESHEET;
 																									g_ASC.PushNode($$);
 																								}
 	| VSYNC '(' ')' ';'																			{
@@ -1911,6 +1922,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 
 		case OP_FSEL:
 		case OP_CLF:
+		case OP_SPRITESHEET:
 		{
 			std::string srcA = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA;

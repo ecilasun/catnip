@@ -950,7 +950,7 @@ public:
 
 		if(strcmp(_parser_table[_current_parser_offset].m_Value, "fsel") == 0)
 		{
-			int portaddress, r1;
+			int portaddress=0, r1=0;
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 			unsigned short code = m_Opcode | 0x0030 | (r1<<7);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
@@ -960,7 +960,7 @@ public:
 
 		if(strcmp(_parser_table[_current_parser_offset].m_Value, "clf") == 0)
 		{
-			int portaddress, r1;
+			int portaddress=0, r1=0;
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 			unsigned short code = m_Opcode | 0x0040 | (r1<<7);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
@@ -970,7 +970,7 @@ public:
 
 		if(strcmp(_parser_table[_current_parser_offset].m_Value, "in") == 0)
 		{
-			int portaddress, r1;
+			int portaddress=0, r1=0;
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "%x", &portaddress);
 
@@ -984,7 +984,7 @@ public:
 
 		if(strcmp(_parser_table[_current_parser_offset].m_Value, "out") == 0)
 		{
-			int portaddress, r1;
+			int portaddress=0, r1=0;
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "%x", &portaddress);
 			sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r1);
 
@@ -996,13 +996,24 @@ public:
 			return 3;
 		}
 
+		if(strcmp(_parser_table[_current_parser_offset].m_Value, "spritesheet") == 0)
+		{
+			int r1=0;
+			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+
+			unsigned short code = m_Opcode | 0x0060 | (r1<<7);
+			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
+			_binary_output[_current_binary_offset++] = code&0x00FF;
+			return 2;
+		}
+
 		if(strcmp(_parser_table[_current_parser_offset].m_Value, "sprite") == 0)
 		{
-			int r1, r2;
+			int r1=0, r2=0;
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 			sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
 
-			unsigned short code = m_Opcode | 0x0020 | (r1<<7) | (r2<<11);
+			unsigned short code = m_Opcode | 0x0050 | (r1<<7) | (r2<<11);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;
 			return 3;
@@ -1123,6 +1134,7 @@ const SAssemblerPair keywords[] =
 	{{"fsel"}, &s_ioop},
 	{{"clf"}, &s_ioop},
 	{{"sprite"}, &s_ioop},
+	{{"spritesheet"}, &s_ioop},
 
 	{{"unused1"}, &s_nilop},
 	{{"unused2"}, &s_nilop},
