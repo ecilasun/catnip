@@ -1350,7 +1350,7 @@ void SpriteMain()
 					if (x+posX>256 || y+posY>192)
 						break;
 					if (K!=0xFF)
-						VRAM[(1-framebuffer_select)*0xFFFF + x+posX + ((y+posY)<<8)] = K;
+						VRAM[framebuffer_select*0xFFFF + x+posX + ((y+posY)<<8)] = K;
 				}
 			}
 		}

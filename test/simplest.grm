@@ -6,7 +6,7 @@
 byteptr VRAM = 0x80000000;
 byteptr BORDERCOLOR = 0x8000C000;
 
-word spriteinfo[] = {
+word spritelist[] = {
     // Wall
     0x0000, 0x0000, 0x0006,
     0x0000, 0x0010, 0x0006,
@@ -378,18 +378,22 @@ def main()
     word posX = 128, dirX = 1;
     word posY = 64, dirY = 1;
 
+    // Sample uses only one sprite sheet, so we set it once
+    spritesheet(&mysprites);
+
     // No return
     while(1)
     {
         // If we're filling the whole screen there's no need for a CLF
         //clf(0xEC);
 
-        // Draw all sprites
-        spritesheet(&mysprites);
-        sprite(&spriteinfo, 0xC8);
+        // Draw all sprites in the list
+        sprite(&spritelist, 0xC8);
 
+        // Set a border color
         BORDERCOLOR[0] = frame>>4;
 
+        // Handle bouncing sprite
         posX = posX + dirX;
         posY = posY + dirY;
 
@@ -404,13 +408,18 @@ def main()
         }
 
         // The last two sprites are our character
-        spriteinfo[0x4A4+0] = posY;
-        spriteinfo[0x4A4+2] = posX;
-        spriteinfo[0x4AA+0] = posY+16;
-        spriteinfo[0x4AA+2] = posX;
+        // Update its position with the bounce position
+        spritelist[0x4A4+0] = posY;
+        spritelist[0x4A4+2] = posX;
+        spritelist[0x4AA+0] = posY+16;
+        spritelist[0x4AA+2] = posX;
 
+        // Advance frame counter, wait for vsync
         frame = ++frame;
         vsync();
+
+        // Swap frames to reveal what we've drawn so far
+        // while simultaneously selecting the other frame for write
         fsel(frame);
     }
 }
