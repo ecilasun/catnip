@@ -1027,11 +1027,18 @@ void CPUMain()
 	{
 		case CPU_INIT:
 		{
-			sprite_state = SPRITE_IDLE;
+			sprite_list_addr = 0;
+			sprite_list_count = 0;
+			sprite_list_countup = 0;
+			sprite_list_xel = 0;
+			sprite_list_yel = 0;
+			sprite_sheet = 0;
+			sprite_pending = 0;
 			sprite_fetch_count = 0;
 			sprite_current_x = 0;
 			sprite_current_y = 0;
 			sprite_current_id = 0;
+			sprite_state = SPRITE_IDLE;
 
 			IP = 0;
 			SP = 0x7FFF0;
