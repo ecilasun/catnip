@@ -49,7 +49,13 @@
 #define CPU_FETCH_ADDRESS_AND_BRANCH	0b1100
 #define CPU_WAIT_VSYNC					0b1101
 #define CPU_READ_DATA_BYTE				0b1110
-#define CPU_UNUSED0						0b1111	// TBD
+#define CPU_SPRITECOPY					0b1111
+
+// Sprite state machine
+#define SPRITE_IDLE						0b00
+#define SPRITE_FETCH_DESCRIPTOR			0b01
+#define SPRITE_READ_DATA				0b10
+#define SPRITE_WRITE_DATA				0b11
 
 // CPU instructions
 #define INST_LOGIC						0b0000	// 0: run logic operation and/or/xor/not/bsl/bsr on r1 and r2, write result to r3 
@@ -58,7 +64,7 @@
 #define INST_MOV						0b0011	// 3: copy reg2mem/mem2reg/reg2reg/word2reg (dword/word/byte)
 #define INST_RET						0b0100	// 4: ret/halt
 #define INST_STACK						0b0101	// 5: push/pop register to stack
-#define INST_TEST						0b0110	// 6: test flags register against mask bits and set TR register to 1 or 0
+#define INST_TEST						0b0110	// 6: test flags register against mask bits and set register to 1 or 0
 #define INST_CMP						0b0111	// 7: compare r1 with r2 and set flags in given register
 #define INST_IO							0b1000	// 8: wait for vsync signal / in / out to port / clear frame / frame select
 #define INST_UNUSED0					0b1001	// 9: TBD
@@ -90,8 +96,16 @@ uint16_t sram_enable_byteaddress;
 
 uint32_t sprite_list_addr;
 uint32_t sprite_list_count;
+uint32_t sprite_list_countup;
+uint32_t sprite_list_xel;
+uint32_t sprite_list_yel;
 uint32_t sprite_sheet;
 uint32_t sprite_pending;
+uint32_t sprite_fetch_count;
+uint32_t sprite_current_x;
+uint32_t sprite_current_y;
+uint32_t sprite_current_id;
+uint16_t sprite_state = SPRITE_IDLE;
 
 uint16_t framebuffer_select;
 uint16_t framebuffer_address;
@@ -138,7 +152,7 @@ const char *s_state_string[]={
 	"CPU_STATE_PRE_RUN",
 	"CPU_READ_DATA",
 	"CPU_WRITE_DATA",
-	"CPU_UNUSED0",
+	"CPU_SPRITECOPY",
 	"CPU_FETCH_ADDRESS_AND_BRANCH",
 	"CPU_WAIT_VSYNC",
 	"CPU_READ_DATA_BYTE",
@@ -238,7 +252,7 @@ void execute(uint16_t instr)
 				case 7: // TODO: BSWAP_H
 				break;
 			}
-			sram_addr = IP+2;
+			sram_addr = IP + 2;
 			IP = IP + 2;
 			sram_enable_byteaddress = 0;
 			sram_read_req = 1;
@@ -280,9 +294,9 @@ void execute(uint16_t instr)
 						printf("%.8X: %s %.4X%.4X\n", IP, op, *wordsram0, *wordsram1);
 						#endif
 						// Read branch address from next WORD in memory (short jump, only 16 bits)
-						IP = IP + 2; // CALL WORD
 						sram_enable_byteaddress = 0;
-						sram_addr = IP;
+						sram_addr = IP + 2;
+						IP = IP + 2; // CALL WORD
 						sram_read_req = 1;
 						cpu_state = CPU_SET_BRANCH_ADDRESSH;
 					}
@@ -313,10 +327,10 @@ void execute(uint16_t instr)
 							printf("%.8X: %sif %.4X%.4X (taken)\n", IP, op, *wordsram0, *wordsram1);
 							#endif
 							// Read branch address from next WORD in memory (short jump, only 16 bits)
-							IP = IP + 2; // CALL WORD
 							sram_enable_byteaddress = 0;
-							sram_addr = IP;
+							sram_addr = IP + 2;
 							sram_read_req = 1;
+							IP = IP + 2; // CALL WORD
 							cpu_state = CPU_SET_BRANCH_ADDRESSH;
 						}
 						else
@@ -384,9 +398,9 @@ void execute(uint16_t instr)
 							printf("%.8X: %sifnot %.4X%.4X (taken)\n", IP, op, *wordsram0, *wordsram1);
 							#endif
 							// Read branch address from next WORD in memory (short jump, only 16 bits)
-							IP = IP + 2; // CALL WORD
 							sram_enable_byteaddress = 0;
-							sram_addr = IP;
+							sram_addr = IP + 2;
+							IP = IP + 2; // CALL WORD
 							sram_read_req = 1;
 							cpu_state = CPU_SET_BRANCH_ADDRESSH;
 						}
@@ -505,7 +519,7 @@ void execute(uint16_t instr)
 				}
 				break;
 			}
-			sram_addr = IP+2;
+			sram_addr = IP + 2;
 			IP = IP + 2;
 			sram_enable_byteaddress = 0;
 			sram_read_req = 1;
@@ -536,7 +550,7 @@ void execute(uint16_t instr)
 							framebuffer_writeena = 1;
 							// TODO: Somehow need to implement a WORD mov to VRAM
 							framebuffer_data = uint8_t(register_file[r2]&0x00FF);
-							sram_addr = IP+2;
+							sram_addr = IP + 2;
 							IP = IP + 2;
 							sram_enable_byteaddress = 0;
 							sram_read_req = 1;
@@ -549,7 +563,7 @@ void execute(uint16_t instr)
 							uint16_t *wordsram1 = (uint16_t *)&SRAM[register_file[IP+4]];
 							printf("%.8X: st.w(sram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 							#endif
-							sram_addr = IP+2;
+							sram_addr = IP + 2;
 							IP = IP + 2;
 							sram_enable_byteaddress = 0;
 							sram_read_req = 1;
@@ -593,7 +607,7 @@ void execute(uint16_t instr)
 					printf("%.8X: reg2reg(sram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 					#endif
 					register_file[r1] = register_file[r2];
-					sram_addr = IP+2;
+					sram_addr = IP + 2;
 					IP = IP + 2;
 					sram_enable_byteaddress = 0;
 					sram_read_req = 1;
@@ -648,7 +662,7 @@ void execute(uint16_t instr)
 							framebuffer_writeena = 1;
 							// TODO: Somehow need to implement a WORD mov to VRAM
 							framebuffer_data = uint8_t(register_file[r2]&0x00FF);
-							sram_addr = IP+2;
+							sram_addr = IP + 2;
 							IP = IP + 2;
 							sram_enable_byteaddress = 0;
 							sram_read_req = 1;
@@ -661,7 +675,7 @@ void execute(uint16_t instr)
 							uint16_t *wordsram1 = (uint16_t *)&SRAM[register_file[IP+4]];
 							printf("%.8X: st.b(sram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 							#endif
-							sram_addr = IP+2;
+							sram_addr = IP + 2;
 							IP = IP + 2;
 							sram_enable_byteaddress = 0;
 							sram_read_req = 1;
@@ -725,6 +739,13 @@ void execute(uint16_t instr)
 					sram_read_req = 1;
 					IP = IP + 2;
 					cpu_state = CPU_READ_DATAH;
+				}
+				break;
+
+				default:
+				{
+					IP = IP + 2;
+					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
 			}
@@ -809,7 +830,7 @@ void execute(uint16_t instr)
 			uint16_t msk = (instr&0b0000001111110000)>>4; // [9:4]
 			uint16_t r1 =  (instr&0b0011110000000000)>>10; // [13:10]
 			register_file[r1] = (flg&msk) ? 1:0; // At least one bit out of the masked bits passed test against mask or no bits passed
-			sram_addr = IP+2;
+			sram_addr = IP + 2;
 			IP = IP + 2;
 			sram_enable_byteaddress = 0;
 			sram_read_req = 1;
@@ -834,7 +855,7 @@ void execute(uint16_t instr)
 			flags_register |= (register_file[r1] != 0) ? 8 : 0;						// NOTZERO
 			flags_register |= (register_file[r1] != register_file[r2]) ? 16 : 0;	// NOTEQUAL
 			flags_register |= (register_file[r1] == 0) ? 32 : 0;					// ZERO
-			sram_addr = IP+2;
+			sram_addr = IP + 2;
 			IP = IP + 2;
 			sram_enable_byteaddress = 0;
 			sram_read_req = 1;
@@ -867,7 +888,7 @@ void execute(uint16_t instr)
 					// TODO: Read next word (PORT)
 					// TODO: Input from given port to register_file[instruction[9:7]]
 					// TODO: Isn't this a memory mapped device MOV?
-					sram_addr = IP+2;
+					sram_addr = IP + 2;
 					IP = IP + 2;
 					sram_enable_byteaddress = 0;
 					sram_read_req = 1;
@@ -883,7 +904,7 @@ void execute(uint16_t instr)
 					// TODO: Read next word (PORT)
 					// TODO: Output register_file[instr[9:7]] to given port
 					// TODO: Isn't this a memory mapped device MOV?
-					sram_addr = IP+2;
+					sram_addr = IP + 2;
 					IP = IP + 2;
 					sram_enable_byteaddress = 0;
 					sram_read_req = 1;
@@ -896,7 +917,7 @@ void execute(uint16_t instr)
 					printf("%.8X: fsel r%d (%.8X)\n", IP, r1, register_file[r1]);
 					#endif
 					framebuffer_select = register_file[r1]&0x0001;
-					sram_addr = IP+2;
+					sram_addr = IP + 2;
 					IP = IP + 2;
 					sram_enable_byteaddress = 0;
 					sram_read_req = 1;
@@ -923,12 +944,16 @@ void execute(uint16_t instr)
 					// Kick sprite table DMA
 					sprite_list_addr = register_file[r1];
 					sprite_list_count = register_file[r2];
+					sprite_list_countup = 0;
+					sprite_list_xel = 0;
+					sprite_list_yel = 0;
 					sprite_pending = 1;
-					sram_addr = IP+2;
+					sram_addr = IP + 2;
 					IP = IP + 2;
 					sram_enable_byteaddress = 0;
 					sram_read_req = 1;
-					cpu_state = CPU_FETCH_INSTRUCTION;
+					framebuffer_address = 0;
+					cpu_state = CPU_SPRITECOPY;
 				}
 				break;
 				case 0b110: // SPRITESHEET
@@ -937,7 +962,7 @@ void execute(uint16_t instr)
 					printf("%.8X: spritesheet r%d\n", IP, r1);
 					#endif
 					sprite_sheet = register_file[r1];
-					sram_addr = IP+2;
+					sram_addr = IP + 2;
 					IP = IP + 2;
 					sram_enable_byteaddress = 0;
 					sram_read_req = 1;
@@ -949,7 +974,7 @@ void execute(uint16_t instr)
 					#if defined(DEBUG_EXECUTE)
 					printf("%.8X: undefined IO\n", IP);
 					#endif
-					sram_addr = IP+2;
+					sram_addr = IP + 2;
 					IP = IP + 2;
 					sram_enable_byteaddress = 0;
 					sram_read_req = 1;
@@ -997,22 +1022,32 @@ void CPUMain()
 	if (!s_SystemClockRisingEdge)
 		return;
 
+	// Main CPU
 	switch (cpu_state)
 	{
 		case CPU_INIT:
 		{
+			sprite_state = SPRITE_IDLE;
+			sprite_fetch_count = 0;
+			sprite_current_x = 0;
+			sprite_current_y = 0;
+			sprite_current_id = 0;
+
 			IP = 0;
 			SP = 0x7FFF0;
 			
 			// Reset write cursor for framebuffer
 			framebuffer_select = 0;
-			framebuffer_address = 0000;
+			framebuffer_address = 0x000;
 			framebuffer_writeena = 0;
 			framebuffer_data = 0;
 			cpu_lane_mask = 0x0000;
 
 			sprite_list_addr = 0x00000000;
 			sprite_list_count = 0x00000000;
+			sprite_list_countup = 0x00000000;
+			sprite_list_xel = 0x00000000;
+			sprite_list_yel = 0x00000000;
 			sprite_sheet = 0x00000000;
 			sprite_pending = 0;
 
@@ -1123,18 +1158,11 @@ void CPUMain()
 		}
 		break;
 
-		case CPU_UNUSED0:
-		{
-			// Spin here
-			cpu_state = CPU_UNUSED0;
-		}
-		break;
-
 		case CPU_SET_BRANCH_ADDRESSH:
 		{
 			BRANCHTARGET = sram_rdata;
 			sram_enable_byteaddress = 0;
-			sram_addr = IP+2;
+			sram_addr = IP + 2;
 			sram_read_req = 1;
 			cpu_state = CPU_FETCH_ADDRESS_AND_BRANCH;
 		}
@@ -1256,7 +1284,119 @@ void CPUMain()
 		}
 		break;
 
+		case CPU_SPRITECOPY:
+		{
+			if (sprite_pending == 1)
+			{
+				sprite_pending = 0;
+				// IP <= IP + 19'd2;
+				cpu_lane_mask = 0x0000;
+				framebuffer_writeena = 0;
+				sram_enable_byteaddress = 0;
+				sram_addr = IP;
+				sprite_fetch_count = 0;
+				sprite_state = SPRITE_FETCH_DESCRIPTOR;
+			}
+			cpu_state = CPU_SPRITECOPY; // Wait in this state
+		}
+		break;
+
 		default:
+		break;
+	}
+
+	// Sprite unit
+	switch (sprite_state)
+	{
+		case SPRITE_IDLE:
+		break;
+
+		case SPRITE_FETCH_DESCRIPTOR:
+		{
+			if (sprite_fetch_count == 0)
+			{
+				sram_addr = sprite_list_addr + sprite_list_countup*6; // Y
+				sram_read_req = 1;
+				sram_enable_byteaddress = 0;
+				sprite_fetch_count = sprite_fetch_count + 1;
+			}
+			else if (sprite_fetch_count == 1)
+			{
+				sprite_current_y = sram_rdata; // Store Y
+				sram_addr = sprite_list_addr + sprite_list_countup*6 + 2; // X
+				sram_read_req = 1;
+				sram_enable_byteaddress = 0;
+				sprite_fetch_count = sprite_fetch_count + 1;
+			}
+			else if (sprite_fetch_count == 2)
+			{
+				sprite_current_x = sram_rdata; // Store X
+				sram_addr = sprite_list_addr + sprite_list_countup*6 + 4; // ID
+				sram_read_req = 1;
+				sram_enable_byteaddress = 0;
+				sprite_fetch_count = sprite_fetch_count + 1;
+			}
+			else if (sprite_fetch_count == 3)
+			{
+				sprite_list_xel = 0;
+				sprite_list_yel = 0;
+				sprite_current_id = sram_rdata; // Store ID
+				sram_read_req = 0;
+				sprite_state = SPRITE_READ_DATA;
+			}
+		}
+		break;
+
+		case SPRITE_READ_DATA:
+		{
+			sram_addr = sprite_sheet + sprite_current_id*256 + sprite_list_xel + sprite_list_yel*16;
+			sram_read_req = 1;
+			sram_enable_byteaddress = 1;
+			framebuffer_writeena = 0;
+			sprite_state = SPRITE_WRITE_DATA;
+		}
+		break;
+
+		case SPRITE_WRITE_DATA:
+		{
+			if (sram_rdata != 0xFF)
+			{
+				framebuffer_address = (sprite_current_x+sprite_list_xel) + (sprite_current_y+sprite_list_yel)*256;
+				framebuffer_writeena = 1;
+				framebuffer_data = sram_rdata;
+			}
+
+			sram_read_req = 0;
+
+			sprite_list_xel = sprite_list_xel + 1;
+			if (sprite_list_xel==16)
+			{
+				sprite_list_xel = 0;
+				sprite_list_yel = sprite_list_yel + 1;
+			}
+			if (sprite_list_yel==16) // Last scanline of sprite
+			{
+				sprite_list_countup = sprite_list_countup + 1;
+				if (sprite_list_countup < sprite_list_count)
+				{
+					sprite_fetch_count = 0;
+					sprite_state = SPRITE_FETCH_DESCRIPTOR;
+				}
+				else
+				{
+					sram_addr = IP;
+					sram_read_req = 1;
+					sram_enable_byteaddress = 0;
+					sprite_fetch_count = 0;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+					sprite_state = SPRITE_IDLE;
+				}
+			}
+			else
+			{
+				sprite_state = SPRITE_READ_DATA;
+			}
+		}
 		break;
 	}
 }
@@ -1372,43 +1512,6 @@ void VideoMain()
 	}
 }
 
-void SpriteMain()
-{
-	if (!s_SystemClockRisingEdge)
-		return;
-
-	// NOTE: In real hardware, this is done x12 times in parallel for each slice of the screen,
-	// for each sprite that falls within the slice bounds.
-	if (sprite_pending)
-	{
-		for (uint32_t spriteEntry=0; spriteEntry<sprite_list_count; ++spriteEntry)
-		{
-			uint16_t *descriptor = (uint16_t *)&SRAM[sprite_list_addr + spriteEntry*sizeof(uint16_t)*3];
-
-			uint32_t posY = descriptor[0];
-			uint32_t posX = descriptor[1];
-			uint32_t spriteoffset = sprite_sheet + (descriptor[2]<<8);
-
-			for (uint32_t y=0; y<16; ++y)
-			{
-				for (uint32_t x=0; x<16; ++x)
-				{
-					uint16_t *sramasword = (uint16_t *)SRAM;
-					uint32_t sram_addr = spriteoffset + (y<<4)+x;
-					uint16_t val = sramasword[sram_addr>>1];
-					uint8_t K = (sram_addr&1) ? val&0x00FF : (val&0xFF00)>>8;
-					if (x+posX>256 || y+posY>192)
-						break;
-					if (K!=0xFF)
-						VRAM[framebuffer_select*0xFFFF + x+posX + ((y+posY)<<8)] = K;
-				}
-			}
-		}
-
-		sprite_pending = 0;
-	}
-}
-
 int RunDevice(void *data)
 {
 	while(!s_Done)
@@ -1416,7 +1519,6 @@ int RunDevice(void *data)
 		ClockMain();	// Clock ticks first (rising/falling edge)
 		CPUMain();		// CPU state machine
 		VideoMain();	// Video scan out (to tie it with 'read old data' in dualport VRAM in hardware, memory writes come after)
-		SpriteMain();	// Handle current sprite list DMA requests to VRAM
 		MemoryMain();	// Update all memory (SRAM/VRAM) after video data is processed
 	}
 	return 0;
@@ -1467,7 +1569,7 @@ bool InitEmulator(uint16_t *_rom_binary)
 	// Init VRAM with default 'NEKOv1' pattern
 	VRAM = new uint8_t[0xFFFF * 2];
 	for (uint32_t i=0;i<0xFFFF * 2;++i)
-		VRAM[i] = RGBCOLOR(i%3,(i>>1)%3,(i>>2)%2);
+		VRAM[i] = 0xEC;//RGBCOLOR(i%3,(i>>1)%3,(i>>2)%2);
 
 	// Init SRAM to all zeros
 	SRAM = new uint8_t[0x7FFFF];
