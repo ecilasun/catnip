@@ -148,6 +148,7 @@ sprite r2, r3
 @ORG myspritetable
 @DW 0x0000 0x0000 0x0001
 ```
+NOTE: Each sprite will take about 516 clock cycles to draw. This is sufficient for full screen coverage and more at high frame rates, however a maximum limit of sprites has not been determined yet.
 
 # Registers
 
