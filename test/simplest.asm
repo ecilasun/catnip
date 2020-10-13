@@ -1,11 +1,14 @@
-# Instruction count: 159
+# Instruction count: 160
 
 @ORG 0x00000000
 
 call main
 
+ld.w r0, 0x0
 @LABEL infloop
 vsync
+fsel r0
+inc r0
 jmp infloop
 # End of program
 
@@ -16,8 +19,8 @@ ret
 lea r0, vblank
 lea r1, _VBLANKSERVICE
 st.d [r1], r0
-ld.d r0, 0x1
-ld.d r1, 0x0
+ld.w r0, 0x1
+ld.w r1, 0x0
 lea r2, _VBSENABLE
 ld.d r2, [r2]
 iadd r1, r2
@@ -26,11 +29,11 @@ lea r0, _mysprites
 spritesheet r0
 
 @LABEL beginwhile00000002
-ld.d r0, 0x1
+ld.w r0, 0x1
 jmpifnot endwhile00000003, r0
 lea r0, _bcolor
 ld.w r0, [r0]
-ld.d r1, 0x0
+ld.w r1, 0x0
 lea r2, _BORDERCOLOR
 ld.d r2, [r2]
 iadd r1, r2
@@ -51,12 +54,12 @@ lea r1, main_posY
 st.w [r1], r0
 lea r0, main_posY
 ld.w r0, [r0]
-ld.d r1, 0xa9
+ld.w r1, 0xa9
 cmp r0, r1
 test r0, greater
 lea r1, main_posY
 ld.w r1, [r1]
-ld.d r2, 0x1
+ld.w r2, 0x1
 cmp r1, r2
 test r1, less
 or r0, r1
@@ -75,12 +78,12 @@ st.w [r1], r0
 @LABEL endif00000000
 lea r0, main_posX
 ld.w r0, [r0]
-ld.d r1, 0xf0
+ld.w r1, 0xf0
 cmp r0, r1
 test r0, greater
 lea r1, main_posX
 ld.w r1, [r1]
-ld.d r2, 0x1
+ld.w r2, 0x1
 cmp r1, r2
 test r1, less
 or r0, r1
@@ -99,40 +102,40 @@ st.w [r1], r0
 @LABEL endif00000001
 lea r0, main_posY
 ld.w r0, [r0]
-ld.d r1, 0x4a4
-ld.d r2, 0x0
+ld.w r1, 0x4a4
+ld.w r2, 0x0
 iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
 lea r0, main_posX
 ld.w r0, [r0]
-ld.d r1, 0x4a4
-ld.d r2, 0x2
+ld.w r1, 0x4a4
+ld.w r2, 0x2
 iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
 lea r0, main_posY
 ld.w r0, [r0]
-ld.d r1, 0x10
+ld.w r1, 0x10
 iadd r0, r1
-ld.d r1, 0x4aa
-ld.d r2, 0x0
+ld.w r1, 0x4aa
+ld.w r2, 0x0
 iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
 lea r0, main_posX
 ld.w r0, [r0]
-ld.d r1, 0x4aa
-ld.d r2, 0x2
+ld.w r1, 0x4aa
+ld.w r2, 0x2
 iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
 lea r0, _spritelist
-ld.d r1, 0xc8
+ld.w r1, 0xc8
 sprite r0, r1
 lea r0, main_frame
 ld.w r0, [r0]
@@ -146,6 +149,7 @@ fsel r0
 jmp beginwhile00000002
 
 @LABEL endwhile00000003
+ret 
 
 #-------------Symbol Table-------------
 

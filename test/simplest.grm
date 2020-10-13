@@ -398,7 +398,7 @@ def main()
     while(1)
     {
         // If we're filling the whole screen there's no need for a CLF
-        //clf(0xEC);
+        //clf(0xEC+frame);
 
         // Set border color
         BORDERCOLOR[0] = bcolor;
@@ -429,6 +429,7 @@ def main()
         spritelist[0x4AA+2] = posX;
 
         // Draw all sprites in the list
+        //sprite(&spritelist, 0x2); //12*99, 0x2
         sprite(&spritelist, 0xC8);
 
         // Advance frame counter, wait for vsync
@@ -439,4 +440,7 @@ def main()
         // while simultaneously selecting the other frame for write
         fsel(frame);
     }
+
+    // In case the emulator or the hardware falls through the infinite loop, this will trap and revert back to boot code.
+    return;
 }

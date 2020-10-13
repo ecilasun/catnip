@@ -132,7 +132,7 @@ st.b [r1],r0
 ```
 
 # Sprites
-Neko supports 16x16 hardware sprites, controlled by a sprite table in SRAM. To select the table and its length, a pair of instructions can be used as follows:
+Neko supports 16x16 hardware sprites, controlled by a sprite table in SRAM. To select the table pointer, and draw the sprites using a table address/length pair, a series of instructions can be used as follows:
 ```c
 // R1 points at the sprite sheet to use for a series of sprites
 lea r1, mysprites

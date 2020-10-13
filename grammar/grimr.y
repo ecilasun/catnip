@@ -2004,9 +2004,9 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string trg = g_ASC.PushRegister();
 			int value = strtol(node->m_Value.c_str(), nullptr, 16);
-			/*if (value <=65535 && value >=-65535)
+			if (value <=65535 && value >=-65535)
 				node->m_Instructions = Opcodes[node->m_Opcode] + ".w" + " " + trg + ", " + node->m_Value;
-			else*/
+			else
 				node->m_Instructions = Opcodes[node->m_Opcode] + ".d" + " " + trg + ", " + node->m_Value;
 			g_ASC.m_InstructionCount+=1;
 		}
@@ -2064,11 +2064,14 @@ bool CompileGrimR(const char *_filename)
 	fprintf(fp, "# Instruction count: %d\n\n", g_ASC.m_InstructionCount);
 	fprintf(fp, "@ORG 0x00000000\n\n");
 	fprintf(fp, "call main\n\n");
+	fprintf(fp, "ld.w r0, 0x0\n");
 	fprintf(fp, "@LABEL infloop\n");
 	fprintf(fp, "vsync\n");
+	fprintf(fp, "fsel r0\n");
+	fprintf(fp, "inc r0\n");
 	fprintf(fp, "jmp infloop\n");
 	fprintf(fp, "# End of program\n");
-
+	
 	// Dump asm code
 	for (auto &node : g_ASC.m_ASTNodes)
 		DumpCode(fp, node);

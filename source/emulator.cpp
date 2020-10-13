@@ -99,7 +99,6 @@ uint32_t sprite_list_count;
 uint32_t sprite_list_countup;
 uint32_t sprite_list_el;
 uint32_t sprite_sheet;
-uint32_t sprite_pending;
 uint32_t sprite_fetch_count;
 uint32_t sprite_current_x;
 uint32_t sprite_current_y;
@@ -292,10 +291,10 @@ void execute(uint16_t instr)
 						uint16_t *wordsram1 = (uint16_t *)&SRAM[IP+4];
 						printf("%.8X: %s %.4X%.4X\n", IP, op, *wordsram0, *wordsram1);
 						#endif
-						// Read branch address from next WORD in memory (short jump, only 16 bits)
+						// Read branch address from next DWORD in memory
 						sram_enable_byteaddress = 0;
 						sram_addr = IP + 2;
-						IP = IP + 2; // CALL WORD
+						IP = IP + 2; // CALL DWORD
 						sram_read_req = 1;
 						cpu_state = CPU_SET_BRANCH_ADDRESSH;
 					}
@@ -316,7 +315,7 @@ void execute(uint16_t instr)
 
 				case 0b01: // When tested register is true - jmp/branch if
 				{
-					if (register_file[r2] == 1)
+					if ((register_file[r2]&0x00000001) == 1)
 					{
 						if (immed == 1)
 						{
@@ -325,11 +324,11 @@ void execute(uint16_t instr)
 							uint16_t *wordsram1 = (uint16_t *)&SRAM[IP+4];
 							printf("%.8X: %sif %.4X%.4X (taken)\n", IP, op, *wordsram0, *wordsram1);
 							#endif
-							// Read branch address from next WORD in memory (short jump, only 16 bits)
+							// Read branch address from next DWORD in memory
 							sram_enable_byteaddress = 0;
 							sram_addr = IP + 2;
+							IP = IP + 2; // CALL DWORD
 							sram_read_req = 1;
-							IP = IP + 2; // CALL WORD
 							cpu_state = CPU_SET_BRANCH_ADDRESSH;
 						}
 						else
@@ -387,7 +386,7 @@ void execute(uint16_t instr)
 
 				case 0b11: // When tested register is false - jmp/branch ifnot
 				{
-					if (register_file[r2] == 0)
+					if ((register_file[r2]&0x00000001) == 0)
 					{
 						if (immed == 1)
 						{
@@ -945,12 +944,11 @@ void execute(uint16_t instr)
 					sprite_list_count = register_file[r2]&0x0000FFFF;
 					sprite_list_countup = 0;
 					sprite_list_el = 0;
-					sprite_pending = 1;
-					sram_addr = IP + 2;
 					IP = IP + 2;
-					sram_enable_byteaddress = 0;
-					sram_read_req = 1;
+					sram_read_req = 0;
 					framebuffer_address = 0;
+					sprite_fetch_count = 0;
+					sprite_state = SPRITE_FETCH_DESCRIPTOR;
 					cpu_state = CPU_SPRITECOPY;
 				}
 				break;
@@ -1030,7 +1028,6 @@ void CPUMain()
 			sprite_list_countup = 0;
 			sprite_list_el = 0;
 			sprite_sheet = 0;
-			sprite_pending = 0;
 			sprite_fetch_count = 0;
 			sprite_current_x = 0;
 			sprite_current_y = 0;
@@ -1182,7 +1179,7 @@ void CPUMain()
 
 		case CPU_READ_DATAH:
 		{
-			register_file[target_register] = (register_file[target_register]&0x0000FFFF) | (sram_rdata<<16);
+			register_file[target_register] = (sram_rdata<<16) | (register_file[target_register]&0x0000FFFF);
 			sram_addr = sram_addr + 2;
 			cpu_state = CPU_READ_DATAL;
 		}
@@ -1282,112 +1279,109 @@ void CPUMain()
 
 		case CPU_SPRITECOPY:
 		{
-			if (sprite_pending == 1)
+			switch (sprite_state)
 			{
-				sprite_pending = 0;
-				// IP <= IP + 19'd2;
-				cpu_lane_mask = 0x0000;
-				framebuffer_writeena = 0;
-				sram_enable_byteaddress = 0;
-				sram_addr = IP;
-				sram_read_req = 0;
-				sprite_fetch_count = 0;
-				sprite_state = SPRITE_FETCH_DESCRIPTOR;
+				case SPRITE_IDLE:
+				break;
+
+				case SPRITE_FETCH_DESCRIPTOR:
+				{
+					if (sprite_fetch_count == 0)
+					{
+						sram_addr = sprite_list_addr + sprite_list_countup*6; // Y
+						sram_read_req = 1;
+						sram_enable_byteaddress = 0;
+						sprite_fetch_count = sprite_fetch_count + 1;
+					}
+					else if (sprite_fetch_count == 1)
+					{
+						sprite_current_y = sram_rdata; // Store Y
+						sram_read_req = 0;
+						sprite_fetch_count = sprite_fetch_count + 1;
+					}
+					else if (sprite_fetch_count == 2)
+					{
+						sram_addr = sprite_list_addr + sprite_list_countup*6 + 2; // X
+						sram_read_req = 1;
+						sram_enable_byteaddress = 0;
+						sprite_fetch_count = sprite_fetch_count + 1;
+					}
+					else if (sprite_fetch_count == 3)
+					{
+						sprite_current_x = sram_rdata; // Store X
+						sram_read_req = 0;
+						sprite_fetch_count = sprite_fetch_count + 1;
+					}
+					else if (sprite_fetch_count == 4)
+					{
+						sram_addr = sprite_list_addr + sprite_list_countup*6 + 4; // ID
+						sram_read_req = 1;
+						sram_enable_byteaddress = 0;
+						sprite_fetch_count = sprite_fetch_count + 1;
+					}
+					else if (sprite_fetch_count == 5)
+					{
+						sprite_current_id = sram_rdata; // Store ID
+						sram_read_req = 0;
+						sprite_fetch_count = sprite_fetch_count + 1;
+						sprite_list_el = 0;
+						sprite_list_countup = sprite_list_countup + 1;
+						sprite_state = SPRITE_READ_DATA;
+					}
+				}
+				break;
+
+				case SPRITE_READ_DATA:
+				{
+					sram_addr = sprite_sheet + sprite_current_id*256 + sprite_list_el;
+					sram_read_req = 1;
+					sram_enable_byteaddress = 1;
+					framebuffer_writeena = 0;
+					sprite_state = SPRITE_WRITE_DATA;
+				}
+				break;
+
+				case SPRITE_WRITE_DATA:
+				{
+					if (sprite_list_el==0x100) // Past the end of sprite
+					{
+						if (sprite_list_countup < sprite_list_count)
+						{
+							sram_read_req = 0;
+							// Read more sprites
+							sprite_fetch_count = 0;
+							sprite_state = SPRITE_FETCH_DESCRIPTOR;
+						}
+						else
+						{
+							// Done with all sprites
+							sram_addr = IP;
+							sram_read_req = 1;
+							sram_enable_byteaddress = 0;
+							sprite_fetch_count = 0;
+							cpu_state = CPU_FETCH_INSTRUCTION;
+							sprite_state = SPRITE_IDLE;
+						}
+					}
+					else
+					{
+						if ((sram_rdata&0xFF) != 0xFF) // TODO: Make mask color code controlled
+						{
+							framebuffer_address = ((sprite_current_y+((sprite_list_el&0xF0)>>4))<<8) + (sprite_current_x+(sprite_list_el&0x0F));
+							framebuffer_writeena = 1;
+							framebuffer_data = sram_rdata;
+						}
+						sram_read_req = 0;
+						sprite_state = SPRITE_READ_DATA;
+					}
+					sprite_list_el = sprite_list_el + 1; // Next pixel
+				}
+				break;
 			}
-			cpu_state = CPU_SPRITECOPY; // Wait in this state
 		}
 		break;
 
 		default:
-		break;
-	}
-
-	// Sprite unit
-	switch (sprite_state)
-	{
-		case SPRITE_IDLE:
-		break;
-
-		case SPRITE_FETCH_DESCRIPTOR:
-		{
-			if (sprite_fetch_count == 0)
-			{
-				sram_addr = sprite_list_addr + sprite_list_countup*6; // Y
-				sram_read_req = 1;
-				sram_enable_byteaddress = 0;
-				sprite_fetch_count = sprite_fetch_count + 1;
-			}
-			else if (sprite_fetch_count == 1)
-			{
-				sprite_current_y = sram_rdata; // Store Y
-				sram_addr = sprite_list_addr + sprite_list_countup*6 + 2; // X
-				sram_read_req = 1;
-				sram_enable_byteaddress = 0;
-				sprite_fetch_count = sprite_fetch_count + 1;
-			}
-			else if (sprite_fetch_count == 2)
-			{
-				sprite_current_x = sram_rdata; // Store X
-				sram_addr = sprite_list_addr + sprite_list_countup*6 + 4; // ID
-				sram_read_req = 1;
-				sram_enable_byteaddress = 0;
-				sprite_fetch_count = sprite_fetch_count + 1;
-			}
-			else if (sprite_fetch_count == 3)
-			{
-				sprite_list_el = 0;
-				sprite_current_id = sram_rdata; // Store ID
-				sram_read_req = 0;
-				sprite_state = SPRITE_READ_DATA;
-			}
-		}
-		break;
-
-		case SPRITE_READ_DATA:
-		{
-			sram_addr = sprite_sheet + sprite_current_id*256 + sprite_list_el;
-			sram_read_req = 1;
-			sram_enable_byteaddress = 1;
-			framebuffer_writeena = 0;
-			sprite_state = SPRITE_WRITE_DATA;
-		}
-		break;
-
-		case SPRITE_WRITE_DATA:
-		{
-			if (sprite_list_el==0x100) // Past the end of sprite
-			{
-				if (sprite_list_countup+1 < sprite_list_count)
-				{
-					// Read more sprites
-					sprite_list_countup = sprite_list_countup + 1;
-					sprite_fetch_count = 0;
-					sprite_state = SPRITE_FETCH_DESCRIPTOR;
-				}
-				else
-				{
-					// Done with all sprites
-					sram_addr = IP;
-					sram_read_req = 1;
-					sram_enable_byteaddress = 0;
-					sprite_fetch_count = 0;
-					cpu_state = CPU_FETCH_INSTRUCTION;
-					sprite_state = SPRITE_IDLE;
-				}
-			}
-			else
-			{
-				if (sram_rdata != 0xFF)
-				{
-					framebuffer_address = (sprite_current_x+(sprite_list_el&0x0F)) + (sprite_current_y+((sprite_list_el&0xF0)>>4))*256;
-					framebuffer_writeena = 1;
-					framebuffer_data = sram_rdata;
-				}
-				sram_read_req = 0;
-				sprite_state = SPRITE_READ_DATA;
-			}
-			sprite_list_el = sprite_list_el + 1; // Next pixel
-		}
 		break;
 	}
 }
@@ -1404,6 +1398,11 @@ void MemoryMain()
 	// ROM read access
 	if (/*rom_addrs<0x7FFFF &&*/ rom_read_enable)
 		rom_out = ROM[rom_addrs];
+
+	/*if (!sram_read_req)
+		sram_rdata = rand()%0xFFFF; // NOTE: Ruin the contents so that we are sure that we read correctly
+	if (!sram_write_req)
+		sram_wdata = rand()%0xFFFF;*/
 
 	// SRAM read/write (byte or word) access
 	if (sram_addr<0x7FFFF && (sram_write_req || sram_read_req))
