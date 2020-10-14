@@ -1117,7 +1117,7 @@ void CPUMain()
 		case CPU_ROM_FETCH:
 		{
 			sram_write_req = 0;
-			if (rom_addrs == 0xFFF)
+			if (rom_addrs == 0x3FFF)
 			{
 				rom_read_enable = 0;
 				sram_addr = 0; // Reset read address (not really required)
