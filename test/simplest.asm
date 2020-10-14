@@ -1,4 +1,4 @@
-# Instruction count: 234
+# Instruction count: 304
 
 @ORG 0x00000000
 
@@ -28,9 +28,9 @@ st.b [r1], r0
 lea r0, _mysprites
 spritesheet r0
 
-@LABEL beginwhile00000004
+@LABEL beginwhile00000006
 ld.w r0, 0x1
-jmpifnot endwhile00000005, r0
+jmpifnot endwhile00000007, r0
 lea r0, _bcolor
 ld.w r0, [r0]
 ld.w r1, 0x0
@@ -38,36 +38,61 @@ lea r2, _BORDERCOLOR
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-lea r0, main_posX
-ld.w r0, [r0]
-lea r1, main_dirX
-ld.w r1, [r1]
-iadd r0, r1
-lea r1, main_posX
+ld.w r0, 0x0
+lea r1, main_i
 st.w [r1], r0
-lea r0, main_posY
+
+@LABEL beginwhile00000002
+lea r0, main_i
 ld.w r0, [r0]
-lea r1, main_dirY
-ld.w r1, [r1]
-iadd r0, r1
+ld.w r1, 0x10
+cmp r0, r1
+test r0, less
+jmpifnot endwhile00000003, r0
+lea r0, main_i
+ld.w r0, [r0]
 lea r1, main_posY
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+lea r1, main_i
+ld.w r1, [r1]
+lea r2, main_dirY
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+iadd r0, r1
+lea r1, main_i
+ld.w r1, [r1]
+lea r2, main_posY
+iadd r1, r2
 st.w [r1], r0
-lea r0, main_posY
+lea r0, main_i
 ld.w r0, [r0]
+lea r1, main_posY
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
 ld.w r1, 0xa9
 cmp r0, r1
 test r0, greater
-lea r1, main_posY
+lea r1, main_i
 ld.w r1, [r1]
+lea r2, main_posY
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
 ld.w r2, 0x1
 cmp r1, r2
 test r1, less
 or r0, r1
 jmpifnot endif00000000, r0
-lea r0, main_dirY
+lea r0, main_i
 ld.w r0, [r0]
-ineg r0
 lea r1, main_dirY
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ineg r0
+lea r1, main_i
+ld.w r1, [r1]
+lea r2, main_dirY
+iadd r1, r2
 st.w [r1], r0
 lea r0, _bcolor
 ld.w r0, [r0]
@@ -76,22 +101,50 @@ lea r1, _bcolor
 st.w [r1], r0
 
 @LABEL endif00000000
-lea r0, main_posX
+lea r0, main_i
 ld.w r0, [r0]
+lea r1, main_posX
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+lea r1, main_i
+ld.w r1, [r1]
+lea r2, main_dirX
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+iadd r0, r1
+lea r1, main_i
+ld.w r1, [r1]
+lea r2, main_posX
+iadd r1, r2
+st.w [r1], r0
+lea r0, main_i
+ld.w r0, [r0]
+lea r1, main_posX
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
 ld.w r1, 0xf0
 cmp r0, r1
 test r0, greater
-lea r1, main_posX
+lea r1, main_i
 ld.w r1, [r1]
+lea r2, main_posX
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
 ld.w r2, 0x1
 cmp r1, r2
 test r1, less
 or r0, r1
 jmpifnot endif00000001, r0
-lea r0, main_dirX
+lea r0, main_i
 ld.w r0, [r0]
-ineg r0
 lea r1, main_dirX
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ineg r0
+lea r1, main_i
+ld.w r1, [r1]
+lea r2, main_dirX
+iadd r1, r2
 st.w [r1], r0
 lea r0, _bcolor
 ld.w r0, [r0]
@@ -100,74 +153,81 @@ lea r1, _bcolor
 st.w [r1], r0
 
 @LABEL endif00000001
-lea r0, main_posY
+lea r0, main_i
 ld.w r0, [r0]
+lea r1, main_posY
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
 ld.w r1, 0x4a4
+lea r2, main_i
+ld.w r2, [r2]
+ld.w r3, 0x6
+imul r2, r3
+iadd r1, r2
 ld.w r2, 0x0
 iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
-lea r0, main_posX
+lea r0, main_i
 ld.w r0, [r0]
+lea r1, main_posX
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
 ld.w r1, 0x4a4
+lea r2, main_i
+ld.w r2, [r2]
+ld.w r3, 0x6
+imul r2, r3
+iadd r1, r2
 ld.w r2, 0x2
 iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
-lea r0, main_posY
+lea r0, main_i
 ld.w r0, [r0]
+lea r1, main_posY
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
 ld.w r1, 0x10
 iadd r0, r1
 ld.w r1, 0x4aa
+lea r2, main_i
+ld.w r2, [r2]
+ld.w r3, 0x6
+imul r2, r3
+iadd r1, r2
 ld.w r2, 0x0
 iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
-lea r0, main_posX
+lea r0, main_i
 ld.w r0, [r0]
-ld.w r1, 0x4aa
-ld.w r2, 0x2
-iadd r1, r2
-lea r2, _spritelist
-iadd r1, r2
-st.w [r1], r0
-lea r0, main_posX
-ld.w r0, [r0]
-ld.w r1, 0x4b0
-ld.w r2, 0x0
-iadd r1, r2
-lea r2, _spritelist
-iadd r1, r2
-st.w [r1], r0
-lea r0, main_posY
-ld.w r0, [r0]
-ld.w r1, 0x4b0
-ld.w r2, 0x2
-iadd r1, r2
-lea r2, _spritelist
-iadd r1, r2
-st.w [r1], r0
-lea r0, main_posX
-ld.w r0, [r0]
-ld.w r1, 0x10
+lea r1, main_posX
 iadd r0, r1
-ld.w r1, 0x4b6
-ld.w r2, 0x0
+ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0x4aa
+lea r2, main_i
+ld.w r2, [r2]
+ld.w r3, 0x6
+imul r2, r3
 iadd r1, r2
-lea r2, _spritelist
-iadd r1, r2
-st.w [r1], r0
-lea r0, main_posY
-ld.w r0, [r0]
-ld.w r1, 0x4b6
 ld.w r2, 0x2
 iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
+lea r0, main_i
+ld.w r0, [r0]
+ld.w r1, 0x2
+iadd r0, r1
+lea r1, main_i
+st.w [r1], r0
+jmp beginwhile00000002
+
+@LABEL endwhile00000003
 lea r0, main_frame
 ld.w r0, [r0]
 ld.w r1, 0x5
@@ -177,7 +237,7 @@ imod r0, r1
 ld.w r1, 0x1
 cmp r0, r1
 test r0, equal
-jmpifnot endif00000002, r0
+jmpifnot endif00000004, r0
 ld.w r0, 0x4
 ld.w r1, 0x498
 ld.w r2, 0x4
@@ -185,9 +245,9 @@ iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
-jmp exitif00000003
+jmp exitif00000005
 
-@LABEL endif00000002
+@LABEL endif00000004
 ld.w r0, 0x6
 ld.w r1, 0x498
 ld.w r2, 0x4
@@ -196,9 +256,9 @@ lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
 
-@LABEL exitif00000003
+@LABEL exitif00000005
 lea r0, _spritelist
-ld.w r1, 0xca
+ld.w r1, 0xd6
 sprite r0, r1
 lea r0, main_frame
 ld.w r0, [r0]
@@ -209,9 +269,9 @@ vsync
 lea r0, main_frame
 ld.w r0, [r0]
 fsel r0
-jmp beginwhile00000004
+jmp beginwhile00000006
 
-@LABEL endwhile00000005
+@LABEL endwhile00000007
 ret 
 
 #-------------Symbol Table-------------
@@ -231,7 +291,7 @@ ret
 # variable 'bcolor', dim:1 typename:word refcount:5
 @LABEL _bcolor
 @DW 0x0000 
-# variable 'spritelist', dim:606 typename:word refcount:11
+# variable 'spritelist', dim:642 typename:word refcount:7
 @LABEL _spritelist
 @DW 0x0000 0x0000 0x0006 0x0000 0x0010 0x0006 0x0000 0x0020 
 @DW 0x0006 0x0000 0x0030 0x0006 0x0000 0x0040 0x0006 0x0000 
@@ -308,7 +368,12 @@ ret
 @DW 0x0000 0x0000 0x0000 0x0010 0x0000 0x0001 0x0000 0x0010 
 @DW 0x0002 0x0010 0x0010 0x0003 0x001A 0x0015 0x0004 0x002A 
 @DW 0x0015 0x0005 0x000F 0x0025 0x0007 0x001F 0x0025 0x0008 
-@DW 0x001F 0x0025 0x0007 0x002F 0x0025 0x0008 
+@DW 0x001F 0x0015 0x0007 0x002F 0x0015 0x0008 0x003F 0x0035 
+@DW 0x0007 0x004F 0x0035 0x0008 0x005F 0x0055 0x0007 0x006F 
+@DW 0x0055 0x0008 0x0000 0x0085 0x0007 0x0010 0x0085 0x0008 
+@DW 0x0010 0x0005 0x0007 0x0020 0x0005 0x0008 0x0030 0x0045 
+@DW 0x0007 0x0040 0x0045 0x0008 0x0050 0x0075 0x0007 0x0060 
+@DW 0x0075 0x0008 
 # variable 'mysprites', dim:2304 typename:byte refcount:1
 @LABEL _mysprites
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
@@ -458,15 +523,18 @@ ret
 # variable 'frame', dim:1 typename:word refcount:4
 @LABEL main_frame
 @DW 0x0000 
-# variable 'posX', dim:1 typename:word refcount:8
+# variable 'i', dim:1 typename:word refcount:26
+@LABEL main_i
+@DW 0xCDCDCDCD 
+# variable 'posX', dim:8 typename:word refcount:6
 @LABEL main_posX
-@DW 0x0080 
-# variable 'dirX', dim:1 typename:word refcount:3
+@DW 0x0080 0x005C 0x003F 0x0012 0x006C 0x000C 0x002B 0x001F 
+# variable 'dirX', dim:8 typename:word refcount:3
 @LABEL main_dirX
-@DW 0x0001 
-# variable 'posY', dim:1 typename:word refcount:8
+@DW 0x0001 0x0002 0x0001 0x0002 0x0002 0x0004 0x0003 0x0003 
+# variable 'posY', dim:8 typename:word refcount:6
 @LABEL main_posY
-@DW 0x0040 
-# variable 'dirY', dim:1 typename:word refcount:3
+@DW 0x0040 0x002C 0x0020 0x0018 0x0033 0x004C 0x005E 0x0029 
+# variable 'dirY', dim:8 typename:word refcount:3
 @LABEL main_dirY
-@DW 0x0001 
+@DW 0x0002 0x0001 0x0001 0x0003 0x0002 0x0002 0x0003 0x0004 

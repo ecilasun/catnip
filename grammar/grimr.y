@@ -1845,12 +1845,17 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();
 
-			/*if (var->m_TypeName != TN_BYTE)
+			/*if (var->m_TypeName != TN_BYTE && var->m_TypeName != TN_BYTEPTR)
 			{
-				// Need to multiply address by two for WORD
-				node->m_Instructions += std::string("\n") + Opcodes[OP_MUL] + " " + srcA + ", 2";
-				g_ASC.m_InstructionCount+=1;
+				// Need to multiply address by two for WORD or four for DWORD
+				if (var->m_TypeName == TN_WORD || var->m_TypeName == TN_WORDPTR)
+					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + ".w r15, 0x2";
+				else
+					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + ".w r15, 0x4";
+				node->m_Instructions += std::string("\n") + Opcodes[OP_MUL] + " " + srcA + ", r15";
+				g_ASC.m_InstructionCount+=2;
 			}*/
+
 			node->m_Instructions += std::string("\n") + Opcodes[OP_ADD] + " " + srcA + ", " + srcB;
 			g_ASC.m_InstructionCount+=1;
 			g_ASC.PushRegister(); // re-use srcA as target
@@ -1859,7 +1864,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
 				std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
-				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + srcA + ", [" + srcA + "] # RHS, valueof";
+				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + srcA + ", [" + srcA + "] # RHS array access, valueof: " + width;
 				g_ASC.m_InstructionCount+=1;
 			}
 		}
