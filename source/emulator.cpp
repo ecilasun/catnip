@@ -1365,7 +1365,7 @@ void CPUMain()
 					}
 					else
 					{
-						if ((sram_rdata&0xFF) != 0xFF) // TODO: Make mask color code controlled
+						if ((sram_rdata&0xFF) != 0xFF && sprite_current_id!=0xFFFF) // TODO: Make mask color code controlled
 						{
 							framebuffer_address = ((sprite_current_y+((sprite_list_el&0xF0)>>4))<<8) + (sprite_current_x+(sprite_list_el&0x0F));
 							framebuffer_writeena = 1;
