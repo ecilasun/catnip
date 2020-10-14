@@ -1,4 +1,4 @@
-# Instruction count: 160
+# Instruction count: 234
 
 @ORG 0x00000000
 
@@ -28,9 +28,9 @@ st.b [r1], r0
 lea r0, _mysprites
 spritesheet r0
 
-@LABEL beginwhile00000002
+@LABEL beginwhile00000004
 ld.w r0, 0x1
-jmpifnot endwhile00000003, r0
+jmpifnot endwhile00000005, r0
 lea r0, _bcolor
 ld.w r0, [r0]
 ld.w r1, 0x0
@@ -134,8 +134,71 @@ iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
+lea r0, main_posX
+ld.w r0, [r0]
+ld.w r1, 0x4b0
+ld.w r2, 0x0
+iadd r1, r2
+lea r2, _spritelist
+iadd r1, r2
+st.w [r1], r0
+lea r0, main_posY
+ld.w r0, [r0]
+ld.w r1, 0x4b0
+ld.w r2, 0x2
+iadd r1, r2
+lea r2, _spritelist
+iadd r1, r2
+st.w [r1], r0
+lea r0, main_posX
+ld.w r0, [r0]
+ld.w r1, 0x10
+iadd r0, r1
+ld.w r1, 0x4b6
+ld.w r2, 0x0
+iadd r1, r2
+lea r2, _spritelist
+iadd r1, r2
+st.w [r1], r0
+lea r0, main_posY
+ld.w r0, [r0]
+ld.w r1, 0x4b6
+ld.w r2, 0x2
+iadd r1, r2
+lea r2, _spritelist
+iadd r1, r2
+st.w [r1], r0
+lea r0, main_frame
+ld.w r0, [r0]
+ld.w r1, 0x5
+bsr r0, r1
+ld.w r1, 0x2
+imod r0, r1
+ld.w r1, 0x1
+cmp r0, r1
+test r0, equal
+jmpifnot endif00000002, r0
+ld.w r0, 0x4
+ld.w r1, 0x498
+ld.w r2, 0x4
+iadd r1, r2
+lea r2, _spritelist
+iadd r1, r2
+st.w [r1], r0
+jmp exitif00000003
+
+@LABEL endif00000002
+ld.w r0, 0x6
+ld.w r1, 0x498
+ld.w r2, 0x4
+iadd r1, r2
+lea r2, _spritelist
+iadd r1, r2
+st.w [r1], r0
+
+@LABEL exitif00000003
 lea r0, _spritelist
-ld.w r1, 0xc8
+ld.w r1, 0xca
 sprite r0, r1
 lea r0, main_frame
 ld.w r0, [r0]
@@ -146,9 +209,9 @@ vsync
 lea r0, main_frame
 ld.w r0, [r0]
 fsel r0
-jmp beginwhile00000002
+jmp beginwhile00000004
 
-@LABEL endwhile00000003
+@LABEL endwhile00000005
 ret 
 
 #-------------Symbol Table-------------
@@ -168,7 +231,7 @@ ret
 # variable 'bcolor', dim:1 typename:word refcount:5
 @LABEL _bcolor
 @DW 0x0000 
-# variable 'spritelist', dim:600 typename:word refcount:5
+# variable 'spritelist', dim:606 typename:word refcount:11
 @LABEL _spritelist
 @DW 0x0000 0x0000 0x0006 0x0000 0x0010 0x0006 0x0000 0x0020 
 @DW 0x0006 0x0000 0x0030 0x0006 0x0000 0x0040 0x0006 0x0000 
@@ -245,6 +308,7 @@ ret
 @DW 0x0000 0x0000 0x0000 0x0010 0x0000 0x0001 0x0000 0x0010 
 @DW 0x0002 0x0010 0x0010 0x0003 0x001A 0x0015 0x0004 0x002A 
 @DW 0x0015 0x0005 0x000F 0x0025 0x0007 0x001F 0x0025 0x0008 
+@DW 0x001F 0x0025 0x0007 0x002F 0x0025 0x0008 
 # variable 'mysprites', dim:2304 typename:byte refcount:1
 @LABEL _mysprites
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
@@ -391,16 +455,16 @@ ret
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
-# variable 'frame', dim:1 typename:word refcount:3
+# variable 'frame', dim:1 typename:word refcount:4
 @LABEL main_frame
 @DW 0x0000 
-# variable 'posX', dim:1 typename:word refcount:6
+# variable 'posX', dim:1 typename:word refcount:8
 @LABEL main_posX
 @DW 0x0080 
 # variable 'dirX', dim:1 typename:word refcount:3
 @LABEL main_dirX
 @DW 0x0001 
-# variable 'posY', dim:1 typename:word refcount:6
+# variable 'posY', dim:1 typename:word refcount:8
 @LABEL main_posY
 @DW 0x0040 
 # variable 'dirY', dim:1 typename:word refcount:3

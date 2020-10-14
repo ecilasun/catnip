@@ -222,9 +222,11 @@ word spritelist[] = {
     // Potted plant
     0x001A, 0x0015, 0x0004,
     0x002A, 0x0015, 0x0005,
-    // Character
+    // Characters
     0x000F, 0x0025, 0x0007,
-    0x001F, 0x0025, 0x0008
+    0x001F, 0x0025, 0x0008,
+    0x001F, 0x0025, 0x0007,
+    0x002F, 0x0025, 0x0008
 };
 
 byte mysprites[] = {
@@ -428,9 +430,24 @@ def main()
         spritelist[0x4AA+0] = posY+16;
         spritelist[0x4AA+2] = posX;
 
+        spritelist[0x4B0+0] = posX;
+        spritelist[0x4B0+2] = posY;
+        spritelist[0x4B6+0] = posX+16;
+        spritelist[0x4B6+2] = posY;
+
+        // Blink a sprite
+        if (((frame>>5)%0x2) == 1)
+        {
+            spritelist[0x498+4] = 4;
+        }
+        else
+        {
+            spritelist[0x498+4] = 6;
+        }
+
         // Draw all sprites in the list
         //sprite(&spritelist, 0x2); //12*99, 0x2
-        sprite(&spritelist, 0xC8);
+        sprite(&spritelist, 0xCA);
 
         // Advance frame counter, wait for vsync
         frame = ++frame;
