@@ -4,10 +4,10 @@
 */
 
 byteptr VRAM = 0x80000000;
+byteptr ARAM = 0x40000000;
 byteptr BORDERCOLOR = 0x8000C000;
 byteptr VBSENABLE = 0x8000C001;
 dwordptr VBLANKSERVICE = 0x8000C004;
-word bcolor = 0;
 
 word spritelist[] = {
     // Sky
@@ -1511,32 +1511,48 @@ def main()
     // Sample uses only one sprite sheet, so we set it once
     spritesheet(&mysprites);
 
+    // Generate random noise sample in buffer 0
+    // At this point, playback is routed to buffer 1 so we should be quiet
+    i=0;
+    asel(0);
+    while(i<2048)
+    {
+        ARAM[i*2+0] = (i<<2)+(i>>1);
+        ARAM[i*2+1] = (i<<2)+(i<<1);
+        i = ++i;
+    }
+    //asel(1);
+
+    // Set border color for both framebuffers
+    fsel(1);
+    BORDERCOLOR[0] = 0x5B;
+    fsel(0);
+    BORDERCOLOR[0] = 0x5B;
+
     // No return
     while(1)
     {
         // If we're filling the whole screen there's no need for a CLF
         //clf(0xEC+frame);
 
-        // Set border color
-        BORDERCOLOR[0] = bcolor;
-
         // Handle bouncing sprites and change border color on collision
+        // Also triggers audio playback of buffer 0 by switching writes to buffer 0
         // Note that array offsets are in bytes, not indices!
         i = 0;
         while (i<16)
         {
             posY[i] = posY[i] + dirY[i];
-            if (posY[i] > 169 || posY[i] < 1)
+            if (posY[i] > 158 || posY[i] < 1)
             {
                 dirY[i] = -dirY[i];
-                bcolor = ++bcolor;
+                asel(1);
             }
 
             posX[i] = posX[i] + dirX[i];
             if (posX[i] > 240 || posX[i] < 1)
             {
                 dirX[i] = -dirX[i];
-                bcolor = ++bcolor;
+                asel(1);
             }
 
             // Update character positions with the bounce position
@@ -1584,6 +1600,9 @@ def main()
         // Advance frame counter, wait for vsync
         frame = ++frame;
         vsync();
+
+        // Turn off sound by switching to the 'quiet' bank after vblank (to give sufficient time for playback)
+        asel(0);
 
         // Swap frames to reveal what we've drawn so far
         // while simultaneously selecting the other frame for write

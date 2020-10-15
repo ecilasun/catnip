@@ -111,6 +111,11 @@ uint16_t framebuffer_writeena;
 uint8_t framebuffer_data;
 uint16_t cpu_lane_mask;
 
+uint16_t aram_select;
+uint16_t aram_address;
+uint16_t aram_writeena;
+uint8_t aram_data;
+
 // ROM unit
 uint16_t rom_out;
 uint16_t rom_addrs;
@@ -128,6 +133,7 @@ uint32_t s_VGAClockFallingEdge = 0;
 uint16_t *ROM;					// ROM
 uint8_t *SRAM;					// SRAM
 static uint8_t *VRAM;			// VRAM (Larger than FRAME_HEIGHT, including top and bottom borders)
+static uint8_t *ARAM;			// ARAM (Audio RAM, 4096 entries, double-buffered)
 int vga_x = 0;
 int vga_y = 0;
 SDL_Window *s_Window;
@@ -647,7 +653,22 @@ void execute(uint16_t instr)
 				case 5: // [r1] <- (byte)r2
 				{
 					bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
-					if (is_vram_address) // VRAM write (address>=0x80000000)
+					bool is_aram_address = (register_file[r1]&0x40000000)>>30 ? true:false;
+					if (is_aram_address) // ARAM write (0x40000000)
+					{
+						#if defined(DEBUG_EXECUTE)
+						printf("%.8X: st.b(aram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
+						#endif
+						aram_address = register_file[r1]&0x0000FFFF;
+						aram_writeena = 1;
+						aram_data = uint8_t(register_file[r2]&0x00FF);
+						sram_addr = IP + 2;
+						IP = IP + 2;
+						sram_enable_byteaddress = 0;
+						sram_read_req = 1;
+						cpu_state = CPU_FETCH_INSTRUCTION;
+					}
+					else if (is_vram_address) // VRAM write (0x80000000)
 					{
 						if ((register_file[r1]&0x0000FFFF) < 0xD000) // Only if within VRAM region
 						{
@@ -863,12 +884,12 @@ void execute(uint16_t instr)
 
 		case INST_IO:
 		{
-			uint16_t sub = (instr&0b0000000001110000)>>4; // [6:4]
-			uint16_t r1  = (instr&0b0000011110000000)>>7; // [10:7]
-			uint16_t r2  = (instr&0b0111100000000000)>>11; // [14:11]
+			uint16_t sub = (instr&0b0000000011110000)>>4; // [7:4]
+			uint16_t r1  = (instr&0b0000111100000000)>>8; // [11:8]
+			uint16_t r2  = (instr&0b1111000000000000)>>12; // [15:12]
 			switch(sub)
 			{
-				case 0b000: // VSYNC
+				case 0b0000: // VSYNC
 				{
 					#if defined(DEBUG_EXECUTE)
 					printf("%.8X: vsync\n", IP);
@@ -877,7 +898,7 @@ void execute(uint16_t instr)
 					cpu_state = CPU_WAIT_VSYNC;
 				}
 				break;
-				case 0b001: // IN
+				case 0b0001: // IN
 				{
 					#if defined(DEBUG_EXECUTE)
 					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
@@ -893,7 +914,7 @@ void execute(uint16_t instr)
 					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
-				case 0b010: // OUT
+				case 0b0010: // OUT
 				{
 					#if defined(DEBUG_EXECUTE)
 					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
@@ -909,7 +930,7 @@ void execute(uint16_t instr)
 					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
-				case 0b011: // FSEL
+				case 0b0011: // FSEL
 				{
 					#if defined(DEBUG_EXECUTE)
 					printf("%.8X: fsel r%d (%.8X)\n", IP, r1, register_file[r1]);
@@ -922,7 +943,7 @@ void execute(uint16_t instr)
 					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
-				case 0b100: // CLF
+				case 0b0100: // CLF
 				{
 					#if defined(DEBUG_EXECUTE)
 					printf("%.8X: clf r%d (%.8X)\n", IP, r1, register_file[r1]);
@@ -934,7 +955,7 @@ void execute(uint16_t instr)
 					cpu_state = CPU_CLEARVRAM;
 				}
 				break;
-				case 0b101: // SPRITE
+				case 0b0101: // SPRITE
 				{
 					#if defined(DEBUG_EXECUTE)
 					printf("%.8X: sprite r%d, r%d\n", IP, r1, r2);
@@ -952,7 +973,7 @@ void execute(uint16_t instr)
 					cpu_state = CPU_SPRITECOPY;
 				}
 				break;
-				case 0b110: // SPRITESHEET
+				case 0b0110: // SPRITESHEET
 				{
 					#if defined(DEBUG_EXECUTE)
 					printf("%.8X: spritesheet r%d\n", IP, r1);
@@ -965,11 +986,25 @@ void execute(uint16_t instr)
 					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
-				default: // Reserved
+				case 0b0111: // ASEL
 				{
 					#if defined(DEBUG_EXECUTE)
-					printf("%.8X: undefined IO\n", IP);
+					printf("%.8X: asel r%d (%.8X)\n", IP, r1, register_file[r1]);
 					#endif
+					aram_select = register_file[r1]&0x0001;
+					sram_addr = IP + 2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				}
+				break;
+				default: // RESERVED
+				{
+					#if defined(DEBUG_EXECUTE)
+					printf("%.8X: io(undef) r%d (%.8X)\n", IP, r1, register_file[r1]);
+					#endif
+					// ???
 					sram_addr = IP + 2;
 					IP = IP + 2;
 					sram_enable_byteaddress = 0;
@@ -1043,6 +1078,12 @@ void CPUMain()
 			framebuffer_writeena = 0;
 			framebuffer_data = 0;
 			cpu_lane_mask = 0x0000;
+
+			// Reset write cursor for audio buffer
+			aram_select = 0;
+			aram_address = 0x0000;
+			aram_writeena = 0;
+			aram_data = 0;
 
 			// Clear instruction and instruction data word
 			instruction = 0xFFFF;
@@ -1141,6 +1182,7 @@ void CPUMain()
 			target_register = 0;
 			sram_read_req = 0;
 			framebuffer_writeena = 0;
+			aram_writeena = 0;
 			if (sram_addr == 0x7FFFF)
 				cpu_state = CPU_FETCH_INSTRUCTION; // Spin here
 			else
@@ -1392,7 +1434,7 @@ void MemoryMain()
 		return;
 
 	// --------------------------------------------------------------
-	// Update ROM/SRAM/VRAM memory access for next pass
+	// Update ROM/SRAM/VRAM/ARAM memory access for next pass
 	// --------------------------------------------------------------
 
 	// ROM read access
@@ -1437,6 +1479,10 @@ void MemoryMain()
 			}
 		}
 	}
+
+	// TODO: ARAM write access
+	if (aram_writeena)
+		ARAM[(1-aram_select)*4096+aram_address] = aram_data;
 
 	// VRAM write access
 	if (framebuffer_writeena)
@@ -1509,7 +1555,7 @@ int RunDevice(void *data)
 		ClockMain();	// Clock ticks first (rising/falling edge)
 		CPUMain();		// CPU state machine
 		VideoMain();	// Video scan out (to tie it with 'read old data' in dualport VRAM in hardware, memory writes come after)
-		MemoryMain();	// Update all memory (SRAM/VRAM) after video data is processed
+		MemoryMain();	// Update all memory (SRAM/VRAM/ARAM) after video data is processed
 	}
 	return 0;
 }
@@ -1545,6 +1591,16 @@ bool StepEmulator()
 	return s_Done ? false : true;
 }
 
+void MyAudioCallback(void*  userdata,
+                       Uint8* stream,
+                       int    len)
+{
+	float *output = (float*)stream;
+	int count = len/sizeof(float); // bytes to indices
+	for(int i=0; i<count; ++i)
+		output[i] = (float)ARAM[aram_select*4096 + i]/256.f;
+}
+
 bool InitEmulator(uint16_t *_rom_binary)
 {
 	s_SystemClock	= 0b10101010101010101010101010101010;	// 50Mhz corresponds to this bit frequency
@@ -1556,10 +1612,15 @@ bool InitEmulator(uint16_t *_rom_binary)
 	vga_x = 0;
 	vga_y = 0;
 
-	// Init VRAM with default 'NEKOv1' pattern
+	// Init VRAM
 	VRAM = new uint8_t[0xFFFF * 2];
 	for (uint32_t i=0;i<0xFFFF * 2;++i)
-		VRAM[i] = 0xEC;//RGBCOLOR(i%3,(i>>1)%3,(i>>2)%2);
+		VRAM[i] = 0;
+
+	// Init ARAM
+	ARAM = new uint8_t[4096 * 2];
+	for (uint32_t i=0;i<4096 * 2;++i)
+		ARAM[i] = 0;
 
 	// Init SRAM to all zeros
 	SRAM = new uint8_t[0x7FFFF];
@@ -1577,7 +1638,7 @@ bool InitEmulator(uint16_t *_rom_binary)
 	rom_out = 0;
 
 	// Start SDL
-	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
 	{
 		printf("Failed to initialize SDL video: %s\n", SDL_GetError());
 		return false;
@@ -1595,6 +1656,27 @@ bool InitEmulator(uint16_t *_rom_binary)
 			printf("Failed to create SDL window: %s\n", SDL_GetError());
 			return false;
 		}
+	}
+
+	SDL_AudioSpec want, have;
+	SDL_AudioDeviceID dev;
+	SDL_memset(&want, 0, sizeof(want)); /* or SDL_zero(want) */
+	want.freq = 44000;
+	want.format = AUDIO_F32;
+	want.channels = 2;
+	want.samples = 2048; // *2 for stereo
+	want.callback = MyAudioCallback; /* you wrote this function elsewhere -- see SDL_AudioSpec for details */
+
+	dev = SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+	if (dev == 0) {
+		SDL_Log("Failed to open audio: %s", SDL_GetError());
+	} else {
+		if (have.format != want.format) { /* we let this one thing change. */
+			SDL_Log("We didn't get correct audio format.");
+		}
+		SDL_PauseAudioDevice(dev, 0); /* start audio playing. */
+		//SDL_Delay(1000);
+		//SDL_CloseAudioDevice(dev);
 	}
 
 	 if (SDL_MUSTLOCK(s_Surface))
@@ -1615,6 +1697,7 @@ void TerminateEmulator()
 	SDL_Quit();
 	
 	// Clean up memory
+	delete []ARAM;
 	delete []VRAM;
 	delete []SRAM;
 	delete []ROM;

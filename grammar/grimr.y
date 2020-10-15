@@ -203,6 +203,7 @@ enum EOpcode
 	OP_DATAARRAY,
 	OP_RETURN,
 	OP_FSEL,
+	OP_ASEL,
 	OP_CLF,
 	OP_SPRITE,
 	OP_SPRITESHEET,
@@ -258,6 +259,7 @@ const std::string Opcodes[]={
 	"dataarray",
 	"ret",
 	"fsel",
+	"asel",
 	"clf",
 	"sprite",
 	"spritesheet",
@@ -550,7 +552,7 @@ SASTScanContext g_ASC;
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
 %token DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
-%token VSYNC FSEL CLF SPRITE SPRITESHEET
+%token VSYNC FSEL ASEL CLF SPRITE SPRITESHEET
 %token INC_OP DEC_OP
 
 %type <astnode> simple_identifier
@@ -1268,8 +1270,8 @@ variable_declaration
 																										if (n0->m_Type == EN_DeclArray)
 																										{
 																											var->m_Dimension = strtoul(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
-																											for (int i=0;i<var->m_Dimension;++i)
-																												var->m_InitialValues.push_back(0xCDCDCDCD);
+																											/*for (int i=0;i<var->m_Dimension;++i)
+																												var->m_InitialValues.push_back(0xCDCDCDCD);*/
 																										}
 																										else if (n0->m_Type == EN_DeclInitJunction)
 																										{
@@ -1298,8 +1300,8 @@ variable_declaration
 																											}
 																										}
 																									}
-																									else
-																										var->m_InitialValues.push_back(0xCDCDCDCD);
+																									/*else
+																										var->m_InitialValues.push_back(0xCDCDCDCD);*/
 
 																									$$->m_Opcode = OP_DECL;
 																									//g_ASC.PushNode($$); // Variable already added to var stack
@@ -1328,8 +1330,8 @@ variable_declaration
 																										if (n0->m_Type == EN_DeclArray)
 																										{
 																											var->m_Dimension = strtoul(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
-																											for (int i=0;i<var->m_Dimension;++i)
-																												var->m_InitialValues.push_back(0xCDCDCDCD);
+																											/*for (int i=0;i<var->m_Dimension;++i)
+																												var->m_InitialValues.push_back(0xCDCDCDCD);*/
 																										}
 																										else if (n0->m_Type == EN_DeclInitJunction)
 																										{
@@ -1358,8 +1360,8 @@ variable_declaration
 																											}
 																										}
 																									}
-																									else
-																										var->m_InitialValues.push_back(0xCDCDCDCD);
+																									//else
+																									//	var->m_InitialValues.push_back(0xCDCDCDCD);
 
 																									$$->m_Opcode = OP_DECL;
 																									//g_ASC.PushNode($$); // Variable already added to var stack
@@ -1471,6 +1473,11 @@ builtin_statement
 	| FSEL '(' expression ')' ';'																{
 																									$$ = new SASTNode(EN_FrameSelect, "");
 																									$$->m_Opcode = OP_FSEL;
+																									g_ASC.PushNode($$);
+																								}
+	| ASEL '(' expression ')' ';'																{
+																									$$ = new SASTNode(EN_FrameSelect, "");
+																									$$->m_Opcode = OP_ASEL;
 																									g_ASC.PushNode($$);
 																								}
 	| CLF '(' expression ')' ';'																{
@@ -1958,6 +1965,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		}
 		break;
 
+		case OP_ASEL:
 		case OP_FSEL:
 		case OP_CLF:
 		case OP_SPRITESHEET:
@@ -2120,7 +2128,7 @@ bool CompileGrimR(const char *_filename)
 				if (var->m_InitialValues.size()==0)
 				{
 					for (int i=0;i<var->m_Dimension;++i)
-						fprintf(fp, "0xCDCD 0xCDCD ");
+						fprintf(fp, "0xCDCD ");
 				}
 				fprintf(fp, "\n");
 			}
@@ -2142,8 +2150,10 @@ bool CompileGrimR(const char *_filename)
 				}
 				if (var->m_InitialValues.size()==0)
 				{
-					for (int i=0;i<var->m_Dimension;++i)
-						fprintf(fp, "0xCDCD 0xCDCD ");
+					int count = var->m_Dimension/2;
+					count = count==0 ? 1 : count;
+					for (int i=0;i<count;++i)
+						fprintf(fp, "0xCDCD ");
 				}
 				fprintf(fp, "\n");
 			}

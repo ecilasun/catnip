@@ -1,4 +1,4 @@
-# Instruction count: 441
+# Instruction count: 508
 
 @ORG 0x00000000
 
@@ -27,28 +27,96 @@ iadd r1, r2
 st.b [r1], r0
 lea r0, _mysprites
 spritesheet r0
+ld.w r0, 0x0
+lea r1, main_i
+st.w [r1], r0
+ld.w r0, 0x0
+asel r0
 
-@LABEL beginwhile00000006
-ld.w r0, 0x1
-jmpifnot endwhile00000007, r0
-lea r0, _bcolor
+@LABEL beginwhile00000000
+lea r0, main_i
 ld.w r0, [r0]
+ld.w r1, 0x800
+cmp r0, r1
+test r0, less
+jmpifnot endwhile00000001, r0
+lea r0, main_i
+ld.w r0, [r0]
+ld.w r1, 0x2
+bsl r0, r1
+lea r1, main_i
+ld.w r1, [r1]
+ld.w r2, 0x1
+bsr r1, r2
+iadd r0, r1
+lea r1, main_i
+ld.w r1, [r1]
+ld.w r2, 0x2
+imul r1, r2
+ld.w r2, 0x0
+iadd r1, r2
+lea r2, _ARAM
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0
+lea r0, main_i
+ld.w r0, [r0]
+ld.w r1, 0x2
+bsl r0, r1
+lea r1, main_i
+ld.w r1, [r1]
+ld.w r2, 0x1
+bsl r1, r2
+iadd r0, r1
+lea r1, main_i
+ld.w r1, [r1]
+ld.w r2, 0x2
+imul r1, r2
+ld.w r2, 0x1
+iadd r1, r2
+lea r2, _ARAM
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0
+lea r0, main_i
+ld.w r0, [r0]
+inc r0
+lea r1, main_i
+st.w [r1], r0
+jmp beginwhile00000000
+
+@LABEL endwhile00000001
+ld.w r0, 0x1
+fsel r0
+ld.w r0, 0x5b
 ld.w r1, 0x0
 lea r2, _BORDERCOLOR
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
 ld.w r0, 0x0
+fsel r0
+ld.w r0, 0x5b
+ld.w r1, 0x0
+lea r2, _BORDERCOLOR
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0
+
+@LABEL beginwhile00000008
+ld.w r0, 0x1
+jmpifnot endwhile00000009, r0
+ld.w r0, 0x0
 lea r1, main_i
 st.w [r1], r0
 
-@LABEL beginwhile00000002
+@LABEL beginwhile00000004
 lea r0, main_i
 ld.w r0, [r0]
 ld.w r1, 0x10
 cmp r0, r1
 test r0, less
-jmpifnot endwhile00000003, r0
+jmpifnot endwhile00000005, r0
 lea r0, main_i
 ld.w r0, [r0]
 lea r1, main_posY
@@ -70,7 +138,7 @@ ld.w r0, [r0]
 lea r1, main_posY
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
-ld.w r1, 0xa9
+ld.w r1, 0x9e
 cmp r0, r1
 test r0, greater
 lea r1, main_i
@@ -82,7 +150,7 @@ ld.w r2, 0x1
 cmp r1, r2
 test r1, less
 or r0, r1
-jmpifnot endif00000000, r0
+jmpifnot endif00000002, r0
 lea r0, main_i
 ld.w r0, [r0]
 lea r1, main_dirY
@@ -94,13 +162,10 @@ ld.w r1, [r1]
 lea r2, main_dirY
 iadd r1, r2
 st.w [r1], r0
-lea r0, _bcolor
-ld.w r0, [r0]
-inc r0
-lea r1, _bcolor
-st.w [r1], r0
+ld.w r0, 0x1
+asel r0
 
-@LABEL endif00000000
+@LABEL endif00000002
 lea r0, main_i
 ld.w r0, [r0]
 lea r1, main_posX
@@ -134,7 +199,7 @@ ld.w r2, 0x1
 cmp r1, r2
 test r1, less
 or r0, r1
-jmpifnot endif00000001, r0
+jmpifnot endif00000003, r0
 lea r0, main_i
 ld.w r0, [r0]
 lea r1, main_dirX
@@ -146,13 +211,10 @@ ld.w r1, [r1]
 lea r2, main_dirX
 iadd r1, r2
 st.w [r1], r0
-lea r0, _bcolor
-ld.w r0, [r0]
-inc r0
-lea r1, _bcolor
-st.w [r1], r0
+ld.w r0, 0x1
+asel r0
 
-@LABEL endif00000001
+@LABEL endif00000003
 lea r0, main_i
 ld.w r0, [r0]
 lea r1, main_posY
@@ -273,9 +335,9 @@ ld.w r1, 0x2
 iadd r0, r1
 lea r1, main_i
 st.w [r1], r0
-jmp beginwhile00000002
+jmp beginwhile00000004
 
-@LABEL endwhile00000003
+@LABEL endwhile00000005
 lea r0, main_frame
 ld.w r0, [r0]
 ld.w r1, 0x5
@@ -285,7 +347,7 @@ imod r0, r1
 ld.w r1, 0x1
 cmp r0, r1
 test r0, equal
-jmpifnot endif00000004, r0
+jmpifnot endif00000006, r0
 ld.w r0, 0x3f
 ld.w r1, 0x498
 ld.w r2, 0x4
@@ -293,9 +355,9 @@ iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
-jmp exitif00000005
+jmp exitif00000007
 
-@LABEL endif00000004
+@LABEL endif00000006
 lea r0, main_seed
 ld.w r0, [r0]
 lea r1, main_seed
@@ -370,8 +432,7 @@ iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
-ld.w r0, 0x1
-ineg r0
+ld.w r0, 0xffff
 ld.w r1, 0x498
 ld.w r2, 0x4
 iadd r1, r2
@@ -379,7 +440,7 @@ lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
 
-@LABEL exitif00000005
+@LABEL exitif00000007
 lea r0, _spritelist
 ld.w r1, 0xd6
 sprite r0, r1
@@ -389,12 +450,14 @@ inc r0
 lea r1, main_frame
 st.w [r1], r0
 vsync 
+ld.w r0, 0x0
+asel r0
 lea r0, main_frame
 ld.w r0, [r0]
 fsel r0
-jmp beginwhile00000006
+jmp beginwhile00000008
 
-@LABEL endwhile00000007
+@LABEL endwhile00000009
 ret 
 
 #-------------Symbol Table-------------
@@ -402,7 +465,10 @@ ret
 # function 'vblank', hash: D127AEAD, refcount: 2
 # function 'main', hash: BC76E6BA, refcount: 1
 # variable 'VRAM', dim:1 typename:byteptr refcount:0
-# variable 'BORDERCOLOR', dim:1 typename:byteptr refcount:1
+# variable 'ARAM', dim:1 typename:byteptr refcount:2
+@LABEL _ARAM
+@DW 0x4000 0x0000
+# variable 'BORDERCOLOR', dim:1 typename:byteptr refcount:2
 @LABEL _BORDERCOLOR
 @DW 0x8000 0xC000
 # variable 'VBSENABLE', dim:1 typename:byteptr refcount:1
@@ -411,9 +477,6 @@ ret
 # variable 'VBLANKSERVICE', dim:1 typename:dwordptr refcount:1
 @LABEL _VBLANKSERVICE
 @DW 0x8000 0xC004
-# variable 'bcolor', dim:1 typename:word refcount:5
-@LABEL _bcolor
-@DW 0x0000 
 # variable 'spritelist', dim:642 typename:word refcount:11
 @LABEL _spritelist
 @DW 0x0000 0x0000 0x0030 0x0000 0x0010 0x0030 0x0000 0x0020 
@@ -1750,9 +1813,9 @@ ret
 # variable 'frame', dim:1 typename:word refcount:6
 @LABEL main_frame
 @DW 0x0000 
-# variable 'i', dim:1 typename:word refcount:30
+# variable 'i', dim:1 typename:word refcount:40
 @LABEL main_i
-@DW 0xCDCDCDCD 
+@DW 0xCDCD 
 # variable 'posX', dim:8 typename:word refcount:6
 @LABEL main_posX
 @DW 0x0000 0x005C 0x003F 0x0012 0x006C 0x000C 0x002B 0x001F 

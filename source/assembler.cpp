@@ -952,7 +952,7 @@ public:
 		{
 			int portaddress=0, r1=0;
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
-			unsigned short code = m_Opcode | 0x0030 | (r1<<7);
+			unsigned short code = m_Opcode | 0x0030 | (r1<<8);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;
 			return 2;
@@ -962,7 +962,7 @@ public:
 		{
 			int portaddress=0, r1=0;
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
-			unsigned short code = m_Opcode | 0x0040 | (r1<<7);
+			unsigned short code = m_Opcode | 0x0040 | (r1<<8);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;
 			return 2;
@@ -974,7 +974,7 @@ public:
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "%x", &portaddress);
 
-			unsigned short code = m_Opcode | 0x0010 | (r1<<7);
+			unsigned short code = m_Opcode | 0x0010 | (r1<<8);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;
 			_binary_output[_current_binary_offset++] = (portaddress&0xFF00)>>8;
@@ -988,7 +988,7 @@ public:
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "%x", &portaddress);
 			sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r1);
 
-			unsigned short code = m_Opcode | 0x0020 | (r1<<7);
+			unsigned short code = m_Opcode | 0x0020 | (r1<<8);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;
 			_binary_output[_current_binary_offset++] = (portaddress&0xFF00)>>8;
@@ -1001,7 +1001,7 @@ public:
 			int r1=0;
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 
-			unsigned short code = m_Opcode | 0x0060 | (r1<<7);
+			unsigned short code = m_Opcode | 0x0060 | (r1<<8);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;
 			return 2;
@@ -1013,10 +1013,20 @@ public:
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 			sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
 
-			unsigned short code = m_Opcode | 0x0050 | (r1<<7) | (r2<<11);
+			unsigned short code = m_Opcode | 0x0050 | (r1<<8) | (r2<<12);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;
 			return 3;
+		}
+
+		if(strcmp(_parser_table[_current_parser_offset].m_Value, "asel") == 0)
+		{
+			int portaddress=0, r1=0;
+			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+			unsigned short code = m_Opcode | 0x0070 | (r1<<8);
+			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
+			_binary_output[_current_binary_offset++] = code&0x00FF;
+			return 2;
 		}
 
 		printf("ERROR: Unknown variant in CIOOp class of instructions\n");
@@ -1135,6 +1145,7 @@ const SAssemblerPair keywords[] =
 	{{"clf"}, &s_ioop},
 	{{"sprite"}, &s_ioop},
 	{{"spritesheet"}, &s_ioop},
+	{{"asel"}, &s_ioop},
 
 	{{"unused1"}, &s_nilop},
 	{{"unused2"}, &s_nilop},

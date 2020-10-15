@@ -117,11 +117,11 @@ def build(bld):
         linker_flags = ['/LTCG', '/RELEASE']
 
         # DEBUG - vcc
-        # compile_flags = ['/permissive-', '/std:c++17', '/arch:AVX',
-        #                  '/GL', '/WX', '/Od', '/DDEBUG', '/fp:fast',
-        #                  '/Qfast_transcendentals', '/Zi', '/Gs',
-        #                  '/EHsc', '/FS']
-        # linker_flags = ['/DEBUG']
+        #compile_flags = ['/permissive-', '/std:c++17', '/arch:AVX',
+        #                 '/GL', '/WX', '/Od', '/DDEBUG', '/fp:fast',
+        #                 '/Qfast_transcendentals', '/Zi', '/Gs',
+        #                 '/EHsc', '/FS']
+        #linker_flags = ['/DEBUG']
 
         # RELEASE - clang
         # compile_flags = ['-std=c++17', '-g',

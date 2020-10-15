@@ -584,16 +584,24 @@ test r2, greater equal
 ---
 ## IO Operations
 ```
-? 0000 0000 000 1000
-  |    |    |   IO
-  rB   rA   000:VSYNC
-  E:B  A:7  001:IN rA PORTADDRESS(next WORD in memory)
-            010:OUT rA PORTADDRESS(next WORD in memory)
-            011:FSEL rA
-            100:CLF rA
-            101:SPRITE rA, rB
-            110:SPRITESHEET rA
-            111: RESERVED
+0000 0000 0000 1000
+|    |    |   IO
+rB   rA   0000:VSYNC
+E:B  A:7  0001:IN rA PORTADDRESS(next WORD in memory)
+          0010:OUT rA PORTADDRESS(next WORD in memory)
+          0011:FSEL rA
+          0100:CLF rA
+          0101:SPRITE rA, rB
+          0110:SPRITESHEET rA
+          0111:ASEL rA
+          1000: RESERVED
+          1001: RESERVED
+          1010: RESERVED
+          1011: RESERVED
+          1100: RESERVED
+          1101: RESERVED
+          1110: RESERVED
+          1111: RESERVED
 ```
 
 ### VSYNC
@@ -634,3 +642,5 @@ For each sprite in the sheet, the following format is used:
 ```c
 {[256 bytes of 3:3:2 packed RGBA pixels for a single 16x16 sprite]}*N
 ```
+### ASEL rA
+Selects the current playback buffer for audio set by rA.
