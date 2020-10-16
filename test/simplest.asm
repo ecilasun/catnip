@@ -1,4 +1,4 @@
-# Instruction count: 557
+# Instruction count: 585
 
 @ORG 0x00000000
 
@@ -429,6 +429,30 @@ iadd r1, r2
 st.w [r1], r0
 
 @LABEL exitif00000007
+ld.w r0, 0x0
+ld.w r1, 0x0
+spriteorigin r0, r1
+lea r0, _spritelist
+ld.w r1, 0x30
+sprite r0, r1
+ld.w r0, 0x0
+ld.w r1, 0x30
+spriteorigin r0, r1
+lea r0, _spritelist
+ld.w r1, 0x30
+sprite r0, r1
+ld.w r0, 0x0
+ld.w r1, 0x60
+spriteorigin r0, r1
+lea r0, _spritelist
+ld.w r1, 0x30
+sprite r0, r1
+ld.w r0, 0x0
+ld.w r1, 0x90
+spriteorigin r0, r1
+lea r0, _spritelist
+ld.w r1, 0x30
+sprite r0, r1
 lea r0, main_scrollx
 ld.w r0, [r0]
 lea r1, main_scrolly
@@ -529,7 +553,7 @@ ret
 # variable 'seed', dim:1 typename:word refcount:12
 @LABEL _seed
 @DW 0x0007 
-# variable 'spritelist', dim:642 typename:word refcount:11
+# variable 'spritelist', dim:642 typename:word refcount:15
 @LABEL _spritelist
 @DW 0x0000 0x0000 0x0030 0x0000 0x0010 0x0030 0x0000 0x0020 
 @DW 0x0030 0x0000 0x0030 0x0030 0x0000 0x0040 0x0030 0x0000 
