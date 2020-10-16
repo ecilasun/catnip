@@ -100,13 +100,13 @@ uint32_t sprite_list_countup;
 uint32_t sprite_list_el;
 uint32_t sprite_sheet;
 uint32_t sprite_fetch_count;
-int32_t sprite_origin_x;
-int32_t sprite_origin_y;
-int32_t sprite_start_x;
-int32_t sprite_start_y;
-int32_t sprite_current_x;
-int32_t sprite_current_y;
-uint32_t sprite_current_id;
+int16_t sprite_origin_x;
+int16_t sprite_origin_y;
+int16_t sprite_start_x;
+int16_t sprite_start_y;
+int16_t sprite_current_x;
+int16_t sprite_current_y;
+uint16_t sprite_current_id;
 uint16_t sprite_state = SPRITE_IDLE;
 
 uint16_t framebuffer_select;
@@ -1406,7 +1406,7 @@ void CPUMain()
 
 				case SPRITE_READ_DATA:
 				{
-					sram_addr = sprite_sheet + sprite_current_id*256 + sprite_list_el;
+					sram_addr = sprite_sheet + (sprite_current_id<<8) + sprite_list_el;
 					sprite_current_x = sprite_start_x + (sprite_list_el&0x0F);
 					sprite_current_y = sprite_start_y + ((sprite_list_el&0xF0)>>4);
 					sram_read_req = 1;

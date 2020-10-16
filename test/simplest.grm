@@ -1603,6 +1603,15 @@ def main()
             //spritelist[0x49E+4] = 9;
         }
 
+        /*spriteorigin(0, 0);
+        sprite(&spritelist, 0x30);
+        spriteorigin(0, 0x30);
+        sprite(&spritelist, 0x30);
+        spriteorigin(0, 0x60);
+        sprite(&spritelist, 0x30);
+        spriteorigin(0, 0x90);
+        sprite(&spritelist, 0x30);*/
+
         // Set sprite origin
         spriteorigin(scrollx, scrolly);
         scrollx = scrollx + scrolldirx;
