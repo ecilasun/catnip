@@ -53,6 +53,7 @@ void stripquotes(char *string);
 "clf"						{ count();  return(CLF); }
 "spritesheet"				{ count();  return(SPRITESHEET); }
 "sprite"					{ count();  return(SPRITE); }
+"spriteorigin"				{ count();  return(SPRITEORIGIN); }
 
 "["							{ count();  return('['); }
 "]"							{ count();  return(']'); }

@@ -593,8 +593,8 @@ E:B  A:7  0001:IN rA PORTADDRESS(next WORD in memory)
           0100:CLF rA
           0101:SPRITE rA, rB
           0110:SPRITESHEET rA
-          0111:ASEL rA
-          1000: RESERVED
+          0111:ASEL rA, rB
+          1000:SPRITEORIGIN rA, rB
           1001: RESERVED
           1010: RESERVED
           1011: RESERVED
@@ -642,5 +642,8 @@ For each sprite in the sheet, the following format is used:
 ```c
 {[256 bytes of 3:3:2 packed RGBA pixels for a single 16x16 sprite]}*N
 ```
-### ASEL rA
-Selects the current playback buffer for audio set by rA.
+### ASEL rA. rB
+Selects the current playback buffer for audio set by rA, and also either enables or disables audio output depending on rB's value (either zero or one)
+
+### SPRITEORIGIN rA, rB
+This value is added to the positions of following sprites in the SPRITE rA, rB call to facilitate scrolling. When used on a series of background tiles, combined with in-hardware sprite clipping, it can produce 2D scroll effects. rA contains the X scroll value, and rB contains the Y scroll value.

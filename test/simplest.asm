@@ -1,4 +1,4 @@
-# Instruction count: 508
+# Instruction count: 559
 
 @ORG 0x00000000
 
@@ -15,6 +15,36 @@ jmp infloop
 @LABEL vblank
 ret 
 
+@LABEL numRand
+lea r0, _seed
+ld.w r0, [r0]
+lea r1, _seed
+ld.w r1, [r1]
+ld.w r2, 0x9
+bsl r1, r2
+xor r0, r1
+lea r1, _seed
+st.w [r1], r0
+lea r0, _seed
+ld.w r0, [r0]
+lea r1, _seed
+ld.w r1, [r1]
+ld.w r2, 0xd
+bsr r1, r2
+xor r0, r1
+lea r1, _seed
+st.w [r1], r0
+lea r0, _seed
+ld.w r0, [r0]
+lea r1, _seed
+ld.w r1, [r1]
+ld.w r2, 0x1
+bsl r1, r2
+xor r0, r1
+lea r1, _seed
+st.w [r1], r0
+ret 
+
 @LABEL main
 lea r0, vblank
 lea r1, _VBLANKSERVICE
@@ -27,11 +57,15 @@ iadd r1, r2
 st.b [r1], r0
 lea r0, _mysprites
 spritesheet r0
+ld.w r0, 0x1
+ld.w r1, 0x0
+asel r0, r1
+ld.w r0, 0x0
+ld.w r1, 0x0
+asel r0, r1
 ld.w r0, 0x0
 lea r1, main_i
 st.w [r1], r0
-ld.w r0, 0x0
-asel r0
 
 @LABEL beginwhile00000000
 lea r0, main_i
@@ -40,6 +74,7 @@ ld.w r1, 0x800
 cmp r0, r1
 test r0, less
 jmpifnot endwhile00000001, r0
+call numRand
 lea r0, main_i
 ld.w r0, [r0]
 ld.w r1, 0x2
@@ -48,6 +83,9 @@ lea r1, main_i
 ld.w r1, [r1]
 ld.w r2, 0x1
 bsr r1, r2
+iadd r0, r1
+lea r1, _seed
+ld.w r1, [r1]
 iadd r0, r1
 lea r1, main_i
 ld.w r1, [r1]
@@ -103,9 +141,11 @@ ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
 
-@LABEL beginwhile00000008
+@LABEL beginwhile0000000a
 ld.w r0, 0x1
-jmpifnot endwhile00000009, r0
+jmpifnot endwhile0000000b, r0
+ld.w r0, 0xec
+clf r0
 ld.w r0, 0x0
 lea r1, main_i
 st.w [r1], r0
@@ -163,7 +203,8 @@ lea r2, main_dirY
 iadd r1, r2
 st.w [r1], r0
 ld.w r0, 0x1
-asel r0
+ld.w r1, 0x1
+asel r0, r1
 
 @LABEL endif00000002
 lea r0, main_i
@@ -212,7 +253,8 @@ lea r2, main_dirX
 iadd r1, r2
 st.w [r1], r0
 ld.w r0, 0x1
-asel r0
+ld.w r1, 0x1
+asel r0, r1
 
 @LABEL endif00000003
 lea r0, main_i
@@ -358,34 +400,8 @@ st.w [r1], r0
 jmp exitif00000007
 
 @LABEL endif00000006
-lea r0, main_seed
-ld.w r0, [r0]
-lea r1, main_seed
-ld.w r1, [r1]
-ld.w r2, 0x9
-bsl r1, r2
-xor r0, r1
-lea r1, main_seed
-st.w [r1], r0
-lea r0, main_seed
-ld.w r0, [r0]
-lea r1, main_seed
-ld.w r1, [r1]
-ld.w r2, 0xd
-bsr r1, r2
-xor r0, r1
-lea r1, main_seed
-st.w [r1], r0
-lea r0, main_seed
-ld.w r0, [r0]
-lea r1, main_seed
-ld.w r1, [r1]
-ld.w r2, 0x1
-bsl r1, r2
-xor r0, r1
-lea r1, main_seed
-st.w [r1], r0
-lea r0, main_seed
+call numRand
+lea r0, _seed
 ld.w r0, [r0]
 ld.w r1, 0xf0
 imod r0, r1
@@ -395,34 +411,8 @@ iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
-lea r0, main_seed
-ld.w r0, [r0]
-lea r1, main_seed
-ld.w r1, [r1]
-ld.w r2, 0x9
-bsl r1, r2
-xor r0, r1
-lea r1, main_seed
-st.w [r1], r0
-lea r0, main_seed
-ld.w r0, [r0]
-lea r1, main_seed
-ld.w r1, [r1]
-ld.w r2, 0xd
-bsr r1, r2
-xor r0, r1
-lea r1, main_seed
-st.w [r1], r0
-lea r0, main_seed
-ld.w r0, [r0]
-lea r1, main_seed
-ld.w r1, [r1]
-ld.w r2, 0x1
-bsl r1, r2
-xor r0, r1
-lea r1, main_seed
-st.w [r1], r0
-lea r0, main_seed
+call numRand
+lea r0, _seed
 ld.w r0, [r0]
 ld.w r1, 0xb4
 imod r0, r1
@@ -441,6 +431,65 @@ iadd r1, r2
 st.w [r1], r0
 
 @LABEL exitif00000007
+lea r0, main_scrollx
+ld.w r0, [r0]
+lea r1, main_scrolly
+ld.w r1, [r1]
+spriteorigin r0, r1
+lea r0, main_scrollx
+ld.w r0, [r0]
+lea r1, main_scrolldirx
+ld.w r1, [r1]
+iadd r0, r1
+lea r1, main_scrollx
+st.w [r1], r0
+lea r0, main_scrollx
+ld.w r0, [r0]
+ld.w r1, 0x64
+cmp r0, r1
+test r0, greater
+lea r1, main_scrollx
+ld.w r1, [r1]
+ld.w r2, 0x64
+ineg r2
+cmp r1, r2
+test r1, less
+or r0, r1
+jmpifnot endif00000008, r0
+lea r0, main_scrolldirx
+ld.w r0, [r0]
+ineg r0
+lea r1, main_scrolldirx
+st.w [r1], r0
+
+@LABEL endif00000008
+lea r0, main_scrolly
+ld.w r0, [r0]
+lea r1, main_scrolldiry
+ld.w r1, [r1]
+iadd r0, r1
+lea r1, main_scrolly
+st.w [r1], r0
+lea r0, main_scrolly
+ld.w r0, [r0]
+ld.w r1, 0x64
+cmp r0, r1
+test r0, greater
+lea r1, main_scrolly
+ld.w r1, [r1]
+ld.w r2, 0x64
+ineg r2
+cmp r1, r2
+test r1, less
+or r0, r1
+jmpifnot endif00000009, r0
+lea r0, main_scrolldiry
+ld.w r0, [r0]
+ineg r0
+lea r1, main_scrolldiry
+st.w [r1], r0
+
+@LABEL endif00000009
 lea r0, _spritelist
 ld.w r1, 0xd6
 sprite r0, r1
@@ -450,19 +499,21 @@ inc r0
 lea r1, main_frame
 st.w [r1], r0
 vsync 
-ld.w r0, 0x0
-asel r0
+ld.w r0, 0x1
+ld.w r1, 0x0
+asel r0, r1
 lea r0, main_frame
 ld.w r0, [r0]
 fsel r0
-jmp beginwhile00000008
+jmp beginwhile0000000a
 
-@LABEL endwhile00000009
+@LABEL endwhile0000000b
 ret 
 
 #-------------Symbol Table-------------
 
 # function 'vblank', hash: D127AEAD, refcount: 2
+# function 'numRand', hash: 07CB724A, refcount: 3
 # function 'main', hash: BC76E6BA, refcount: 1
 # variable 'VRAM', dim:1 typename:byteptr refcount:0
 # variable 'ARAM', dim:1 typename:byteptr refcount:2
@@ -477,6 +528,9 @@ ret
 # variable 'VBLANKSERVICE', dim:1 typename:dwordptr refcount:1
 @LABEL _VBLANKSERVICE
 @DW 0x8000 0xC004
+# variable 'seed', dim:1 typename:word refcount:12
+@LABEL _seed
+@DW 0x0007 
 # variable 'spritelist', dim:642 typename:word refcount:11
 @LABEL _spritelist
 @DW 0x0000 0x0000 0x0030 0x0000 0x0010 0x0030 0x0000 0x0020 
@@ -1828,6 +1882,15 @@ ret
 # variable 'dirY', dim:8 typename:word refcount:3
 @LABEL main_dirY
 @DW 0x0000 0x0001 0x0001 0x0003 0x0002 0x0002 0x0003 0x0004 
-# variable 'seed', dim:1 typename:word refcount:20
-@LABEL main_seed
-@DW 0x0007 
+# variable 'scrollx', dim:1 typename:word refcount:5
+@LABEL main_scrollx
+@DW 0x0032 
+# variable 'scrolly', dim:1 typename:word refcount:5
+@LABEL main_scrolly
+@DW 0x0032 
+# variable 'scrolldirx', dim:1 typename:word refcount:3
+@LABEL main_scrolldirx
+@DW 0x0001 
+# variable 'scrolldiry', dim:1 typename:word refcount:3
+@LABEL main_scrolldiry
+@DW 0x0001 

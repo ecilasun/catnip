@@ -90,6 +90,7 @@ enum EASTNodeType
 	EN_ClearFrame,
 	EN_Sprite,
 	EN_SpriteSheet,
+	EN_SpriteOrigin,
 	EN_Vsync,
 	EN_EndCodeBlock,
 	EN_BeginCodeBlock,
@@ -160,6 +161,7 @@ const char* NodeTypes[]=
 	"EN_ClearFrame                ",
 	"EN_Sprite                    ",
 	"EN_SpriteSheet               ",
+	"EN_SpriteOrigin              ",
 	"EN_Vsync                     ",
 	"EN_EndCodeBlock              ",
 	"EN_BeginCodeBlock            ",
@@ -207,6 +209,7 @@ enum EOpcode
 	OP_CLF,
 	OP_SPRITE,
 	OP_SPRITESHEET,
+	OP_SPRITEORIGIN,
 	OP_VSYNC,
 	OP_PUSHCONTEXT,
 	OP_POPCONTEXT,
@@ -263,6 +266,7 @@ const std::string Opcodes[]={
 	"clf",
 	"sprite",
 	"spritesheet",
+	"spriteorigin",
 	"vsync",
 	"pushcontext",
 	"popcontext",
@@ -552,7 +556,7 @@ SASTScanContext g_ASC;
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
 %token DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
-%token VSYNC FSEL ASEL CLF SPRITE SPRITESHEET
+%token VSYNC FSEL ASEL CLF SPRITE SPRITESHEET SPRITEORIGIN
 %token INC_OP DEC_OP
 
 %type <astnode> simple_identifier
@@ -1475,7 +1479,7 @@ builtin_statement
 																									$$->m_Opcode = OP_FSEL;
 																									g_ASC.PushNode($$);
 																								}
-	| ASEL '(' expression ')' ';'																{
+	| ASEL '(' expression ',' expression ')' ';'												{
 																									$$ = new SASTNode(EN_FrameSelect, "");
 																									$$->m_Opcode = OP_ASEL;
 																									g_ASC.PushNode($$);
@@ -1493,6 +1497,11 @@ builtin_statement
 	| SPRITESHEET '(' expression ')' ';'														{
 																									$$ = new SASTNode(EN_SpriteSheet, "");
 																									$$->m_Opcode = OP_SPRITESHEET;
+																									g_ASC.PushNode($$);
+																								}
+	| SPRITEORIGIN '(' expression ',' expression ')' ';'										{
+																									$$ = new SASTNode(EN_SpriteOrigin, "");
+																									$$->m_Opcode = OP_SPRITEORIGIN;
 																									g_ASC.PushNode($$);
 																								}
 	| VSYNC '(' ')' ';'																			{
@@ -1965,7 +1974,6 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		}
 		break;
 
-		case OP_ASEL:
 		case OP_FSEL:
 		case OP_CLF:
 		case OP_SPRITESHEET:
@@ -1976,7 +1984,9 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		}
 		break;
 
+		case OP_ASEL:
 		case OP_SPRITE:
+		case OP_SPRITEORIGIN:
 		{
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();

@@ -80,7 +80,7 @@ uint32_t BRANCHTARGET;			// Branch target
 uint32_t IP;					// Instruction pointer
 uint32_t SP;					// Stack pointer
 uint16_t instruction;			// Current instruction
-uint32_t register_file[16];		// Array of 16 x 32bit registers
+int32_t register_file[16];		// Array of 16 x 32bit registers
 uint16_t flags_register;	   	// Flag registers [ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL]
 uint16_t target_register;		// Target for some memory read operations
 uint16_t cpu_state = CPU_INIT;	// Default state to boot from
@@ -100,8 +100,12 @@ uint32_t sprite_list_countup;
 uint32_t sprite_list_el;
 uint32_t sprite_sheet;
 uint32_t sprite_fetch_count;
-uint32_t sprite_current_x;
-uint32_t sprite_current_y;
+int32_t sprite_origin_x;
+int32_t sprite_origin_y;
+int32_t sprite_start_x;
+int32_t sprite_start_y;
+int32_t sprite_current_x;
+int32_t sprite_current_y;
 uint32_t sprite_current_id;
 uint16_t sprite_state = SPRITE_IDLE;
 
@@ -111,6 +115,7 @@ uint16_t framebuffer_writeena;
 uint8_t framebuffer_data;
 uint16_t cpu_lane_mask;
 
+uint16_t audio_enable;
 uint16_t aram_select;
 uint16_t aram_address;
 uint16_t aram_writeena;
@@ -280,7 +285,7 @@ void execute(uint16_t instr)
 			if (typ == 1)
 			{
 				#if defined(DEBUG_EXECUTE)
-				op = "branch";
+				op = "call";
 				#endif
 				CALLSTACK[CALLSP] = IP + (immed ? 6:2); // Skip current instruction (and two WORDs if this not register based)
 				CALLSP = CALLSP + 1;
@@ -989,12 +994,27 @@ void execute(uint16_t instr)
 				case 0b0111: // ASEL
 				{
 					#if defined(DEBUG_EXECUTE)
-					printf("%.8X: asel r%d (%.8X)\n", IP, r1, register_file[r1]);
+					printf("%.8X: asel r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 					#endif
 					aram_select = register_file[r1]&0x0001;
+					audio_enable = register_file[r2]&0x0001;
 					sram_addr = IP + 2;
 					IP = IP + 2;
 					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				}
+				break;
+				case 0b1000: // SPRITEORIGIN
+				{
+					#if defined(DEBUG_EXECUTE)
+					printf("%.8X: spriteorigin r%d, r%d\n", IP, r1, r2);
+					#endif
+					// Kick sprite table DMA
+					sprite_origin_x = register_file[r1];
+					sprite_origin_y = register_file[r2];
+					sram_addr = IP + 2;
+					IP = IP + 2;
 					sram_read_req = 1;
 					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
@@ -1029,7 +1049,7 @@ void execute(uint16_t instr)
 	}
 
 #if defined(DEBUG_EXECUTE)
-	while(!break_loop)
+	/*while(!break_loop)
 	{
 		SDL_Event event;
 		while(SDL_PollEvent(&event))
@@ -1040,7 +1060,7 @@ void execute(uint16_t instr)
 					break_loop = 1;
 			}
 		}
-	}
+	}*/
 #endif
 }
 
@@ -1063,6 +1083,8 @@ void CPUMain()
 			sprite_list_countup = 0;
 			sprite_list_el = 0;
 			sprite_sheet = 0;
+			sprite_origin_x = 0;
+			sprite_origin_y = 0;
 			sprite_fetch_count = 0;
 			sprite_current_x = 0;
 			sprite_current_y = 0;
@@ -1081,6 +1103,7 @@ void CPUMain()
 
 			// Reset write cursor for audio buffer
 			aram_select = 0;
+			audio_enable = 0;
 			aram_address = 0x0000;
 			aram_writeena = 0;
 			aram_data = 0;
@@ -1239,7 +1262,8 @@ void CPUMain()
 
 		case CPU_READ_DATA:
 		{
-			register_file[target_register] = sram_rdata;
+			int signextend = sram_rdata&0x8000 ? 1:0;
+			register_file[target_register] = (signextend ? 0xFFFF0000 : 0x00000000) | sram_rdata;
 			sram_enable_byteaddress = 0;
 			sram_addr = IP;
 			sram_read_req = 1;
@@ -1337,7 +1361,7 @@ void CPUMain()
 					}
 					else if (sprite_fetch_count == 1)
 					{
-						sprite_current_y = sram_rdata; // Store Y
+						sprite_start_y = sprite_origin_y + sram_rdata; // Store Y
 						sram_read_req = 0;
 						sprite_fetch_count = sprite_fetch_count + 1;
 					}
@@ -1350,7 +1374,7 @@ void CPUMain()
 					}
 					else if (sprite_fetch_count == 3)
 					{
-						sprite_current_x = sram_rdata; // Store X
+						sprite_start_x = sprite_origin_x + sram_rdata; // Store X
 						sram_read_req = 0;
 						sprite_fetch_count = sprite_fetch_count + 1;
 					}
@@ -1363,11 +1387,17 @@ void CPUMain()
 					}
 					else if (sprite_fetch_count == 5)
 					{
-						sprite_current_id = sram_rdata; // Store ID
 						sram_read_req = 0;
+						sprite_current_id = sram_rdata; // Store ID
 						sprite_fetch_count = sprite_fetch_count + 1;
-						sprite_list_el = 0;
 						sprite_list_countup = sprite_list_countup + 1;
+
+						// Sprite tile early reject
+						if (sprite_start_y>192 || sprite_start_y<-15 || sprite_start_x>255 || sprite_start_x<-15)
+							sprite_list_el = 0x100;
+						else
+							sprite_list_el = 0;
+
 						sprite_state = SPRITE_READ_DATA;
 					}
 				}
@@ -1376,6 +1406,8 @@ void CPUMain()
 				case SPRITE_READ_DATA:
 				{
 					sram_addr = sprite_sheet + sprite_current_id*256 + sprite_list_el;
+					sprite_current_x = sprite_start_x + (sprite_list_el&0x0F);
+					sprite_current_y = sprite_start_y + ((sprite_list_el&0xF0)>>4);
 					sram_read_req = 1;
 					sram_enable_byteaddress = 1;
 					framebuffer_writeena = 0;
@@ -1409,9 +1441,13 @@ void CPUMain()
 					{
 						if ((sram_rdata&0xFF) != 0xFF && sprite_current_id!=0xFFFF) // TODO: Make mask color code controlled
 						{
-							framebuffer_address = ((sprite_current_y+((sprite_list_el&0xF0)>>4))<<8) + (sprite_current_x+(sprite_list_el&0x0F));
-							framebuffer_writeena = 1;
-							framebuffer_data = sram_rdata;
+							// Per pixel sprite cull
+							if (sprite_current_y < 192 && sprite_current_x < 256 && sprite_current_y >= 0 && sprite_current_x >= 0)
+							{
+								framebuffer_address = (sprite_current_y<<8) + sprite_current_x;
+								framebuffer_writeena = 1;
+								framebuffer_data = sram_rdata;
+							}
 						}
 						sram_read_req = 0;
 						sprite_state = SPRITE_READ_DATA;
@@ -1598,7 +1634,7 @@ void MyAudioCallback(void*  userdata,
 	float *output = (float*)stream;
 	int count = len/sizeof(float); // bytes to indices
 	for(int i=0; i<count; ++i)
-		output[i] = (float)ARAM[aram_select*4096 + i]/256.f;
+		output[i] = audio_enable ? (float)ARAM[aram_select*4096 + i]/256.f : 0.f;
 }
 
 bool InitEmulator(uint16_t *_rom_binary)

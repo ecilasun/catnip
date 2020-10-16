@@ -8,6 +8,7 @@ byteptr ARAM = 0x40000000;
 byteptr BORDERCOLOR = 0x8000C000;
 byteptr VBSENABLE = 0x8000C001;
 dwordptr VBLANKSERVICE = 0x8000C004;
+word seed = 7;
 
 word spritelist[] = {
     // Sky
@@ -1496,12 +1497,21 @@ def vblank()
     return;
 }
 
+def numRand()
+{
+    seed = seed ^ (seed << 9);
+    seed = seed ^ (seed >> 13);
+    seed = seed ^ (seed << 1);
+    return;
+}
+
 def main()
 {
     word frame = 0, i;
     word posX[8] = {0,92,63,18,108,12,43,31}, dirX[8] = {1,2,1,2,2,4,3,3};
     word posY[8] = {16,44,32,24,51,76,94,41}, dirY[8] = {0,1,1,3,2,2,3,4};
-    word seed = 7;
+    word scrollx = 50, scrolly = 50;
+    word scrolldirx = 1, scrolldiry = 1;
 
     // Set up vblank service function address
     VBLANKSERVICE = &vblank;
@@ -1511,17 +1521,20 @@ def main()
     // Sample uses only one sprite sheet, so we set it once
     spritesheet(&mysprites);
 
+    // Quiet both audio buffers
+    asel(1,0);
+    asel(0,0);
+
     // Generate random noise sample in buffer 0
-    // At this point, playback is routed to buffer 1 so we should be quiet
+    // At this point, playback is routed to buffer 1
     i=0;
-    asel(0);
     while(i<2048)
     {
-        ARAM[i*2+0] = (i<<2)+(i>>1);
+        numRand();
+        ARAM[i*2+0] = (i<<2)+(i>>1)+seed;
         ARAM[i*2+1] = (i<<2)+(i<<1);
         i = ++i;
     }
-    //asel(1);
 
     // Set border color for both framebuffers
     fsel(1);
@@ -1533,7 +1546,7 @@ def main()
     while(1)
     {
         // If we're filling the whole screen there's no need for a CLF
-        //clf(0xEC+frame);
+        clf(0xEC);
 
         // Handle bouncing sprites and change border color on collision
         // Also triggers audio playback of buffer 0 by switching writes to buffer 0
@@ -1545,14 +1558,14 @@ def main()
             if (posY[i] > 158 || posY[i] < 1)
             {
                 dirY[i] = -dirY[i];
-                asel(1);
+                asel(1,1);
             }
 
             posX[i] = posX[i] + dirX[i];
             if (posX[i] > 240 || posX[i] < 1)
             {
                 dirX[i] = -dirX[i];
-                asel(1);
+                asel(1,1);
             }
 
             // Update character positions with the bounce position
@@ -1576,22 +1589,31 @@ def main()
         else
         {
             // Random X
-            seed = seed ^ (seed << 9);
-            seed = seed ^ (seed >> 13);
-            seed = seed ^ (seed << 1);
+            numRand();
             spritelist[0x498+2] = seed%240;
             //spritelist[0x49E+2] = seed%240;
 
             // Random Y
-            seed = seed ^ (seed << 9);
-            seed = seed ^ (seed >> 13);
-            seed = seed ^ (seed << 1);
+            numRand();
             spritelist[0x498+0] = seed%180;
             //spritelist[0x49E+0] = (seed%180)+16;
 
             // But hide
             spritelist[0x498+4] = 0xFFFF;
             //spritelist[0x49E+4] = 9;
+        }
+
+        // Set sprite origin
+        spriteorigin(scrollx, scrolly);
+        scrollx = scrollx + scrolldirx;
+        if (scrollx > 100 || scrollx < -100) // and since this is unsigned, it will also bounce back from zero
+        {
+            scrolldirx = -scrolldirx;
+        }
+        scrolly = scrolly + scrolldiry;
+        if (scrolly > 100 || scrolly < -100)
+        {
+            scrolldiry = -scrolldiry;
         }
 
         // Draw all sprites in the list
@@ -1601,8 +1623,8 @@ def main()
         frame = ++frame;
         vsync();
 
-        // Turn off sound by switching to the 'quiet' bank after vblank (to give sufficient time for playback)
-        asel(0);
+        // Turn off sound by using the enable/disable bit
+        asel(1,0);
 
         // Swap frames to reveal what we've drawn so far
         // while simultaneously selecting the other frame for write

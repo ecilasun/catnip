@@ -19,6 +19,9 @@ The following keywords are reserved:
 * clf
 * fsel
 * vsync
+* spritesheet
+* sprite
+* asel
 
 In addition, the following operators are reserved and can't be overriden:
 * \* Multiplication
