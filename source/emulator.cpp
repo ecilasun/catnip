@@ -1086,6 +1086,8 @@ void CPUMain()
 			sprite_origin_x = 0;
 			sprite_origin_y = 0;
 			sprite_fetch_count = 0;
+			sprite_start_x = 0;
+			sprite_start_y = 0;
 			sprite_current_x = 0;
 			sprite_current_y = 0;
 			sprite_current_id = 0;
@@ -1389,7 +1391,6 @@ void CPUMain()
 					{
 						sram_read_req = 0;
 						sprite_current_id = sram_rdata; // Store ID
-						sprite_fetch_count = sprite_fetch_count + 1;
 						sprite_list_countup = sprite_list_countup + 1;
 
 						// Sprite tile early reject
@@ -1450,9 +1451,9 @@ void CPUMain()
 							}
 						}
 						sram_read_req = 0;
+						sprite_list_el = sprite_list_el + 1; // Next pixel
 						sprite_state = SPRITE_READ_DATA;
 					}
-					sprite_list_el = sprite_list_el + 1; // Next pixel
 				}
 				break;
 			}

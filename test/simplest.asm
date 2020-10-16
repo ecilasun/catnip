@@ -1,4 +1,4 @@
-# Instruction count: 559
+# Instruction count: 557
 
 @ORG 0x00000000
 
@@ -144,8 +144,6 @@ st.b [r1], r0
 @LABEL beginwhile0000000a
 ld.w r0, 0x1
 jmpifnot endwhile0000000b, r0
-ld.w r0, 0xec
-clf r0
 ld.w r0, 0x0
 lea r1, main_i
 st.w [r1], r0

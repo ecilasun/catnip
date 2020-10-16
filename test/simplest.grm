@@ -1546,7 +1546,7 @@ def main()
     while(1)
     {
         // If we're filling the whole screen there's no need for a CLF
-        clf(0xEC);
+        //clf(0xEC);
 
         // Handle bouncing sprites and change border color on collision
         // Also triggers audio playback of buffer 0 by switching writes to buffer 0
