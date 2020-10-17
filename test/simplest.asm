@@ -1,4 +1,4 @@
-# Instruction count: 585
+# Instruction count: 679
 
 @ORG 0x00000000
 
@@ -75,18 +75,8 @@ cmp r0, r1
 test r0, less
 jmpifnot endwhile00000001, r0
 call numRand
-lea r0, main_i
+lea r0, _seed
 ld.w r0, [r0]
-ld.w r1, 0x2
-bsl r0, r1
-lea r1, main_i
-ld.w r1, [r1]
-ld.w r2, 0x1
-bsr r1, r2
-iadd r0, r1
-lea r1, _seed
-ld.w r1, [r1]
-iadd r0, r1
 lea r1, main_i
 ld.w r1, [r1]
 ld.w r2, 0x2
@@ -97,15 +87,9 @@ lea r2, _ARAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-lea r0, main_i
+call numRand
+lea r0, _seed
 ld.w r0, [r0]
-ld.w r1, 0x2
-bsl r0, r1
-lea r1, main_i
-ld.w r1, [r1]
-ld.w r2, 0x1
-bsl r1, r2
-iadd r0, r1
 lea r1, main_i
 ld.w r1, [r1]
 ld.w r2, 0x2
@@ -141,20 +125,20 @@ ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
 
-@LABEL beginwhile0000000a
+@LABEL beginwhile0000000c
 ld.w r0, 0x1
-jmpifnot endwhile0000000b, r0
+jmpifnot endwhile0000000d, r0
 ld.w r0, 0x0
 lea r1, main_i
 st.w [r1], r0
 
-@LABEL beginwhile00000004
+@LABEL beginwhile00000006
 lea r0, main_i
 ld.w r0, [r0]
 ld.w r1, 0x10
 cmp r0, r1
 test r0, less
-jmpifnot endwhile00000005, r0
+jmpifnot endwhile00000007, r0
 lea r0, main_i
 ld.w r0, [r0]
 lea r1, main_posY
@@ -321,7 +305,39 @@ iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
-ld.w r0, 0x46
+lea r0, main_i
+ld.w r0, [r0]
+lea r1, main_dirX
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0x8000
+and r0, r1
+lea r1, main_flipx
+st.w [r1], r0
+lea r0, main_i
+ld.w r0, [r0]
+lea r1, main_dirY
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0x8000
+and r0, r1
+ld.w r1, 0x1
+bsr r0, r1
+lea r1, main_flipy
+st.w [r1], r0
+lea r0, main_flipy
+ld.w r0, [r0]
+ld.w r1, 0x0
+cmp r0, r1
+test r0, notequal
+jmpifnot endif00000004, r0
+lea r0, main_flipy
+ld.w r0, [r0]
+lea r1, main_flipx
+ld.w r1, [r1]
+iadd r0, r1
+ld.w r1, 0x47
+iadd r0, r1
 ld.w r1, 0x2
 lea r2, main_i
 ld.w r2, [r2]
@@ -345,7 +361,13 @@ iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
-ld.w r0, 0x47
+lea r0, main_flipy
+ld.w r0, [r0]
+lea r1, main_flipx
+ld.w r1, [r1]
+iadd r0, r1
+ld.w r1, 0x46
+iadd r0, r1
 ld.w r1, 0x2
 lea r2, main_i
 ld.w r2, [r2]
@@ -369,15 +391,80 @@ iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
+jmp exitif00000005
+
+@LABEL endif00000004
+lea r0, main_flipy
+ld.w r0, [r0]
+lea r1, main_flipx
+ld.w r1, [r1]
+iadd r0, r1
+ld.w r1, 0x46
+iadd r0, r1
+ld.w r1, 0x2
+lea r2, main_i
+ld.w r2, [r2]
+lea r3, main_frame
+ld.w r3, [r3]
+iadd r2, r3
+ld.w r3, 0x4
+bsr r2, r3
+ld.w r3, 0x4
+imod r2, r3
+imul r1, r2
+iadd r0, r1
+ld.w r1, 0x4a4
+lea r2, main_i
+ld.w r2, [r2]
+ld.w r3, 0x6
+imul r2, r3
+iadd r1, r2
+ld.w r2, 0x4
+iadd r1, r2
+lea r2, _spritelist
+iadd r1, r2
+st.w [r1], r0
+lea r0, main_flipy
+ld.w r0, [r0]
+lea r1, main_flipx
+ld.w r1, [r1]
+iadd r0, r1
+ld.w r1, 0x47
+iadd r0, r1
+ld.w r1, 0x2
+lea r2, main_i
+ld.w r2, [r2]
+lea r3, main_frame
+ld.w r3, [r3]
+iadd r2, r3
+ld.w r3, 0x4
+bsr r2, r3
+ld.w r3, 0x4
+imod r2, r3
+imul r1, r2
+iadd r0, r1
+ld.w r1, 0x4aa
+lea r2, main_i
+ld.w r2, [r2]
+ld.w r3, 0x6
+imul r2, r3
+iadd r1, r2
+ld.w r2, 0x4
+iadd r1, r2
+lea r2, _spritelist
+iadd r1, r2
+st.w [r1], r0
+
+@LABEL exitif00000005
 lea r0, main_i
 ld.w r0, [r0]
 ld.w r1, 0x2
 iadd r0, r1
 lea r1, main_i
 st.w [r1], r0
-jmp beginwhile00000004
+jmp beginwhile00000006
 
-@LABEL endwhile00000005
+@LABEL endwhile00000007
 lea r0, main_frame
 ld.w r0, [r0]
 ld.w r1, 0x5
@@ -387,7 +474,7 @@ imod r0, r1
 ld.w r1, 0x1
 cmp r0, r1
 test r0, equal
-jmpifnot endif00000006, r0
+jmpifnot endif00000008, r0
 ld.w r0, 0x3f
 ld.w r1, 0x498
 ld.w r2, 0x4
@@ -395,9 +482,9 @@ iadd r1, r2
 lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
-jmp exitif00000007
+jmp exitif00000009
 
-@LABEL endif00000006
+@LABEL endif00000008
 call numRand
 lea r0, _seed
 ld.w r0, [r0]
@@ -428,7 +515,7 @@ lea r2, _spritelist
 iadd r1, r2
 st.w [r1], r0
 
-@LABEL exitif00000007
+@LABEL exitif00000009
 ld.w r0, 0x0
 ld.w r1, 0x0
 spriteorigin r0, r1
@@ -477,14 +564,14 @@ ineg r2
 cmp r1, r2
 test r1, less
 or r0, r1
-jmpifnot endif00000008, r0
+jmpifnot endif0000000a, r0
 lea r0, main_scrolldirx
 ld.w r0, [r0]
 ineg r0
 lea r1, main_scrolldirx
 st.w [r1], r0
 
-@LABEL endif00000008
+@LABEL endif0000000a
 lea r0, main_scrolly
 ld.w r0, [r0]
 lea r1, main_scrolldiry
@@ -504,14 +591,14 @@ ineg r2
 cmp r1, r2
 test r1, less
 or r0, r1
-jmpifnot endif00000009, r0
+jmpifnot endif0000000b, r0
 lea r0, main_scrolldiry
 ld.w r0, [r0]
 ineg r0
 lea r1, main_scrolldiry
 st.w [r1], r0
 
-@LABEL endif00000009
+@LABEL endif0000000b
 lea r0, _spritelist
 ld.w r1, 0xd6
 sprite r0, r1
@@ -527,15 +614,15 @@ asel r0, r1
 lea r0, main_frame
 ld.w r0, [r0]
 fsel r0
-jmp beginwhile0000000a
+jmp beginwhile0000000c
 
-@LABEL endwhile0000000b
+@LABEL endwhile0000000d
 ret 
 
 #-------------Symbol Table-------------
 
 # function 'vblank', hash: D127AEAD, refcount: 2
-# function 'numRand', hash: 07CB724A, refcount: 3
+# function 'numRand', hash: 07CB724A, refcount: 4
 # function 'main', hash: BC76E6BA, refcount: 1
 # variable 'VRAM', dim:1 typename:byteptr refcount:0
 # variable 'ARAM', dim:1 typename:byteptr refcount:2
@@ -550,10 +637,10 @@ ret
 # variable 'VBLANKSERVICE', dim:1 typename:dwordptr refcount:1
 @LABEL _VBLANKSERVICE
 @DW 0x8000 0xC004
-# variable 'seed', dim:1 typename:word refcount:12
+# variable 'seed', dim:1 typename:word refcount:13
 @LABEL _seed
 @DW 0x0007 
-# variable 'spritelist', dim:642 typename:word refcount:15
+# variable 'spritelist', dim:642 typename:word refcount:17
 @LABEL _spritelist
 @DW 0x0000 0x0000 0x0030 0x0000 0x0010 0x0030 0x0000 0x0020 
 @DW 0x0030 0x0000 0x0030 0x0030 0x0000 0x0040 0x0030 0x0000 
@@ -629,7 +716,7 @@ ret
 @DW 0x00D0 0x0023 0x00B0 0x00E0 0x0023 0x00B0 0x00F0 0x0023 
 @DW 0x00A0 0x0065 0x0042 0x00B0 0x0065 0x0043 0x00A0 0x0075 
 @DW 0x0044 0x00B0 0x0075 0x0045 0x00A0 0x0015 0x003F 0x00B0 
-@DW 0x0015 0x0040 0x000F 0x0025 0x0046 0x001F 0x0025 0x0047 
+@DW 0x0015 0x0040 0x000F 0x0025 0x8046 0x001F 0x0025 0x8047 
 @DW 0x001F 0x0015 0x0046 0x002F 0x0015 0x0047 0x003F 0x0035 
 @DW 0x0046 0x004F 0x0035 0x0047 0x005F 0x0055 0x0046 0x006F 
 @DW 0x0055 0x0047 0x0000 0x0085 0x0046 0x0010 0x0085 0x0047 
@@ -1886,22 +1973,22 @@ ret
 @DW 0xFFFF 0x09D1 0xE109 0x0909 0x0909 0xD1E1 0x09FF 0xFFFF 
 @DW 0xFFFF 0x09D1 0xE109 0xFFFF 0xFF09 0xD1E1 0x09FF 0xFFFF 
 @DW 0xFFFF 0x0913 0x5D09 0xFFFF 0xFF09 0x135D 0x09FF 0xFFFF 
-# variable 'frame', dim:1 typename:word refcount:6
+# variable 'frame', dim:1 typename:word refcount:8
 @LABEL main_frame
 @DW 0x0000 
-# variable 'i', dim:1 typename:word refcount:40
+# variable 'i', dim:1 typename:word refcount:42
 @LABEL main_i
 @DW 0xCDCD 
 # variable 'posX', dim:8 typename:word refcount:6
 @LABEL main_posX
 @DW 0x0000 0x005C 0x003F 0x0012 0x006C 0x000C 0x002B 0x001F 
-# variable 'dirX', dim:8 typename:word refcount:3
+# variable 'dirX', dim:8 typename:word refcount:4
 @LABEL main_dirX
 @DW 0x0001 0x0002 0x0001 0x0002 0x0002 0x0004 0x0003 0x0003 
 # variable 'posY', dim:8 typename:word refcount:6
 @LABEL main_posY
 @DW 0x0010 0x002C 0x0020 0x0018 0x0033 0x004C 0x005E 0x0029 
-# variable 'dirY', dim:8 typename:word refcount:3
+# variable 'dirY', dim:8 typename:word refcount:4
 @LABEL main_dirY
 @DW 0x0000 0x0001 0x0001 0x0003 0x0002 0x0002 0x0003 0x0004 
 # variable 'scrollx', dim:1 typename:word refcount:5
@@ -1909,10 +1996,16 @@ ret
 @DW 0x0032 
 # variable 'scrolly', dim:1 typename:word refcount:5
 @LABEL main_scrolly
-@DW 0x0032 
+@DW 0x0000 
 # variable 'scrolldirx', dim:1 typename:word refcount:3
 @LABEL main_scrolldirx
 @DW 0x0001 
 # variable 'scrolldiry', dim:1 typename:word refcount:3
 @LABEL main_scrolldiry
-@DW 0x0001 
+@DW 0x0000 
+# variable 'flipx', dim:1 typename:word refcount:5
+@LABEL main_flipx
+@DW 0x0000 
+# variable 'flipy', dim:1 typename:word refcount:6
+@LABEL main_flipy
+@DW 0x0000 

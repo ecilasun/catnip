@@ -107,6 +107,8 @@ int16_t sprite_start_y;
 int16_t sprite_current_x;
 int16_t sprite_current_y;
 uint16_t sprite_current_id;
+uint16_t sprite_flip_x;
+uint16_t sprite_flip_y;
 uint16_t sprite_state = SPRITE_IDLE;
 
 uint16_t framebuffer_select;
@@ -1091,6 +1093,8 @@ void CPUMain()
 			sprite_current_x = 0;
 			sprite_current_y = 0;
 			sprite_current_id = 0;
+			sprite_flip_x = 0;
+			sprite_flip_y = 0;
 			sprite_state = SPRITE_IDLE;
 
 			IP = 0;
@@ -1390,7 +1394,9 @@ void CPUMain()
 					else if (sprite_fetch_count == 5)
 					{
 						sram_read_req = 0;
-						sprite_current_id = sram_rdata; // Store ID
+						sprite_current_id = sram_rdata&0x0FFF; // Store ID
+						sprite_flip_x = sram_rdata&0x8000 ? 0xF : 0x0;
+						sprite_flip_y = sram_rdata&0x4000 ? 0xF : 0x0;
 						sprite_list_countup = sprite_list_countup + 1;
 
 						// Sprite tile early reject
@@ -1407,8 +1413,8 @@ void CPUMain()
 				case SPRITE_READ_DATA:
 				{
 					sram_addr = sprite_sheet + (sprite_current_id<<8) + sprite_list_el;
-					sprite_current_x = sprite_start_x + (sprite_list_el&0x0F);
-					sprite_current_y = sprite_start_y + ((sprite_list_el&0xF0)>>4);
+					sprite_current_x = sprite_start_x + (sprite_flip_x ^ (sprite_list_el&0x0F));
+					sprite_current_y = sprite_start_y + (sprite_flip_y ^ ((sprite_list_el&0xF0)>>4));
 					sram_read_req = 1;
 					sram_enable_byteaddress = 1;
 					framebuffer_writeena = 0;
@@ -1440,7 +1446,7 @@ void CPUMain()
 					}
 					else
 					{
-						if ((sram_rdata&0xFF) != 0xFF && sprite_current_id!=0xFFFF) // TODO: Make mask color code controlled
+						if ((sram_rdata&0xFF) != 0xFF && sprite_current_id!=0x0FFF) // TODO: Make mask color code controlled
 						{
 							// Per pixel sprite cull
 							if (sprite_current_y < 192 && sprite_current_x < 256 && sprite_current_y >= 0 && sprite_current_x >= 0)

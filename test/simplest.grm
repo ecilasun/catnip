@@ -224,8 +224,8 @@ word spritelist[] = {
     0x00A0, 0x0015, 0x003F,
     0x00B0, 0x0015, 0x0040,
     // Characters
-    0x000F, 0x0025, 0x0046,
-    0x001F, 0x0025, 0x0047,
+    0x000F, 0x0025, 0x8046,
+    0x001F, 0x0025, 0x8047,
     0x001F, 0x0015, 0x0046,
     0x002F, 0x0015, 0x0047,
     0x003F, 0x0035, 0x0046,
@@ -1510,8 +1510,9 @@ def main()
     word frame = 0, i;
     word posX[8] = {0,92,63,18,108,12,43,31}, dirX[8] = {1,2,1,2,2,4,3,3};
     word posY[8] = {16,44,32,24,51,76,94,41}, dirY[8] = {0,1,1,3,2,2,3,4};
-    word scrollx = 50, scrolly = 50;
-    word scrolldirx = 1, scrolldiry = 1;
+    word scrollx = 50, scrolly = 0;
+    word scrolldirx = 1, scrolldiry = 0;
+    word flipx = 0, flipy = 0;
 
     // Set up vblank service function address
     VBLANKSERVICE = &vblank;
@@ -1531,8 +1532,9 @@ def main()
     while(i<2048)
     {
         numRand();
-        ARAM[i*2+0] = (i<<2)+(i>>1)+seed;
-        ARAM[i*2+1] = (i<<2)+(i<<1);
+        ARAM[i*2+0] = seed;
+        numRand();
+        ARAM[i*2+1] = seed;
         i = ++i;
     }
 
@@ -1574,8 +1576,19 @@ def main()
             spritelist[0x4AA+i*6+0] = posY[i]+16;
             spritelist[0x4AA+i*6+2] = posX[i];
 
-            spritelist[0x4A4+i*6+4] = 0x0046 + 2*((i+frame>>4)%4);
-            spritelist[0x4AA+i*6+4] = 0x0047 + 2*((i+frame>>4)%4);
+            flipx = dirX[i]&0x8000;
+            flipy = (dirY[i]&0x8000)>>1;
+
+            if (flipy != 0)
+            {
+                spritelist[0x4AA+i*6+4] = flipy + flipx + 0x0046 + 2*((i+frame>>4)%4);
+                spritelist[0x4A4+i*6+4] = flipy + flipx + 0x0047 + 2*((i+frame>>4)%4);
+            }
+            else
+            {
+                spritelist[0x4A4+i*6+4] = flipy + flipx + 0x0046 + 2*((i+frame>>4)%4);
+                spritelist[0x4AA+i*6+4] = flipy + flipx + 0x0047 + 2*((i+frame>>4)%4);
+            }
 
             i = i+2;
         }
