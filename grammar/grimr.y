@@ -1262,7 +1262,7 @@ variable_declaration
 																									var->m_Scope = g_ASC.m_CurrentFunctionName;
 																									var->m_NameHash = HashString(var->m_Name.c_str());
 																									var->m_ScopeHash = HashString(var->m_Scope.c_str());
-																									var->m_CombinedHash = HashString((var->m_Scope+"_"+var->m_Name).c_str());
+																									var->m_CombinedHash = HashString((var->m_Scope+":"+var->m_Name).c_str());
 																									var->m_RootNode = $$;
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
@@ -1322,7 +1322,7 @@ variable_declaration
 																									var->m_Scope = g_ASC.m_CurrentFunctionName;
 																									var->m_NameHash = HashString(var->m_Name.c_str());
 																									var->m_ScopeHash = HashString(var->m_Scope.c_str());
-																									var->m_CombinedHash = HashString((var->m_Scope+"_"+var->m_Name).c_str());
+																									var->m_CombinedHash = HashString((var->m_Scope+":"+var->m_Name).c_str());
 																									var->m_RootNode = $$;
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
@@ -1595,7 +1595,7 @@ function_def
 																										var->m_Scope = g_ASC.m_CurrentFunctionName;
 																										var->m_NameHash = HashString(var->m_Name.c_str());
 																										var->m_ScopeHash = HashString(var->m_Scope.c_str());
-																										var->m_CombinedHash = HashString((var->m_Scope+"_"+var->m_Name).c_str());
+																										var->m_CombinedHash = HashString((var->m_Scope+":"+var->m_Name).c_str());
 																										var->m_RootNode = n0;
 																										var->m_Dimension = 1;
 																										var->m_RefCount = 0;
@@ -1728,7 +1728,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				//var->m_RefCount++;
 				std::string val = g_ASC.PushRegister();
 				std::string trg = g_ASC.PushRegister();
-				node->m_Instructions = Opcodes[OP_LEA] + " " + val + ", " + var->m_Scope + "_" + var->m_Name;
+				node->m_Instructions = Opcodes[OP_LEA] + " " + val + ", " + var->m_Scope + ":" + var->m_Name;
 				node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode] + " " + trg;
 				std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
 				node->m_Instructions += std::string("\n") + Opcodes[OP_STORE] + width + " " + val + ", " + trg;
@@ -1842,7 +1842,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			{
 				//var->m_RefCount++;
 				//printf("arrayindex identifier type: %s[%d]\n", NodeTypes[node->m_Type], var->m_Dimension);
-				node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + ", " + var->m_Scope + "_" + var->m_Name;
+				node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + ", " + var->m_Scope + ":" + var->m_Name;
 				g_ASC.m_InstructionCount+=1;
 				// This is not a 'real' array, fetch data at address to treat as array base address
 				if (var->m_Dimension <= 1)
@@ -1917,7 +1917,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			}
 			else
 			{
-				node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + "_" + var->m_Name;
+				node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
 				g_ASC.m_InstructionCount+=1;
 			}
 		}
@@ -1946,7 +1946,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				if (var)
 				{
 					std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
-					node->m_Instructions = Opcodes[OP_LEA] + " " + trg + ", " + var->m_Scope + "_" + var->m_Name;
+					node->m_Instructions = Opcodes[OP_LEA] + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
 					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + trg + ", [" + trg + "]";
 					g_ASC.m_InstructionCount+=2;
 				}
@@ -1960,7 +1960,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			{
 				if (var)
 				{
-					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + "_" + var->m_Name;
+					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
 					g_ASC.m_InstructionCount+=1;
 					//std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
 					//node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + trg + ", [" + trg + "]";
@@ -2122,7 +2122,7 @@ bool CompileGrimR(const char *_filename)
 		fprintf(fp, "# variable '%s', dim:%d typename:%s refcount:%d\n", var->m_Name.c_str(), var->m_Dimension, TypeNames[var->m_TypeName], var->m_RefCount);
 		if (var->m_RefCount == 0)
 			continue;
-		fprintf(fp, "@LABEL %s_%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
+		fprintf(fp, "@LABEL %s:%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
 		{
 			if (var->m_TypeName == TN_WORD)
 			{
