@@ -1,4 +1,4 @@
-# Instruction count: 724
+# Instruction count: 736
 
 @ORG 0x00000000
 
@@ -110,7 +110,7 @@ test r3, less
 jmpifnot endwhile00000001, r3
 lea r3, main:i
 ld.w r3, [r3]
-ld.w r4, 0x1
+ld.w r4, 0x2
 bsl r3, r4
 ld.w r4, 0xff
 imod r3, r4
@@ -535,20 +535,30 @@ st.w [r4], r3
 jmp exitif00000009
 
 @LABEL endif00000008
+ld.w r3, 0x0
+lea r4, main:posX
+iadd r3, r4
+ld.w r3, [r3] # RHS array access, valueof: .w
 call numRand
-pop r3
-ld.w r4, 0xf0
-imod r3, r4
+pop r4
+ld.w r5, 0x10
+imod r4, r5
+iadd r3, r4
 ld.w r4, 0x498
 ld.w r5, 0x2
 iadd r4, r5
 lea r5, :spritelist
 iadd r4, r5
 st.w [r4], r3
+ld.w r3, 0x0
+lea r4, main:posY
+iadd r3, r4
+ld.w r3, [r3] # RHS array access, valueof: .w
 call numRand
-pop r3
-ld.w r4, 0xb4
-imod r3, r4
+pop r4
+ld.w r5, 0x10
+imod r4, r5
+iadd r3, r4
 ld.w r4, 0x498
 ld.w r5, 0x0
 iadd r4, r5
@@ -2043,13 +2053,13 @@ ret
 # variable 'i', dim:1 typename:word refcount:44
 @LABEL main:i
 @DW 0xCDCD 
-# variable 'posX', dim:8 typename:word refcount:7
+# variable 'posX', dim:8 typename:word refcount:8
 @LABEL main:posX
 @DW 0x0000 0x005C 0x003F 0x0012 0x006C 0x000C 0x002B 0x001F 
 # variable 'dirX', dim:8 typename:word refcount:4
 @LABEL main:dirX
 @DW 0x0001 0x0002 0x0001 0x0002 0x0002 0x0004 0x0003 0x0003 
-# variable 'posY', dim:8 typename:word refcount:7
+# variable 'posY', dim:8 typename:word refcount:8
 @LABEL main:posY
 @DW 0x0010 0x002C 0x0020 0x0018 0x0033 0x004C 0x005E 0x0029 
 # variable 'dirY', dim:8 typename:word refcount:4

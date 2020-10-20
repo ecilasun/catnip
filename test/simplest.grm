@@ -1576,7 +1576,7 @@ def main()
     i=0;
     while(i<2048)
     {
-        ARAM[i*2+0] = sin((i<<1)%255)-128;
+        ARAM[i*2+0] = sin((i<<2)%255)-128;
         ARAM[i*2+1] = sin((i<<1)%255)-128;
         i = ++i;
     }
@@ -1645,19 +1645,18 @@ def main()
         else
         {
             // Random X
-            spritelist[0x498+2] = numRand()%240;
-            //spritelist[0x49E+2] = seed%240;
+            spritelist[0x498+2] = posX[0]+(numRand()%16);
 
             // Random Y
-            spritelist[0x498+0] = numRand()%180;
-            //spritelist[0x49E+0] = (seed%180)+16;
+            spritelist[0x498+0] = posY[0]+(numRand()%16);
 
             // But hide
             spritelist[0x498+4] = 0xFFFF;
             //spritelist[0x49E+4] = 9;
         }
 
-        spriteorigin(0, 0);
+        // Clear screen by blitting sprites
+        /*spriteorigin(0, 0);
         sprite(&spritelist, 0x30);
         spriteorigin(0, 0x30);
         sprite(&spritelist, 0x30);
@@ -1665,6 +1664,9 @@ def main()
         sprite(&spritelist, 0x30);
         spriteorigin(0, 0x90);
         sprite(&spritelist, 0x30);
+        */
+        // Clear screen using hardware aid
+        clf(0xE0);
 
         // Set sprite origin
         spriteorigin(scrollx, scrolly);
