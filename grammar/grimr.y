@@ -86,6 +86,7 @@ enum EASTNodeType
 	EN_DummyString,
 	EN_Call,
 	EN_Return,
+	EN_ReturnVal,
 	EN_FrameSelect,
 	EN_ClearFrame,
 	EN_Sprite,
@@ -157,6 +158,7 @@ const char* NodeTypes[]=
 	"EN_DummyString               ",
 	"EN_Call                      ",
 	"EN_Return                    ",
+	"EN_ReturnVal                 ",
 	"EN_FrameSelect               ",
 	"EN_ClearFrame                ",
 	"EN_Sprite                    ",
@@ -204,6 +206,7 @@ enum EOpcode
 	OP_BULKASSIGN,
 	OP_DATAARRAY,
 	OP_RETURN,
+	OP_RETURNVAL,
 	OP_FSEL,
 	OP_ASEL,
 	OP_CLF,
@@ -220,6 +223,7 @@ enum EOpcode
 	OP_CALL,
 	OP_PUSH,
 	OP_POP,
+	OP_DIRECTTOREGISTER,
 	OP_JUMP,
 	OP_JUMPIF,
 	OP_JUMPIFNOT,
@@ -261,6 +265,7 @@ const std::string Opcodes[]={
 	"bulkassign",
 	"dataarray",
 	"ret",
+	"ret",
 	"fsel",
 	"asel",
 	"clf",
@@ -276,6 +281,7 @@ const std::string Opcodes[]={
 	"while",
 	"call",
 	"push",
+	"pop",
 	"pop",
 	"jmp",
 	"jmpif",
@@ -661,6 +667,47 @@ postfix_expression
 																									$$->PushNode(exprnode);
 																									exprnode->m_Opcode = OP_ARRAYINDEX;
 																									g_ASC.PushNode($$);
+																								}
+	| postfix_expression parameter_list															{
+																									// We need a 'call' as a child node
+																									SASTNode *callnode = new SASTNode(EN_Call, "");
+																									bool done = false;
+																									int paramcount = 0;
+																									do
+																									{
+																										SASTNode *paramnode = g_ASC.PeekNode();
+																										done = paramnode->m_Type == EN_Expression ? false:true;
+																										if (done)
+																											break;
+																										g_ASC.PopNode();
+																										// Replace EN_Expression with EN_StackPush
+																										paramnode->m_Type = EN_StackPush;
+																										paramnode->m_Opcode = OP_PUSH;
+																										callnode->m_ASTNodes.emplace(callnode->m_ASTNodes.begin(),paramnode);
+																										++paramcount;
+																									} while (1);
+																									SASTNode *namenode = g_ASC.PopNode();
+																									uint32_t hash = HashString(namenode->m_Value.c_str());
+																									SFunction *func = g_ASC.FindFunction(hash);
+																									if (func)
+																										func->m_RefCount++;
+																									else
+																									{
+																										printf("ERROR: Function %s not declared before use\n", namenode->m_Value.c_str());
+																										g_ASC.m_CompileFailed = true;
+																									}
+																									//callnode->PushNode(namenode); // No need to push name node, this is part of the 'call' opcode (as a target label)
+																									callnode->m_Opcode = OP_CALL;
+																									callnode->m_Value = namenode->m_Value;
+
+																									// We need a 'pop' for the return value
+																									$$ = new SASTNode(EN_StackPop, "");
+																									$$->m_Opcode = OP_DIRECTTOREGISTER;
+																									$$->m_Value = namenode->m_Value;
+																									g_ASC.PushNode($$);
+
+																									$$->PushNode(callnode);
+																									//g_ASC.PushNode(callnode);
 																								}
 	;
 
@@ -1474,6 +1521,11 @@ builtin_statement
 																									$$->m_Opcode = OP_RETURN;
 																									g_ASC.PushNode($$);
 																								}
+	| RETURN '(' expression ')' ';'																{
+																									$$ = new SASTNode(EN_ReturnVal, "");
+																									$$->m_Opcode = OP_RETURNVAL;
+																									g_ASC.PushNode($$);
+																								}
 	| FSEL '(' expression ')' ';'																{
 																									$$ = new SASTNode(EN_FrameSelect, "");
 																									$$->m_Opcode = OP_FSEL;
@@ -1710,6 +1762,15 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 
 	switch(node->m_Opcode)
 	{
+		case OP_DIRECTTOREGISTER:
+		{
+			std::string src = g_ASC.PushRegister();
+			//std::string src = g_ASC.PopRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + src;
+			g_ASC.m_InstructionCount+=1;
+		}
+		break;
+
 		case OP_POP:
 		{
 			uint32_t namehash = HashString(node->m_Value.c_str());
@@ -1731,7 +1792,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				node->m_Instructions = Opcodes[OP_LEA] + " " + val + ", " + var->m_Scope + ":" + var->m_Name;
 				node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode] + " " + trg;
 				std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
-				node->m_Instructions += std::string("\n") + Opcodes[OP_STORE] + width + " " + val + ", " + trg;
+				node->m_Instructions += std::string("\n") + Opcodes[OP_STORE] + width + " [" + val + "], " + trg;
 				g_ASC.PopRegister(); // Forget trg and val
 				g_ASC.PopRegister();
 				g_ASC.m_InstructionCount+=3;
@@ -2000,6 +2061,17 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string srcA = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcA;
 			g_ASC.m_InstructionCount+=1;
+			g_ASC.PushRegister(); // Keep output in same register
+		}
+		break;
+
+		case OP_RETURNVAL:
+		{
+			// Result of return expression in register
+			std::string srcA = g_ASC.PopRegister();
+			node->m_Instructions = Opcodes[OP_PUSH] + " " + srcA;
+			node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode];
+			g_ASC.m_InstructionCount+=2;
 			g_ASC.PushRegister(); // Keep output in same register
 		}
 		break;

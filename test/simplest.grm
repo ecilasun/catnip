@@ -1527,7 +1527,7 @@ word mysprites[] = {
 0xFFFF, 0x9D1, 0xE109, 0xFFFF, 0xFF09, 0xD1E1, 0x9FF, 0xFFFF, 
 0xFFFF, 0x913, 0x5D09, 0xFFFF, 0xFF09, 0x135D, 0x9FF, 0xFFFF };
 
-def vblank()
+def vblankhandler()
 {
     return;
 }
@@ -1537,14 +1537,17 @@ def numRand()
     seed = seed ^ (seed << 9);
     seed = seed ^ (seed >> 13);
     seed = seed ^ (seed << 1);
-    return;
+    return(seed);
 }
 
 def numSquareRoot(word x)
 {
-    word result;
-    result  = (x + 127) << 23;
-    result = result>>1;
+    return (((x + 127) << 23)>>1);
+}
+
+def sin(word param)
+{
+    return(sinewave[param%255]-128);
 }
 
 def main()
@@ -1557,7 +1560,7 @@ def main()
     word flipx = 0, flipy = 0;
 
     // Set up vblank service function address
-    VBLANKSERVICE = &vblank;
+    VBLANKSERVICE = &vblankhandler;
     // Enable vblank service
     VBSENABLE[0] = 1;
 
@@ -1573,8 +1576,8 @@ def main()
     i=0;
     while(i<2048)
     {
-        ARAM[i*2+0] = sinewave[(i<<1)%255];
-        ARAM[i*2+1] = sinewave[(i<<1)%255];
+        ARAM[i*2+0] = sin((i<<1)%255)-128;
+        ARAM[i*2+1] = sin((i<<1)%255)-128;
         i = ++i;
     }
 
@@ -1642,13 +1645,11 @@ def main()
         else
         {
             // Random X
-            numRand();
-            spritelist[0x498+2] = seed%240;
+            spritelist[0x498+2] = numRand()%240;
             //spritelist[0x49E+2] = seed%240;
 
             // Random Y
-            numRand();
-            spritelist[0x498+0] = seed%180;
+            spritelist[0x498+0] = numRand()%180;
             //spritelist[0x49E+0] = (seed%180)+16;
 
             // But hide
@@ -1668,7 +1669,7 @@ def main()
         // Set sprite origin
         spriteorigin(scrollx, scrolly);
         scrollx = -posX[0]+128;//(sinewave[(frame+32)%255]-128)>>1;
-        scrolly = -posY[0]+32;//(sinewave[frame%255]-128)>>1;
+        scrolly = -posY[0]+32;//((sinewave[frame%255]-128)>>2);
 
         // Draw all sprites in the list
         sprite(&spritelist, 0xD6);
