@@ -20,7 +20,6 @@ IS	((u|U)|(u|U)?(l|L|ll|LL)|(l|L|ll|LL)(u|U))
 extern YYSTYPE yylval;
 
 int check_type();
-void comment();
 void count();
 void stripquotes(char *string);
 
@@ -30,8 +29,8 @@ void stripquotes(char *string);
 %option noyywrap
 
 %%
-"/*"						{ comment(); }
-"//"[^\n]*					{ /* consume //-comment */ }
+"/*"([^*]|(\*+[^*/]))*\*+\/	{  }
+"//"[^\n]*					{  }
 
 "void"						{ count();  return(VOID); }
 "int"						{ count();  return(DWORD); }
@@ -138,18 +137,6 @@ void stripquotes(char *string)
 	string[l-2] = 0;
 }
 
-void comment()
-{
-	char c, prev = 0;
-	while ((c = yyinput()) != 0)      /* (EOF maps to 0) */
-	{
-		if (c == '/' && prev == '*')
-			return;
-		prev = c;
-	}
-	printf("ERROR: unterminated comment");
-}
-
 int column = 0;
 
 void count()
@@ -166,6 +153,4 @@ void count()
 			column += 8 - (column % 8);
 		else
 			++column;
-
-	// ECHO;
 }
