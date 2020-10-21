@@ -207,6 +207,7 @@ enum EOpcode
 	OP_DATAARRAY,
 	OP_RETURN,
 	OP_RETURNVAL,
+	OP_RESETREGISTERS,
 	OP_FSEL,
 	OP_ASEL,
 	OP_CLF,
@@ -266,6 +267,7 @@ const std::string Opcodes[]={
 	"dataarray",
 	"ret",
 	"ret",
+	"resetregisters",
 	"fsel",
 	"asel",
 	"clf",
@@ -1699,6 +1701,7 @@ function_def
 																									$$->PushNode(codeblocknode);
 																									//$$->PushNode(endcodeblocknode);
 
+																									$$->m_Opcode = OP_RESETREGISTERS;
 																									g_ASC.PushNode($$);
 
 																									// Also store the function in function list for later retreival
@@ -2164,6 +2167,12 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		}
 		break;
 
+		case OP_RESETREGISTERS:
+		{
+			g_ASC.m_CurrentRegister = 0;
+		}
+		break;
+
 		default:
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
 			if (node->m_Opcode != OP_LABEL)
@@ -2214,6 +2223,9 @@ bool CompileGrimR(const char *_filename)
 		mainfunc->m_RefCount++;
 	else
 		printf("WARNING: No entry point (main) found in input file.\n");
+	for (uint32_t i=0;i<g_ASC.m_Functions.size();++i)
+		if (g_ASC.m_Functions[i]->m_RefCount == 0)
+			printf("WARNING: Function '%s %s' not referenced in code\n", TypeNames[g_ASC.m_Functions[i]->m_ReturnType], g_ASC.m_Functions[i]->m_Name.c_str());
 
 	/* uint32_t interruptservice = HashString("vblank");
 	if (interruptservice)
@@ -2229,7 +2241,10 @@ bool CompileGrimR(const char *_filename)
 	{
 		fprintf(fp, "# variable '%s', dim:%d typename:%s refcount:%d\n", var->m_Name.c_str(), var->m_Dimension, TypeNames[var->m_TypeName], var->m_RefCount);
 		if (var->m_RefCount == 0)
+		{
+			printf("WARNING: Variable '%s %s' not referenced in code\n", TypeNames[var->m_TypeName], var->m_Name.c_str());
 			continue;
+		}
 		fprintf(fp, "@LABEL %s:%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
 		{
 			if (var->m_TypeName == TN_WORD)
