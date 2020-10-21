@@ -1,4 +1,4 @@
-# Instruction count: 856
+# Instruction count: 860
 
 @ORG 0x00000000
 
@@ -214,7 +214,10 @@ ret
 
 @LABEL main
 lea r4, vblankhandler
-lea r5, :VBLANKSERVICE
+ld.w r5, 0x0
+lea r6, :VBLANKSERVICE
+ld.d r6, [r6]
+iadd r5, r6
 st.d [r5], r4
 ld.w r4, 0x1
 ld.w r5, 0x0

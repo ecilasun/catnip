@@ -1591,7 +1591,7 @@ void main()
     short flipx = 0, flipy = 0;
 
     // Set up vblank service function address
-    VBLANKSERVICE = &vblankhandler;
+    VBLANKSERVICE[0] = &vblankhandler;
     // Enable vblank service
     VBSENABLE[0] = 1;
 
