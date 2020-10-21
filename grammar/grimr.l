@@ -29,8 +29,8 @@ void stripquotes(char *string);
 %option noyywrap
 
 %%
-"/*"([^*]|(\*+[^*/]))*\*+\/	{  }
-"//"[^\n]*					{  }
+"/*"([^*]|(\*+[^*/]))*\*+\/	{ count(); }
+"//"[^\n]*					{ count(); }
 
 "static"					{ count();  return(STATIC); }
 
@@ -46,6 +46,7 @@ void stripquotes(char *string);
 "{"							{ count();  return(BEGINBLOCK); }
 "}"							{ count();  return(ENDBLOCK); }
 "return"					{ count();  return(RETURN); }
+"break"						{ count();  return(BREAK); }
 
 "vsync"						{ count();  return(VSYNC); }
 "fsel"						{ count();  return(FSEL); }

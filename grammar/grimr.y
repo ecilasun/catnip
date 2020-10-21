@@ -89,6 +89,7 @@ enum EASTNodeType
 	EN_Call,
 	EN_Return,
 	EN_ReturnVal,
+	EN_Break,
 	EN_FrameSelect,
 	EN_ClearFrame,
 	EN_Sprite,
@@ -162,6 +163,7 @@ const char* NodeTypes[]=
 	"EN_Call                      ",
 	"EN_Return                    ",
 	"EN_ReturnVal                 ",
+	"EN_Break                     ",
 	"EN_FrameSelect               ",
 	"EN_ClearFrame                ",
 	"EN_Sprite                    ",
@@ -212,6 +214,7 @@ enum EOpcode
 	OP_DATAARRAY,
 	OP_RETURN,
 	OP_RETURNVAL,
+	OP_BREAK,
 	OP_RESETREGISTERS,
 	OP_FSEL,
 	OP_ASEL,
@@ -273,6 +276,7 @@ const std::string Opcodes[]={
 	"dataarray",
 	"ret",
 	"ret",
+	"brk",
 	"resetregisters",
 	"fsel",
 	"asel",
@@ -611,7 +615,7 @@ SASTScanContext g_ASC;
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
 %token STATIC
-%token VOID DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
+%token VOID DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN BREAK
 %token VSYNC FSEL ASEL CLF SPRITE SPRITESHEET SPRITEORIGIN
 %token INC_OP DEC_OP
 
@@ -1114,11 +1118,8 @@ if_statement
 																									g_ASC.PopNode();
 
 																									// Create code block node
-																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
-																									//codeblocknode->m_Opcode = OP_PUSHCONTEXT;
-
-																									//SASTNode *endcodeblocknode = new SASTNode(EN_EndCodeBlock, "");
-																									//endcodeblocknode->m_Opcode = OP_POPCONTEXT;
+																									SASTNode *ifblocknode = new SASTNode(EN_BeginCodeBlock, "");
+																									//ifblocknode->m_Opcode = OP_PUSHCONTEXT;
 
 																									// Collect everything up till prologue
 																									bool done = false;
@@ -1129,7 +1130,7 @@ if_statement
 																										if (done)
 																											break;
 																										g_ASC.PopNode();
-																										codeblocknode->m_ASTNodes.emplace(codeblocknode->m_ASTNodes.begin(),n0);
+																										ifblocknode->m_ASTNodes.emplace(ifblocknode->m_ASTNodes.begin(),n0);
 																									} while (1);
 
 																									// Remove prologue
@@ -1145,8 +1146,7 @@ if_statement
 																									SASTNode *exprnode=g_ASC.PopNode();
 																									$$->PushNode(exprnode);
 																									$$->PushNode(callcode);
-																									$$->PushNode(codeblocknode);
-																									//$$->PushNode(endcodeblocknode);
+																									$$->PushNode(ifblocknode);
 																									$$->PushNode(endlabel);
 																									//$$->m_Opcode = OP_IF;
 																									g_ASC.PushNode($$);
@@ -1164,11 +1164,6 @@ if_statement
 
 																									SASTNode *ifblocknode = new SASTNode(EN_BeginCodeBlock, "");
 																									//ifblocknode->m_Opcode = OP_PUSHCONTEXT;
-
-																									//SASTNode *ifcodeblockendnode = new SASTNode(EN_EndCodeBlock, "");
-																									//ifcodeblockendnode->m_Opcode = OP_POPCONTEXT;
-																									//SASTNode *elsecodeblockendnode = new SASTNode(EN_EndCodeBlock, "");
-																									//elsecodeblockendnode->m_Opcode = OP_POPCONTEXT;
 
 																									// Collect everything up till prologue
 																									bool done = false;
@@ -1197,7 +1192,7 @@ if_statement
 																										if (done)
 																											break;
 																										g_ASC.PopNode();
-																										ifblocknode->PushNode(n0);
+																										ifblocknode->m_ASTNodes.emplace(ifblocknode->m_ASTNodes.begin(),n0);
 																									} while (1);
 
 																									// Remove prologue
@@ -1220,11 +1215,9 @@ if_statement
 																									$$->PushNode(exprnode);
 																									$$->PushNode(callcode);
 																									$$->PushNode(ifblocknode);
-																									//$$->PushNode(ifcodeblockendnode);
 																									$$->PushNode(jumpnode);
 																									$$->PushNode(endlabel);
 																									$$->PushNode(elseblocknode);
-																									//$$->PushNode(elsecodeblockendnode);
 																									$$->PushNode(exitlabel);
 																									//$$->m_Opcode = OP_IF;
 																									g_ASC.PushNode($$);
@@ -1713,6 +1706,12 @@ builtin_statement
 																									$$ = new SASTNode(EN_ReturnVal, "");
 																									$$->m_LineNumber = yylineno;
 																									$$->m_Opcode = OP_RETURNVAL;
+																									g_ASC.PushNode($$);
+																								}
+	| BREAK ';'																					{
+																									$$ = new SASTNode(EN_Break, "");
+																									$$->m_LineNumber = yylineno;
+																									$$->m_Opcode = OP_BREAK;
 																									g_ASC.PushNode($$);
 																								}
 	| FSEL '(' expression ')' ';'																{
