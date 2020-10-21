@@ -1559,9 +1559,9 @@ short meep()
     {
         ARAM[ac*2+0] = sin((cnt<<5)%255)-128;
         ARAM[ac*2+1] = sin((cnt<<4)%255)-128;
-        ac = ++ac;
+        ++ac;
         ac = ac%2048;
-        cnt = ++cnt;
+        ++cnt;
     }
     return(cnt);
 }
@@ -1574,9 +1574,9 @@ void silence()
     {
         ARAM[ac*2+0] = 0;
         ARAM[ac*2+1] = 0;
-        ac = ++ac;
+        ++ac;
         ac = ac%2048;
-        cnt = ++cnt;
+        ++cnt;
     }
     return;
 }
@@ -1609,7 +1609,7 @@ void main()
     {
         ARAM[i*2+0] = 0;
         ARAM[i*2+1] = 0;
-        i = ++i;
+        ++i;
     }
 
     // Set border color for both framebuffers
@@ -1717,8 +1717,7 @@ void main()
         VRAM[2] = 0x08;
         VRAM[255] = 0xFF;
 
-        // Advance frame counter, wait for vsync
-        frame = ++frame;
+        // Wait for vsync
         vsync();
 
         // Turn off sound by using the enable/disable bit
@@ -1726,7 +1725,7 @@ void main()
 
         // Swap frames to reveal what we've drawn so far
         // while simultaneously selecting the other frame for write
-        fsel(frame);
+        fsel(++frame);
     }
 
     // In case the emulator or the hardware falls through the infinite loop, this will trap and revert back to boot code.

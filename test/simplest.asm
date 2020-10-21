@@ -1,4 +1,4 @@
-# Instruction count: 860
+# Instruction count: 857
 
 @ORG 0x00000000
 
@@ -165,24 +165,24 @@ inc r0
 lea r1, :ac
 st.w [r1], r0
 # line 1563
-lea r0, :ac
-ld.w r0, [r0]
-ld.w r1, 0x800
-imod r0, r1
 lea r1, :ac
-st.w [r1], r0
+ld.w r1, [r1]
+ld.w r2, 0x800
+imod r1, r2
+lea r2, :ac
+st.w [r2], r1
 # line 1564
-lea r0, meep:cnt
-ld.w r0, [r0]
-inc r0
 lea r1, meep:cnt
-st.w [r1], r0
+ld.w r1, [r1]
+inc r1
+lea r2, meep:cnt
+st.w [r2], r1
 jmp beginwhile00000000
 @LABEL endwhile00000001
 # line 1566
-lea r0, meep:cnt
-ld.w r0, [r0]
-push r0
+lea r2, meep:cnt
+ld.w r2, [r2]
+push r2
 ret
 # line 1567
 # End of function meep
@@ -232,18 +232,18 @@ inc r0
 lea r1, :ac
 st.w [r1], r0
 # line 1578
-lea r0, :ac
-ld.w r0, [r0]
-ld.w r1, 0x800
-imod r0, r1
 lea r1, :ac
-st.w [r1], r0
+ld.w r1, [r1]
+ld.w r2, 0x800
+imod r1, r2
+lea r2, :ac
+st.w [r2], r1
 # line 1579
-lea r0, silence:cnt
-ld.w r0, [r0]
-inc r0
 lea r1, silence:cnt
-st.w [r1], r0
+ld.w r1, [r1]
+inc r1
+lea r2, silence:cnt
+st.w [r2], r1
 jmp beginwhile00000002
 @LABEL endwhile00000003
 # line 1581
@@ -323,548 +323,545 @@ st.w [r1], r0
 jmp beginwhile00000004
 @LABEL endwhile00000005
 # line 1616
-ld.w r0, 0x1
-fsel r0
+ld.w r1, 0x1
+fsel r1
 # line 1617
-ld.w r0, 0x5b
-ld.w r1, 0x0
-lea r2, :BORDERCOLOR
-ld.d r2, [r2]
-iadd r1, r2
-st.b [r1], r0
+ld.w r1, 0x5b
+ld.w r2, 0x0
+lea r3, :BORDERCOLOR
+ld.d r3, [r3]
+iadd r2, r3
+st.b [r2], r1
 # line 1618
-ld.w r0, 0x0
-fsel r0
-# line 1619
-ld.w r0, 0x5b
 ld.w r1, 0x0
-lea r2, :BORDERCOLOR
-ld.d r2, [r2]
-iadd r1, r2
-st.b [r1], r0
+fsel r1
+# line 1619
+ld.w r1, 0x5b
+ld.w r2, 0x0
+lea r3, :BORDERCOLOR
+ld.d r3, [r3]
+iadd r2, r3
+st.b [r2], r1
 # line 1622
-ld.w r0, 0x0
-lea r1, main:samples
-st.w [r1], r0
+ld.w r1, 0x0
+lea r2, main:samples
+st.w [r2], r1
 @LABEL beginwhile0000000e
 # line 1623
-ld.w r0, 0x1
-jmpifnot endwhile0000000f, r0
+ld.w r1, 0x1
+jmpifnot endwhile0000000f, r1
 # line 1631
-ld.w r0, 0x0
-lea r1, main:i
-st.w [r1], r0
+ld.w r1, 0x0
+lea r2, main:i
+st.w [r2], r1
 @LABEL beginwhile0000000a
 # line 1632
-lea r0, main:i
-ld.w r0, [r0]
-ld.w r1, 0x10
-cmp r0, r1
-test r0, less
-jmpifnot endwhile0000000b, r0
-# line 1634
-lea r0, main:i
-ld.w r0, [r0]
-lea r1, main:posY
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
 lea r1, main:i
 ld.w r1, [r1]
-lea r2, main:dirY
-iadd r1, r2
-ld.w r1, [r1] # RHS array access, valueof: .w
-iadd r0, r1
-lea r1, main:i
-ld.w r1, [r1]
-lea r2, main:posY
-iadd r1, r2
-st.w [r1], r0
-# line 1635
-lea r0, main:i
-ld.w r0, [r0]
-lea r1, main:posY
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-ld.w r1, 0x9e
-cmp r0, r1
-test r0, greater
-lea r1, main:i
-ld.w r1, [r1]
-lea r2, main:posY
-iadd r1, r2
-ld.w r1, [r1] # RHS array access, valueof: .w
-ld.w r2, 0x1
+ld.w r2, 0x10
 cmp r1, r2
 test r1, less
-or r0, r1
-jmpifnot endif00000006, r0
+jmpifnot endwhile0000000b, r1
+# line 1634
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:posY
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+lea r2, main:i
+ld.w r2, [r2]
+lea r3, main:dirY
+iadd r2, r3
+ld.w r2, [r2] # RHS array access, valueof: .w
+iadd r1, r2
+lea r2, main:i
+ld.w r2, [r2]
+lea r3, main:posY
+iadd r2, r3
+st.w [r2], r1
+# line 1635
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:posY
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+ld.w r2, 0x9e
+cmp r1, r2
+test r1, greater
+lea r2, main:i
+ld.w r2, [r2]
+lea r3, main:posY
+iadd r2, r3
+ld.w r2, [r2] # RHS array access, valueof: .w
+ld.w r3, 0x1
+cmp r2, r3
+test r2, less
+or r1, r2
+jmpifnot endif00000006, r1
 # line 1637
-lea r0, main:i
-ld.w r0, [r0]
-lea r1, main:dirY
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-ineg r0
 lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:dirY
 iadd r1, r2
-st.w [r1], r0
+ld.w r1, [r1] # RHS array access, valueof: .w
+ineg r1
+lea r2, main:i
+ld.w r2, [r2]
+lea r3, main:dirY
+iadd r2, r3
+st.w [r2], r1
 # line 1638
-lea r0, main:samples
-ld.w r0, [r0]
-call meep
-pop r1
-iadd r0, r1
 lea r1, main:samples
-st.w [r1], r0
+ld.w r1, [r1]
+call meep
+pop r2
+iadd r1, r2
+lea r2, main:samples
+st.w [r2], r1
 # line 1639
-ld.w r0, 0x1
 ld.w r1, 0x1
-asel r0, r1
+ld.w r2, 0x1
+asel r1, r2
 @LABEL endif00000006
 # line 1642
-lea r0, main:i
-ld.w r0, [r0]
-lea r1, main:posX
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-lea r1, main:i
-ld.w r1, [r1]
-lea r2, main:dirX
-iadd r1, r2
-ld.w r1, [r1] # RHS array access, valueof: .w
-iadd r0, r1
 lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:posX
 iadd r1, r2
-st.w [r1], r0
+ld.w r1, [r1] # RHS array access, valueof: .w
+lea r2, main:i
+ld.w r2, [r2]
+lea r3, main:dirX
+iadd r2, r3
+ld.w r2, [r2] # RHS array access, valueof: .w
+iadd r1, r2
+lea r2, main:i
+ld.w r2, [r2]
+lea r3, main:posX
+iadd r2, r3
+st.w [r2], r1
 # line 1643
-lea r0, main:i
-ld.w r0, [r0]
-lea r1, main:posX
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-ld.w r1, 0xf0
-cmp r0, r1
-test r0, greater
 lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:posX
 iadd r1, r2
 ld.w r1, [r1] # RHS array access, valueof: .w
-ld.w r2, 0x1
+ld.w r2, 0xf0
 cmp r1, r2
-test r1, less
-or r0, r1
-jmpifnot endif00000007, r0
+test r1, greater
+lea r2, main:i
+ld.w r2, [r2]
+lea r3, main:posX
+iadd r2, r3
+ld.w r2, [r2] # RHS array access, valueof: .w
+ld.w r3, 0x1
+cmp r2, r3
+test r2, less
+or r1, r2
+jmpifnot endif00000007, r1
 # line 1645
-lea r0, main:i
-ld.w r0, [r0]
-lea r1, main:dirX
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-ineg r0
 lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:dirX
 iadd r1, r2
-st.w [r1], r0
+ld.w r1, [r1] # RHS array access, valueof: .w
+ineg r1
+lea r2, main:i
+ld.w r2, [r2]
+lea r3, main:dirX
+iadd r2, r3
+st.w [r2], r1
 # line 1646
-lea r0, main:samples
-ld.w r0, [r0]
-call meep
-pop r1
-iadd r0, r1
 lea r1, main:samples
-st.w [r1], r0
+ld.w r1, [r1]
+call meep
+pop r2
+iadd r1, r2
+lea r2, main:samples
+st.w [r2], r1
 # line 1647
-ld.w r0, 0x1
 ld.w r1, 0x1
-asel r0, r1
+ld.w r2, 0x1
+asel r1, r2
 @LABEL endif00000007
 # line 1651
-lea r0, main:i
-ld.w r0, [r0]
-lea r1, main:posY
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-ld.w r1, 0x4a4
-lea r2, main:i
-ld.w r2, [r2]
-ld.w r3, 0x6
-imul r2, r3
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:posY
 iadd r1, r2
-ld.w r2, 0x0
-iadd r1, r2
-lea r2, :spritelist
-iadd r1, r2
-st.w [r1], r0
+ld.w r1, [r1] # RHS array access, valueof: .w
+ld.w r2, 0x4a4
+lea r3, main:i
+ld.w r3, [r3]
+ld.w r4, 0x6
+imul r3, r4
+iadd r2, r3
+ld.w r3, 0x0
+iadd r2, r3
+lea r3, :spritelist
+iadd r2, r3
+st.w [r2], r1
 # line 1652
-lea r0, main:i
-ld.w r0, [r0]
-lea r1, main:posX
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-ld.w r1, 0x4a4
-lea r2, main:i
-ld.w r2, [r2]
-ld.w r3, 0x6
-imul r2, r3
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:posX
 iadd r1, r2
-ld.w r2, 0x2
-iadd r1, r2
-lea r2, :spritelist
-iadd r1, r2
-st.w [r1], r0
+ld.w r1, [r1] # RHS array access, valueof: .w
+ld.w r2, 0x4a4
+lea r3, main:i
+ld.w r3, [r3]
+ld.w r4, 0x6
+imul r3, r4
+iadd r2, r3
+ld.w r3, 0x2
+iadd r2, r3
+lea r3, :spritelist
+iadd r2, r3
+st.w [r2], r1
 # line 1653
-lea r0, main:i
-ld.w r0, [r0]
-lea r1, main:posY
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-ld.w r1, 0x10
-iadd r0, r1
-ld.w r1, 0x4aa
-lea r2, main:i
-ld.w r2, [r2]
-ld.w r3, 0x6
-imul r2, r3
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:posY
 iadd r1, r2
-ld.w r2, 0x0
+ld.w r1, [r1] # RHS array access, valueof: .w
+ld.w r2, 0x10
 iadd r1, r2
-lea r2, :spritelist
-iadd r1, r2
-st.w [r1], r0
+ld.w r2, 0x4aa
+lea r3, main:i
+ld.w r3, [r3]
+ld.w r4, 0x6
+imul r3, r4
+iadd r2, r3
+ld.w r3, 0x0
+iadd r2, r3
+lea r3, :spritelist
+iadd r2, r3
+st.w [r2], r1
 # line 1654
-lea r0, main:i
-ld.w r0, [r0]
-lea r1, main:posX
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-ld.w r1, 0x4aa
-lea r2, main:i
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:posX
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+ld.w r2, 0x4aa
+lea r3, main:i
+ld.w r3, [r3]
+ld.w r4, 0x6
+imul r3, r4
+iadd r2, r3
+ld.w r3, 0x2
+iadd r2, r3
+lea r3, :spritelist
+iadd r2, r3
+st.w [r2], r1
+# line 1656
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:dirX
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+ld.w r2, 0x8000
+and r1, r2
+lea r2, main:flipx
+st.w [r2], r1
+# line 1657
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:dirY
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+ld.w r2, 0x8000
+and r1, r2
+ld.w r2, 0x1
+bsr r1, r2
+lea r2, main:flipy
+st.w [r2], r1
+# line 1659
+lea r1, main:flipy
+ld.w r1, [r1]
+ld.w r2, 0x0
+cmp r1, r2
+test r1, notequal
+jmpifnot endif00000008, r1
+# line 1661
+lea r1, main:flipy
+ld.w r1, [r1]
+lea r2, main:flipx
 ld.w r2, [r2]
-ld.w r3, 0x6
-imul r2, r3
+iadd r1, r2
+ld.w r2, 0x46
 iadd r1, r2
 ld.w r2, 0x2
-iadd r1, r2
-lea r2, :spritelist
-iadd r1, r2
-st.w [r1], r0
-# line 1656
-lea r0, main:i
-ld.w r0, [r0]
-lea r1, main:dirX
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-ld.w r1, 0x8000
-and r0, r1
-lea r1, main:flipx
-st.w [r1], r0
-# line 1657
-lea r0, main:i
-ld.w r0, [r0]
-lea r1, main:dirY
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-ld.w r1, 0x8000
-and r0, r1
-ld.w r1, 0x1
-bsr r0, r1
-lea r1, main:flipy
-st.w [r1], r0
-# line 1659
-lea r0, main:flipy
-ld.w r0, [r0]
-ld.w r1, 0x0
-cmp r0, r1
-test r0, notequal
-jmpifnot endif00000008, r0
-# line 1661
-lea r0, main:flipy
-ld.w r0, [r0]
-lea r1, main:flipx
-ld.w r1, [r1]
-iadd r0, r1
-ld.w r1, 0x46
-iadd r0, r1
-ld.w r1, 0x2
-lea r2, main:i
-ld.w r2, [r2]
-lea r3, main:frame
+lea r3, main:i
 ld.w r3, [r3]
-iadd r2, r3
-ld.w r3, 0x4
-bsr r2, r3
-ld.w r3, 0x4
-imod r2, r3
-imul r1, r2
-iadd r0, r1
-ld.w r1, 0x4aa
-lea r2, main:i
-ld.w r2, [r2]
-ld.w r3, 0x6
+lea r4, main:frame
+ld.w r4, [r4]
+iadd r3, r4
+ld.w r4, 0x4
+bsr r3, r4
+ld.w r4, 0x4
+imod r3, r4
 imul r2, r3
 iadd r1, r2
-ld.w r2, 0x4
-iadd r1, r2
-lea r2, :spritelist
-iadd r1, r2
-st.w [r1], r0
+ld.w r2, 0x4aa
+lea r3, main:i
+ld.w r3, [r3]
+ld.w r4, 0x6
+imul r3, r4
+iadd r2, r3
+ld.w r3, 0x4
+iadd r2, r3
+lea r3, :spritelist
+iadd r2, r3
+st.w [r2], r1
 # line 1662
-lea r0, main:flipy
-ld.w r0, [r0]
-lea r1, main:flipx
+lea r1, main:flipy
 ld.w r1, [r1]
-iadd r0, r1
-ld.w r1, 0x47
-iadd r0, r1
-ld.w r1, 0x2
-lea r2, main:i
+lea r2, main:flipx
 ld.w r2, [r2]
-lea r3, main:frame
+iadd r1, r2
+ld.w r2, 0x47
+iadd r1, r2
+ld.w r2, 0x2
+lea r3, main:i
 ld.w r3, [r3]
-iadd r2, r3
-ld.w r3, 0x4
-bsr r2, r3
-ld.w r3, 0x4
-imod r2, r3
-imul r1, r2
-iadd r0, r1
-ld.w r1, 0x4a4
-lea r2, main:i
-ld.w r2, [r2]
-ld.w r3, 0x6
+lea r4, main:frame
+ld.w r4, [r4]
+iadd r3, r4
+ld.w r4, 0x4
+bsr r3, r4
+ld.w r4, 0x4
+imod r3, r4
 imul r2, r3
 iadd r1, r2
-ld.w r2, 0x4
-iadd r1, r2
-lea r2, :spritelist
-iadd r1, r2
-st.w [r1], r0
+ld.w r2, 0x4a4
+lea r3, main:i
+ld.w r3, [r3]
+ld.w r4, 0x6
+imul r3, r4
+iadd r2, r3
+ld.w r3, 0x4
+iadd r2, r3
+lea r3, :spritelist
+iadd r2, r3
+st.w [r2], r1
 jmp exitif00000009
 @LABEL endif00000008
 # line 1666
-lea r0, main:flipy
-ld.w r0, [r0]
-lea r1, main:flipx
+lea r1, main:flipy
 ld.w r1, [r1]
-iadd r0, r1
-ld.w r1, 0x46
-iadd r0, r1
-ld.w r1, 0x2
-lea r2, main:i
+lea r2, main:flipx
 ld.w r2, [r2]
-lea r3, main:frame
+iadd r1, r2
+ld.w r2, 0x46
+iadd r1, r2
+ld.w r2, 0x2
+lea r3, main:i
 ld.w r3, [r3]
-iadd r2, r3
-ld.w r3, 0x4
-bsr r2, r3
-ld.w r3, 0x4
-imod r2, r3
-imul r1, r2
-iadd r0, r1
-ld.w r1, 0x4a4
-lea r2, main:i
-ld.w r2, [r2]
-ld.w r3, 0x6
+lea r4, main:frame
+ld.w r4, [r4]
+iadd r3, r4
+ld.w r4, 0x4
+bsr r3, r4
+ld.w r4, 0x4
+imod r3, r4
 imul r2, r3
 iadd r1, r2
-ld.w r2, 0x4
-iadd r1, r2
-lea r2, :spritelist
-iadd r1, r2
-st.w [r1], r0
+ld.w r2, 0x4a4
+lea r3, main:i
+ld.w r3, [r3]
+ld.w r4, 0x6
+imul r3, r4
+iadd r2, r3
+ld.w r3, 0x4
+iadd r2, r3
+lea r3, :spritelist
+iadd r2, r3
+st.w [r2], r1
 # line 1667
-lea r0, main:flipy
-ld.w r0, [r0]
-lea r1, main:flipx
+lea r1, main:flipy
 ld.w r1, [r1]
-iadd r0, r1
-ld.w r1, 0x47
-iadd r0, r1
-ld.w r1, 0x2
-lea r2, main:i
+lea r2, main:flipx
 ld.w r2, [r2]
-lea r3, main:frame
+iadd r1, r2
+ld.w r2, 0x47
+iadd r1, r2
+ld.w r2, 0x2
+lea r3, main:i
 ld.w r3, [r3]
-iadd r2, r3
-ld.w r3, 0x4
-bsr r2, r3
-ld.w r3, 0x4
-imod r2, r3
-imul r1, r2
-iadd r0, r1
-ld.w r1, 0x4aa
-lea r2, main:i
-ld.w r2, [r2]
-ld.w r3, 0x6
+lea r4, main:frame
+ld.w r4, [r4]
+iadd r3, r4
+ld.w r4, 0x4
+bsr r3, r4
+ld.w r4, 0x4
+imod r3, r4
 imul r2, r3
 iadd r1, r2
-ld.w r2, 0x4
-iadd r1, r2
-lea r2, :spritelist
-iadd r1, r2
-st.w [r1], r0
+ld.w r2, 0x4aa
+lea r3, main:i
+ld.w r3, [r3]
+ld.w r4, 0x6
+imul r3, r4
+iadd r2, r3
+ld.w r3, 0x4
+iadd r2, r3
+lea r3, :spritelist
+iadd r2, r3
+st.w [r2], r1
 @LABEL exitif00000009
 # line 1670
-lea r0, main:i
-ld.w r0, [r0]
-ld.w r1, 0x2
-iadd r0, r1
 lea r1, main:i
-st.w [r1], r0
+ld.w r1, [r1]
+ld.w r2, 0x2
+iadd r1, r2
+lea r2, main:i
+st.w [r2], r1
 jmp beginwhile0000000a
 @LABEL endwhile0000000b
 # line 1673
 call silence
 # line 1676
-lea r0, main:frame
-ld.w r0, [r0]
-ld.w r1, 0x5
-bsr r0, r1
-ld.w r1, 0x2
-imod r0, r1
-ld.w r1, 0x1
-cmp r0, r1
-test r0, equal
-jmpifnot endif0000000c, r0
+lea r1, main:frame
+ld.w r1, [r1]
+ld.w r2, 0x5
+bsr r1, r2
+ld.w r2, 0x2
+imod r1, r2
+ld.w r2, 0x1
+cmp r1, r2
+test r1, equal
+jmpifnot endif0000000c, r1
 # line 1678
-ld.w r0, 0x3f
-ld.w r1, 0x498
-ld.w r2, 0x4
-iadd r1, r2
-lea r2, :spritelist
-iadd r1, r2
-st.w [r1], r0
+ld.w r1, 0x3f
+ld.w r2, 0x498
+ld.w r3, 0x4
+iadd r2, r3
+lea r3, :spritelist
+iadd r2, r3
+st.w [r2], r1
 jmp exitif0000000d
 @LABEL endif0000000c
 # line 1684
-ld.w r0, 0x0
-lea r1, main:posX
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0x0
+lea r2, main:posX
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
 call numRand
-pop r1
-ld.w r2, 0x10
-imod r1, r2
-iadd r0, r1
-ld.w r1, 0x498
-ld.w r2, 0x2
+pop r2
+ld.w r3, 0x10
+imod r2, r3
 iadd r1, r2
-lea r2, :spritelist
-iadd r1, r2
-st.w [r1], r0
+ld.w r2, 0x498
+ld.w r3, 0x2
+iadd r2, r3
+lea r3, :spritelist
+iadd r2, r3
+st.w [r2], r1
 # line 1687
-ld.w r0, 0x0
-lea r1, main:posY
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0x0
+lea r2, main:posY
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
 call numRand
-pop r1
-ld.w r2, 0x10
-imod r1, r2
-iadd r0, r1
-ld.w r1, 0x498
-ld.w r2, 0x0
+pop r2
+ld.w r3, 0x10
+imod r2, r3
 iadd r1, r2
-lea r2, :spritelist
-iadd r1, r2
-st.w [r1], r0
+ld.w r2, 0x498
+ld.w r3, 0x0
+iadd r2, r3
+lea r3, :spritelist
+iadd r2, r3
+st.w [r2], r1
 # line 1690
-ld.w r0, 0xffff
-ld.w r1, 0x498
-ld.w r2, 0x4
-iadd r1, r2
-lea r2, :spritelist
-iadd r1, r2
-st.w [r1], r0
+ld.w r1, 0xffff
+ld.w r2, 0x498
+ld.w r3, 0x4
+iadd r2, r3
+lea r3, :spritelist
+iadd r2, r3
+st.w [r2], r1
 @LABEL exitif0000000d
 # line 1705
-ld.w r0, 0xe0
-clf r0
+ld.w r1, 0xe0
+clf r1
 # line 1708
-lea r0, main:scrollx
-ld.w r0, [r0]
-lea r1, main:scrolly
-ld.w r1, [r1]
-spriteorigin r0, r1
-# line 1709
-ld.w r0, 0x0
-lea r1, main:posX
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-ineg r0
-ld.w r1, 0x80
-iadd r0, r1
 lea r1, main:scrollx
-st.w [r1], r0
+ld.w r1, [r1]
+lea r2, main:scrolly
+ld.w r2, [r2]
+spriteorigin r1, r2
+# line 1709
+ld.w r1, 0x0
+lea r2, main:posX
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+ineg r1
+ld.w r2, 0x80
+iadd r1, r2
+lea r2, main:scrollx
+st.w [r2], r1
 # line 1710
-ld.w r0, 0x0
-lea r1, main:posY
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-ineg r0
-ld.w r1, 0x20
-iadd r0, r1
-lea r1, main:scrolly
-st.w [r1], r0
+ld.w r1, 0x0
+lea r2, main:posY
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+ineg r1
+ld.w r2, 0x20
+iadd r1, r2
+lea r2, main:scrolly
+st.w [r2], r1
 # line 1713
-lea r0, :spritelist
-ld.w r1, 0xd6
-sprite r0, r1
+lea r1, :spritelist
+ld.w r2, 0xd6
+sprite r1, r2
 # line 1715
-ld.w r0, 0xf
-ld.w r1, 0x0
-lea r2, :VRAM
-ld.d r2, [r2]
-iadd r1, r2
-st.b [r1], r0
+ld.w r1, 0xf
+ld.w r2, 0x0
+lea r3, :VRAM
+ld.d r3, [r3]
+iadd r2, r3
+st.b [r2], r1
 # line 1716
-ld.w r0, 0xf0
-ld.w r1, 0x1
-lea r2, :VRAM
-ld.d r2, [r2]
-iadd r1, r2
-st.b [r1], r0
+ld.w r1, 0xf0
+ld.w r2, 0x1
+lea r3, :VRAM
+ld.d r3, [r3]
+iadd r2, r3
+st.b [r2], r1
 # line 1717
-ld.w r0, 0x8
-ld.w r1, 0x2
-lea r2, :VRAM
-ld.d r2, [r2]
-iadd r1, r2
-st.b [r1], r0
+ld.w r1, 0x8
+ld.w r2, 0x2
+lea r3, :VRAM
+ld.d r3, [r3]
+iadd r2, r3
+st.b [r2], r1
 # line 1718
-ld.w r0, 0xff
 ld.w r1, 0xff
-lea r2, :VRAM
-ld.d r2, [r2]
-iadd r1, r2
-st.b [r1], r0
+ld.w r2, 0xff
+lea r3, :VRAM
+ld.d r3, [r3]
+iadd r2, r3
+st.b [r2], r1
 # line 1721
-lea r0, main:frame
-ld.w r0, [r0]
-inc r0
-lea r1, main:frame
-st.w [r1], r0
-# line 1722
 vsync 
-# line 1725
-ld.w r0, 0x0
+# line 1724
 ld.w r1, 0x0
-asel r0, r1
-# line 1729
-lea r0, main:frame
-ld.w r0, [r0]
-fsel r0
+ld.w r2, 0x0
+asel r1, r2
+# line 1728
+lea r1, main:frame
+ld.w r1, [r1]
+inc r1
+lea r2, main:frame
+st.w [r2], r1
+fsel r1
 jmp beginwhile0000000e
 @LABEL endwhile0000000f
-# line 1733
+# line 1732
 ret 
-# line 1734
+# line 1733
 # End of function main
 
 #-------------Symbol Table-------------
@@ -894,7 +891,7 @@ ret
 # variable 'seed', dim:1 typename:word refcount:10
 @LABEL :seed
 @DW 0x0007 
-# variable 'ac', dim:1 typename:word refcount:12
+# variable 'ac', dim:1 typename:word refcount:10
 @LABEL :ac
 @DW 0x0000 
 # variable 'sinewave', dim:256 typename:byte refcount:1
@@ -2254,16 +2251,16 @@ ret
 # variable 's', dim:1 typename:word refcount:1
 @LABEL sin:s
 @DW 0xCDCD 
-# variable 'cnt', dim:1 typename:word refcount:7
+# variable 'cnt', dim:1 typename:word refcount:6
 @LABEL meep:cnt
 @DW 0x0000 
-# variable 'cnt', dim:1 typename:word refcount:4
+# variable 'cnt', dim:1 typename:word refcount:3
 @LABEL silence:cnt
 @DW 0x0000 
-# variable 'frame', dim:1 typename:word refcount:8
+# variable 'frame', dim:1 typename:word refcount:6
 @LABEL main:frame
 @DW 0x0000 
-# variable 'i', dim:1 typename:word refcount:42
+# variable 'i', dim:1 typename:word refcount:41
 @LABEL main:i
 @DW 0x0000 
 # variable 'samples', dim:1 typename:word refcount:5

@@ -2292,6 +2292,31 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string srcA = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA;
 			g_ASC.m_InstructionCount+=1;
+
+			// Assign back to self if this is a variable
+
+			uint32_t namehash = HashString(node->m_ASTNodes[0]->m_Value.c_str());
+			uint32_t scopehash = HashString(g_ASC.m_CurrentFunctionName.c_str());
+			uint32_t emptyhash = HashString("");
+			SVariable *var = g_ASC.FindVariable(namehash, scopehash);
+			if (!var)
+				var = g_ASC.FindVariable(namehash, emptyhash);
+			if (var)
+			{
+				g_ASC.PushRegister(); // Have to skip over the one we already read as srcA
+				std::string trg = g_ASC.PushRegister();
+				node->m_Instructions += std::string("\n") + "lea " + trg + ", " + var->m_Scope + ":" + var->m_Name;
+				node->m_Instructions += std::string("\n") + "st"+TypeNameToInstructionSize[var->m_TypeName]+" [" + trg + "], " + srcA;
+				g_ASC.PopRegister(); // Discard trg
+				g_ASC.PopRegister(); // Discard second copy of srcA
+				g_ASC.m_InstructionCount+=2;
+				//var->m_RefCount++; ?? Does the self-assignment count as another ref?
+			}
+			else
+			{
+				printf("WARNING: Inc/Dec prefix on non-variable, ignoring self assignment. Incremented value is transient.\n");
+			}
+
 			g_ASC.PushRegister(); // Keep output in same register
 		}
 		break;
