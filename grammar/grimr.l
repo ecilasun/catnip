@@ -34,12 +34,12 @@ void stripquotes(char *string);
 "//"[^\n]*					{ /* consume //-comment */ }
 
 "void"						{ count();  return(VOID); }
-"dword"						{ count();  return(DWORD); }
-"word"						{ count();  return(WORD); }
-"byte"						{ count();  return(BYTE); }
-"wordptr"					{ count();  return(WORDPTR); }
-"dwordptr"					{ count();  return(DWORDPTR); }
-"byteptr"					{ count();  return(BYTEPTR); }
+"int"						{ count();  return(DWORD); }
+"short"						{ count();  return(WORD); }
+"char"						{ count();  return(BYTE); }
+"shortptr"					{ count();  return(WORDPTR); }
+"intptr"					{ count();  return(DWORDPTR); }
+"charptr"					{ count();  return(BYTEPTR); }
 
 "def"						{ count();  return(FUNCTION); }
 "if"						{ count();  return(IF); }

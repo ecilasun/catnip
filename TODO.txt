@@ -4,4 +4,4 @@ TODO
 - Add spriteorigin command to be used before sprite call (to shift draw origin)
 - Add proper sprite culling to sprite unit so it can skip over culled data
 - Add scaling/size bits to sprite routine for 8x8 sprites
-- 
+- Fix array index to be indices, not bytes
