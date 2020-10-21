@@ -21,6 +21,8 @@ extern char *yytext;
 extern FILE *fp;
 int err=0;
 
+static uint32_t s_prevLineNo;
+
 uint32_t HashString(const char *_str)
 {
 	size_t Val = 2166136261U;
@@ -93,6 +95,7 @@ enum EASTNodeType
 	EN_SpriteSheet,
 	EN_SpriteOrigin,
 	EN_Vsync,
+	EN_AudioSelect,
 	EN_EndCodeBlock,
 	EN_BeginCodeBlock,
 	EN_StackPush,
@@ -165,6 +168,7 @@ const char* NodeTypes[]=
 	"EN_SpriteSheet               ",
 	"EN_SpriteOrigin              ",
 	"EN_Vsync                     ",
+	"EN_AudioSelect               ",
 	"EN_EndCodeBlock              ",
 	"EN_BeginCodeBlock            ",
 	"EN_StackPush                 ",
@@ -184,7 +188,7 @@ const char* NodeTypes[]=
 
 enum EOpcode
 {
-	OP_EMPTY,
+	OP_PASSTHROUGH,
 	OP_NOOP,
 	OP_INC,
 	OP_DEC,
@@ -404,11 +408,12 @@ public:
 		return node;
 	}
 
-	EOpcode m_Opcode{OP_EMPTY};
+	EOpcode m_Opcode{OP_PASSTHROUGH};
 	EASTNodeType m_Type{EN_Default};
 	ENodeSide m_Side{RIGHT_HAND_SIDE};
 	int m_ScopeDepth{0};
 	int m_Visited{0};
+	uint32_t m_LineNumber{0xFFFFFFFF};
 	ETypeName m_InheritedTypeName{TN_WORD};
 	SString *m_String{nullptr};
 	std::string m_Value;
@@ -636,6 +641,7 @@ SASTScanContext g_ASC;
 simple_identifier
 	: IDENTIFIER																				{
 																									$$ = new SASTNode(EN_Identifier, std::string($1));
+																									$$->m_LineNumber = yylineno;
 																									$$->m_Opcode = OP_LEA;
 																									g_ASC.PushNode($$);
 																								}
@@ -648,6 +654,7 @@ simple_constant
 																									stream << std::hex << $1;
 																									std::string result( stream.str() );
 																									$$ = new SASTNode(EN_Constant, std::string("0x")+result);
+																									$$->m_LineNumber = yylineno;
 																									$$->m_Opcode = OP_LOAD;
 																									g_ASC.PushNode($$);
 																								}
@@ -656,6 +663,7 @@ simple_constant
 simple_string
 	: STRING_LITERAL																			{
 																									$$ = new SASTNode(EN_String, yytext); // $1 is just a single word, yytext includes spaces
+																									$$->m_LineNumber = yylineno;
 																									$$->m_String = g_ASC.AllocateOrRetreiveString(yytext);
 																									$$->m_Opcode = OP_LOAD;
 																									g_ASC.PushNode($$);
@@ -673,6 +681,7 @@ postfix_expression
 	: primary_expression																		/*{
 																									SASTNode *exprnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_PrimaryExpression, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->PushNode(exprnode);
 																									g_ASC.PushNode($$);
 																								}*/
@@ -680,6 +689,7 @@ postfix_expression
 																									SASTNode *offsetexpressionnode = g_ASC.PopNode();
 																									SASTNode *exprnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_PostfixArrayExpression, "");
+																									$$->m_LineNumber = yylineno;
 																									// We need to evaluate offset first
 																									$$->PushNode(offsetexpressionnode);
 																									$$->PushNode(exprnode);
@@ -727,6 +737,7 @@ postfix_expression
 
 																									// We need a 'pop' for the return value
 																									$$ = new SASTNode(EN_StackPop, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->m_Opcode = OP_DIRECTTOREGISTER;
 																									$$->m_Value = namenode->m_Value;
 																									g_ASC.PushNode($$);
@@ -741,6 +752,7 @@ unary_expression
 	| '~' unary_expression																		{
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryBitNot, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->PushNode(unaryexpressionnode);
 																									$$->m_Opcode = OP_NOT;
 																									g_ASC.PushNode($$);
@@ -748,6 +760,7 @@ unary_expression
 	| '-' unary_expression																		{
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryNegate, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->PushNode(unaryexpressionnode);
 																									$$->m_Opcode = OP_NEG;
 																									g_ASC.PushNode($$);
@@ -755,6 +768,7 @@ unary_expression
 	| '!' unary_expression																		{
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryLogicNot, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->PushNode(unaryexpressionnode);
 																									$$->m_Opcode = OP_NOT;
 																									g_ASC.PushNode($$);
@@ -762,6 +776,7 @@ unary_expression
 	| '&' unary_expression																		{
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryAddressOf, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->PushNode(unaryexpressionnode);
 																									unaryexpressionnode->m_Opcode = OP_ADDRESSOF;
 																									g_ASC.PushNode($$);
@@ -769,6 +784,7 @@ unary_expression
 	| '*' unary_expression																		{
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$ = new SASTNode(EN_UnaryValueOf, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->PushNode(n0);
 																									$$->m_Opcode = OP_VALUEOF;
 																									g_ASC.PushNode($$);
@@ -776,6 +792,7 @@ unary_expression
 	| INC_OP unary_expression																	{
 																									SASTNode *exprnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_PrefixInc, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->PushNode(exprnode);
 																									$$->m_Opcode = OP_INC;
 																									g_ASC.PushNode($$);
@@ -783,6 +800,7 @@ unary_expression
 	| DEC_OP unary_expression																	{
 																									SASTNode *exprnode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_PrefixDec, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->PushNode(exprnode);
 																									$$->m_Opcode = OP_DEC;
 																									g_ASC.PushNode($$);
@@ -794,6 +812,7 @@ multiplicative_expression
 	: unary_expression
 	| multiplicative_expression '*' unary_expression											{
 																									$$ = new SASTNode(EN_Mul, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -803,6 +822,7 @@ multiplicative_expression
 																								}
 	| multiplicative_expression '/' unary_expression											{
 																									$$ = new SASTNode(EN_Div, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -812,6 +832,7 @@ multiplicative_expression
 																								}
 	| multiplicative_expression '%' unary_expression											{
 																									$$ = new SASTNode(EN_Mod, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -826,6 +847,7 @@ additive_expression
 	: multiplicative_expression
 	| additive_expression '+' multiplicative_expression											{
 																									$$ = new SASTNode(EN_Add, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -835,6 +857,7 @@ additive_expression
 																								}
 	| additive_expression '-' multiplicative_expression											{
 																									$$ = new SASTNode(EN_Sub, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode = g_ASC.PopNode();
 																									SASTNode *leftnode = g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -848,6 +871,7 @@ shift_expression
 	: additive_expression
 	| shift_expression SHIFTLEFT_OP additive_expression											{
 																									$$ = new SASTNode(EN_BitShiftLeft, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -857,6 +881,7 @@ shift_expression
 																								}
 	| shift_expression SHIFTRIGHT_OP additive_expression										{
 																									$$ = new SASTNode(EN_BitShiftRight, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -870,6 +895,7 @@ relational_expression
 	: shift_expression
 	| relational_expression LESS_OP additive_expression											{
 																									$$ = new SASTNode(EN_LessThan, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -879,6 +905,7 @@ relational_expression
 																								}
 	| relational_expression GREATER_OP additive_expression										{
 																									$$ = new SASTNode(EN_GreaterThan, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -888,6 +915,7 @@ relational_expression
 																								}
 	| relational_expression LESSEQUAL_OP additive_expression									{
 																									$$ = new SASTNode(EN_LessEqual, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -897,6 +925,7 @@ relational_expression
 																								}
 	| relational_expression GREATEREQUAL_OP additive_expression									{
 																									$$ = new SASTNode(EN_GreaterEqual, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -910,6 +939,7 @@ equality_expression
 	: relational_expression
 	| equality_expression EQUAL_OP relational_expression										{
 																									$$ = new SASTNode(EN_Equal, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -919,6 +949,7 @@ equality_expression
 																								}
 	| equality_expression NOTEQUAL_OP relational_expression										{
 																									$$ = new SASTNode(EN_NotEqual, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -932,6 +963,7 @@ and_expression
 	: equality_expression
 	| and_expression '&' equality_expression													{
 																									$$ = new SASTNode(EN_BitAnd, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -945,6 +977,7 @@ exclusive_or_expression
 	: and_expression
 	| exclusive_or_expression '^' and_expression												{
 																									$$ = new SASTNode(EN_BitXor, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -958,6 +991,7 @@ inclusive_or_expression
 	: exclusive_or_expression
 	| inclusive_or_expression '|' exclusive_or_expression										{
 																									$$ = new SASTNode(EN_BitOr, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -971,6 +1005,7 @@ logical_and_expression
 	: inclusive_or_expression
 	| logical_and_expression AND_OP inclusive_or_expression										{
 																									$$ = new SASTNode(EN_LogicAnd, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -984,6 +1019,7 @@ logical_or_expression
 	: logical_and_expression
 	| logical_or_expression OR_OP logical_and_expression										{
 																									$$ = new SASTNode(EN_LogicOr, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									$$->PushNode(leftnode);
@@ -996,6 +1032,7 @@ logical_or_expression
 conditional_expression
 	: logical_or_expression																		/*{
 																									$$ = new SASTNode(EN_ConditionalExpr, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
 																									g_ASC.PushNode($$);
@@ -1006,6 +1043,7 @@ assignment_expression
 	: conditional_expression
 	| unary_expression '=' assignment_expression												{
 																									$$ = new SASTNode(EN_AssignmentExpression, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode=g_ASC.PopNode();
 																									SASTNode *leftnode=g_ASC.PopNode();
 																									//printf("LSH:%s\n", NodeTypes[leftnode->m_Type]);
@@ -1033,6 +1071,7 @@ expression
 expression_statement
 	: expression ';'																			{
 																									$$ = new SASTNode(EN_Statement, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
 																									g_ASC.PushNode($$);
@@ -1042,6 +1081,7 @@ expression_statement
 if_statement
 	: IF '(' expression ')' code_block_start code_block_body code_block_end						{
 																									$$ = new SASTNode(EN_If, "");
+																									$$->m_LineNumber = yylineno;
 
 																									// Remove epilogue
 																									g_ASC.PopNode();
@@ -1086,6 +1126,7 @@ if_statement
 																								}
 	| IF '(' expression ')' code_block_start code_block_body code_block_end ELSE code_block_start code_block_body code_block_end	{
 																									$$ = new SASTNode(EN_If, "");
+																									$$->m_LineNumber = yylineno;
 
 																									// Remove epilogue
 																									g_ASC.PopNode();
@@ -1166,6 +1207,7 @@ if_statement
 while_statement
 	: WHILE '(' expression ')' code_block_start code_block_body code_block_end					{
 																									$$ = new SASTNode(EN_While, "");
+																									$$->m_LineNumber = yylineno;
 
 																									// Remove epilogue
 																									g_ASC.PopNode();
@@ -1221,6 +1263,7 @@ variable_declaration_item
 																								}
 	| simple_identifier '=' expression 															{
 																									$$ = new SASTNode(EN_DeclInitJunction, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *valnode=g_ASC.PopNode();
 																									SASTNode *namenode=g_ASC.PopNode();
 																									$$->PushNode(namenode);
@@ -1230,6 +1273,7 @@ variable_declaration_item
 																								}
 	| simple_identifier '[' expression ']'														{
 																									$$ = new SASTNode(EN_DeclArray, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *dimnode=g_ASC.PopNode();
 																									SASTNode *namenode=g_ASC.PopNode();
 																									$$->PushNode(namenode);
@@ -1239,6 +1283,7 @@ variable_declaration_item
 																								}
 	| simple_identifier '[' expression ']' '=' code_block_start expression_list code_block_end	{
 																									$$ = new SASTNode(EN_DeclInitJunction, "");
+																									$$->m_LineNumber = yylineno;
 
 																									// Discard epilogue
 																									g_ASC.PopNode();
@@ -1273,6 +1318,7 @@ variable_declaration_item
 																								}
 	| simple_identifier '['  ']' '=' code_block_start expression_list code_block_end			{
 																									$$ = new SASTNode(EN_DeclInitJunction, "");
+																									$$->m_LineNumber = yylineno;
 
 																									// Discard epilogue
 																									g_ASC.PopNode();
@@ -1327,6 +1373,7 @@ type_name
 variable_declaration
 	: type_name variable_declaration_item														{
 																									$$ = new SASTNode(EN_Decl, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
 
@@ -1387,6 +1434,7 @@ variable_declaration
 																								}
 	| variable_declaration ',' variable_declaration_item										{
 																									$$ = new SASTNode(EN_Decl, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
 
@@ -1454,12 +1502,14 @@ variable_declaration_statement
 expression_list
 	: expression																				{
 																									$$ = new SASTNode(EN_Expression, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
 																									g_ASC.PushNode($$);
 																								}
 	| expression_list ',' expression															{
 																									$$ = new SASTNode(EN_Expression, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
 																									g_ASC.PushNode($$);
@@ -1474,6 +1524,7 @@ parameter_list
 input_param_list
 	: type_name simple_identifier																{
 																									$$ = new SASTNode(EN_Expression, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
 																									$$->m_InheritedTypeName = g_ASC.m_CurrentTypeName;
@@ -1481,6 +1532,7 @@ input_param_list
 																								}
 	| input_param_list ',' type_name simple_identifier											{
 																									$$ = new SASTNode(EN_Expression, "");
+																									$$->m_LineNumber = yylineno;
 																									SASTNode *n0=g_ASC.PopNode();
 																									$$->PushNode(n0);
 																									$$->m_InheritedTypeName = g_ASC.m_CurrentTypeName;
@@ -1496,6 +1548,7 @@ function_parameters
 functioncall_statement
 	: simple_identifier parameter_list ';'														{
 																									$$ = new SASTNode(EN_Call, "");
+																									$$->m_LineNumber = yylineno;
 																									bool done = false;
 																									int paramcount = 0;
 																									do
@@ -1531,6 +1584,7 @@ functioncall_statement
 code_block_start
 	: BEGINBLOCK																				{
 																									$$ = new SASTNode(EN_Prologue, "");
+																									$$->m_LineNumber = yylineno;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -1538,6 +1592,7 @@ code_block_start
 code_block_end
 	: ENDBLOCK																					{
 																									$$ = new SASTNode(EN_Epilogue, "");
+																									$$->m_LineNumber = yylineno;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -1545,46 +1600,55 @@ code_block_end
 builtin_statement
 	: RETURN ';'																				{
 																									$$ = new SASTNode(EN_Return, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->m_Opcode = OP_RETURN;
 																									g_ASC.PushNode($$);
 																								}
 	| RETURN '(' expression ')' ';'																{
 																									$$ = new SASTNode(EN_ReturnVal, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->m_Opcode = OP_RETURNVAL;
 																									g_ASC.PushNode($$);
 																								}
 	| FSEL '(' expression ')' ';'																{
 																									$$ = new SASTNode(EN_FrameSelect, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->m_Opcode = OP_FSEL;
 																									g_ASC.PushNode($$);
 																								}
 	| ASEL '(' expression ',' expression ')' ';'												{
-																									$$ = new SASTNode(EN_FrameSelect, "");
+																									$$ = new SASTNode(EN_AudioSelect, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->m_Opcode = OP_ASEL;
 																									g_ASC.PushNode($$);
 																								}
 	| CLF '(' expression ')' ';'																{
 																									$$ = new SASTNode(EN_ClearFrame, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->m_Opcode = OP_CLF;
 																									g_ASC.PushNode($$);
 																								}
 	| SPRITE '(' expression ',' expression ')' ';'												{
 																									$$ = new SASTNode(EN_Sprite, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->m_Opcode = OP_SPRITE;
 																									g_ASC.PushNode($$);
 																								}
 	| SPRITESHEET '(' expression ')' ';'														{
 																									$$ = new SASTNode(EN_SpriteSheet, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->m_Opcode = OP_SPRITESHEET;
 																									g_ASC.PushNode($$);
 																								}
 	| SPRITEORIGIN '(' expression ',' expression ')' ';'										{
 																									$$ = new SASTNode(EN_SpriteOrigin, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->m_Opcode = OP_SPRITEORIGIN;
 																									g_ASC.PushNode($$);
 																								}
 	| VSYNC '(' ')' ';'																			{
 																									$$ = new SASTNode(EN_Vsync, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->m_Opcode = OP_VSYNC;
 																									g_ASC.PushNode($$);
 																								}
@@ -1614,6 +1678,7 @@ function_header
 	: type_name simple_identifier																{
 																									SASTNode *namenode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_FuncHeader, "");
+																									$$->m_LineNumber = yylineno;
 																									$$->PushNode(namenode);
 																									//printf("Current function: %s %s\n", g_ASC.m_CurrentTypeName, namenode->m_Value.c_str());
 																									g_ASC.m_CurrentFunctionName = namenode->m_Value;
@@ -1625,6 +1690,7 @@ function_header
 function_def
 	: function_header function_parameters code_block_start code_block_body code_block_end		{
 																									$$ = new SASTNode(EN_FuncDecl, "");
+																									$$->m_LineNumber = yylineno;
 
 																									// Remove epilogue
 																									g_ASC.PopNode();
@@ -1688,6 +1754,11 @@ function_def
 																									// Remove function header (contains name as subnode)
 																									g_ASC.PopNode();
 
+																									SASTNode *commentnode = new SASTNode(EN_Default, g_ASC.m_CurrentFunctionName);
+																									commentnode->m_Opcode = OP_PASSTHROUGH;
+																									commentnode->m_Value = "\n# Start of function " + g_ASC.m_CurrentFunctionName;
+																									g_ASC.PushNode(commentnode);
+
 																									SASTNode *labelnode = new SASTNode(EN_Label, g_ASC.m_CurrentFunctionName);
 																									labelnode->m_Opcode = OP_LABEL;
 																									$$->PushNode(labelnode);
@@ -1740,11 +1811,19 @@ void DumpCode(FILE *_fp, SASTNode *node)
 	for (auto &subnode : node->m_ASTNodes)
 		DumpCode(_fp, subnode);
 
-	if (node->m_Opcode != OP_EMPTY)
+	if (node->m_Opcode != OP_PASSTHROUGH)
 	{
-		if (node->m_Type == EN_Label)
-			fprintf(_fp, "\n");
+		if (node->m_LineNumber!=0xFFFFFFFF && node->m_LineNumber!=s_prevLineNo)
+		{
+			fprintf(_fp, "# line %d\n", node->m_LineNumber);
+			s_prevLineNo = node->m_LineNumber;
+		}
 		fprintf(_fp, "%s\n", node->m_Instructions.c_str());
+	}
+	else
+	{
+		if (node->m_Value.length()>0)
+			fprintf(_fp, "%s\n", node->m_Value.c_str());
 	}
 }
 
@@ -2170,6 +2249,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_RESETREGISTERS:
 		{
 			g_ASC.m_CurrentRegister = 0;
+			node->m_Instructions = "# End of function " + g_ASC.m_CurrentFunctionName;
 		}
 		break;
 
@@ -2213,6 +2293,7 @@ bool CompileGrimR(const char *_filename)
 	fprintf(fp, "# End of program\n");
 	
 	// Dump asm code
+	s_prevLineNo = 0xCCCCCCCC;
 	for (auto &node : g_ASC.m_ASTNodes)
 		DumpCode(fp, node);
 
