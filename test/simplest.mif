@@ -12017,11 +12017,11 @@ CONTENT BEGIN
 	2EE5  :   FFFF;
 	2EE6  :   CDCD;
 	2EE7  :   CDCD;
-	2EE8  :   CDCD;
-	2EE9  :   CDCD;
+	2EE8  :   0000;
+	2EE9  :   0000;
 	2EEA  :   0000;
-	2EEB  :   CDCD;
-	2EEC  :   CDCD;
+	2EEB  :   0000;
+	2EEC  :   0000;
 	2EED  :   0000;
 	2EEE  :   005C;
 	2EEF  :   003F;
