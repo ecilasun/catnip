@@ -321,6 +321,7 @@ enum ETypeName
 	TN_DWORD,
 	TN_WORD,
 	TN_BYTE,
+	TN_VOIDPTR,
 	TN_DWORDPTR,
 	TN_WORDPTR,
 	TN_BYTEPTR,
@@ -334,6 +335,17 @@ const char* TypeNames[]={
 	"dwordptr",
 	"wordptr",
 	"byteptr",
+};
+
+const char* ReturnTypes[]={
+	"void",
+	"int",
+	"short",
+	"char",
+	"void*",
+	"int*",
+	"short*",
+	"char*",
 };
 
 struct SVariable
@@ -355,7 +367,7 @@ struct SVariable
 struct SFunction
 {
 	std::string m_Name;
-	ETypeName m_ReturnType;
+	ETypeName m_ReturnType{TN_VOID};
 	uint32_t m_Hash;
 	int m_RefCount{0};
 	class SASTNode *m_RootNode{nullptr};
@@ -507,6 +519,7 @@ struct SASTScanContext
 
 	std::vector<SASTNode*> m_ASTNodes;
 	std::string m_CurrentFunctionName;
+	ETypeName m_CurrentFunctionTypeName{TN_VOID};
 	ETypeName m_CurrentTypeName{TN_WORD};
 	std::vector<SVariable*> m_Variables;
 	std::vector<SFunction*> m_Functions;
@@ -693,7 +706,14 @@ postfix_expression
 																									uint32_t hash = HashString(namenode->m_Value.c_str());
 																									SFunction *func = g_ASC.FindFunction(hash);
 																									if (func)
+																									{
+																										if (func->m_ReturnType==TN_VOID)
+																										{
+																											printf("ERROR: Cannot use void function %s in an expression\n", func->m_Name.c_str());
+																											g_ASC.m_CompileFailed = true;
+																										}
 																										func->m_RefCount++;
+																									}
 																									else
 																									{
 																										printf("ERROR: Function %s not declared before use\n", namenode->m_Value.c_str());
@@ -1296,9 +1316,10 @@ type_name
 	| DWORD																						{ g_ASC.m_CurrentTypeName = TN_DWORD;  }
 	| WORD																						{ g_ASC.m_CurrentTypeName = TN_WORD;  }
 	| BYTE																						{ g_ASC.m_CurrentTypeName = TN_BYTE;  }
-	| DWORDPTR																					{ g_ASC.m_CurrentTypeName = TN_DWORDPTR;  }
-	| WORDPTR																					{ g_ASC.m_CurrentTypeName = TN_WORDPTR;  }
-	| BYTEPTR																					{ g_ASC.m_CurrentTypeName = TN_BYTEPTR;  }
+	| VOID '*'																					{ g_ASC.m_CurrentTypeName = TN_VOIDPTR; }
+	| DWORD '*'																					{ g_ASC.m_CurrentTypeName = TN_DWORDPTR; }
+	| WORD '*'																					{ g_ASC.m_CurrentTypeName = TN_WORDPTR; }
+	| BYTE '*'																					{ g_ASC.m_CurrentTypeName = TN_BYTEPTR; }
 	;
 
 variable_declaration
@@ -1594,6 +1615,7 @@ function_header
 																									$$->PushNode(namenode);
 																									//printf("Current function: %s %s\n", g_ASC.m_CurrentTypeName, namenode->m_Value.c_str());
 																									g_ASC.m_CurrentFunctionName = namenode->m_Value;
+																									g_ASC.m_CurrentFunctionTypeName = g_ASC.m_CurrentTypeName;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -1682,7 +1704,7 @@ function_def
 																									// Also store the function in function list for later retreival
 																									SFunction *func = new SFunction();
 																									func->m_Name = g_ASC.m_CurrentFunctionName;
-																									func->m_ReturnType = g_ASC.m_CurrentTypeName;
+																									func->m_ReturnType = g_ASC.m_CurrentFunctionTypeName;
 																									func->m_Hash = HashString(func->m_Name.c_str());
 																									func->m_RootNode = $$;
 																									g_ASC.m_Functions.push_back(func);
@@ -2128,7 +2150,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string srcA = g_ASC.PopRegister();
 			//std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : (g_ASC.m_CurrentTypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
 			std::string width = 
-			(g_ASC.m_CurrentTypeName == TN_DWORD || g_ASC.m_CurrentTypeName == TN_DWORDPTR) ? ".d" : 
+			(g_ASC.m_CurrentTypeName == TN_DWORD || g_ASC.m_CurrentTypeName == TN_DWORDPTR || g_ASC.m_CurrentTypeName == TN_VOIDPTR) ? ".d" : 
 			((g_ASC.m_CurrentTypeName == TN_WORD || g_ASC.m_CurrentTypeName == TN_WORDPTR) ? ".w" : ".b");
 			node->m_Instructions = Opcodes[node->m_Opcode] + width + " [" + trg + "], " + srcA;
 			g_ASC.m_InstructionCount+=1;
@@ -2271,7 +2293,7 @@ bool CompileGrimR(const char *_filename)
 				}
 				fprintf(fp, "\n");
 			}
-			if (var->m_TypeName == TN_DWORDPTR || var->m_TypeName == TN_DWORD)
+			if (var->m_TypeName == TN_DWORDPTR || var->m_TypeName == TN_DWORD || var->m_TypeName == TN_VOIDPTR)
 			{
 				fprintf(fp, "@DW ");
 				int i=0;

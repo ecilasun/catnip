@@ -3,11 +3,11 @@
     which tries to show as many language features as possible
 */
 
-charptr VRAM = 0x80000000;
-charptr ARAM = 0x40000000;
-charptr BORDERCOLOR = 0x8000C000;
-charptr VBSENABLE = 0x8000C001;
-intptr VBLANKSERVICE = 0x8000C004;
+char* VRAM = 0x80000000;
+char* ARAM = 0x40000000;
+char* BORDERCOLOR = 0x8000C000;
+char* VBSENABLE = 0x8000C001;
+int* VBLANKSERVICE = 0x8000C004;
 short seed = 7;
 short ac = 0;
 

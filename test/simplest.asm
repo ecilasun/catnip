@@ -786,19 +786,19 @@ ret
 # function 'meep', hash: A06C2D14, refcount: 2
 # function 'silence', hash: B54A925A, refcount: 1
 # function 'main', hash: BC76E6BA, refcount: 1
-# variable 'VRAM', dim:1 typename:byteptr refcount:4
+# variable 'VRAM', dim:1 typename:(null) refcount:4
 @LABEL :VRAM
 @DW 0x8000 0x0000
-# variable 'ARAM', dim:1 typename:byteptr refcount:6
+# variable 'ARAM', dim:1 typename:(null) refcount:6
 @LABEL :ARAM
 @DW 0x4000 0x0000
-# variable 'BORDERCOLOR', dim:1 typename:byteptr refcount:2
+# variable 'BORDERCOLOR', dim:1 typename:(null) refcount:2
 @LABEL :BORDERCOLOR
 @DW 0x8000 0xC000
-# variable 'VBSENABLE', dim:1 typename:byteptr refcount:1
+# variable 'VBSENABLE', dim:1 typename:(null) refcount:1
 @LABEL :VBSENABLE
 @DW 0x8000 0xC001
-# variable 'VBLANKSERVICE', dim:1 typename:dwordptr refcount:1
+# variable 'VBLANKSERVICE', dim:1 typename:wordptr refcount:1
 @LABEL :VBLANKSERVICE
 @DW 0x8000 0xC004
 # variable 'seed', dim:1 typename:word refcount:10
