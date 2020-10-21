@@ -1,5 +1,5 @@
 D	[0-9]
-L	[a-zA-Z:]
+L	[a-zA-Z]
 H	[a-fA-F0-9]
 E	([Ee][+-]?{D}+)
 P	([Pp][+-]?{D}+)
@@ -31,6 +31,8 @@ void stripquotes(char *string);
 %%
 "/*"([^*]|(\*+[^*/]))*\*+\/	{  }
 "//"[^\n]*					{  }
+
+"static"					{ count();  return(STATIC); }
 
 "void"						{ count();  return(VOID); }
 "int"						{ count();  return(DWORD); }

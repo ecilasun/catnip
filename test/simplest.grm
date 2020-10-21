@@ -1546,9 +1546,9 @@ short numSquareRoot(short x)
     return (((x + 127) << 23)>>1);
 }
 
-short sin(short param)
+short sin(short s)
 {
-    return(sinewave[param%255]-128);
+    return(sinewave[s%255]-128);
 }
 
 short meep()

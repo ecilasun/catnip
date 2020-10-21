@@ -189,6 +189,7 @@ const char* NodeTypes[]=
 enum EOpcode
 {
 	OP_PASSTHROUGH,
+	OP_PULLINITEXPRESSION,
 	OP_NOOP,
 	OP_INC,
 	OP_DEC,
@@ -248,6 +249,7 @@ enum EOpcode
 };
 
 const std::string Opcodes[]={
+	"",
 	"",
 	"nop",
 	"inc",
@@ -321,6 +323,13 @@ struct SString
 	uint32_t m_Address{0xFFFFFFFF};
 };
 
+enum EAllocationModifier
+{
+	AM_NONE,
+	AM_DYNAMIC,
+	AM_STATIC,
+};
+
 enum ETypeName
 {
 	TN_VOID,
@@ -331,6 +340,28 @@ enum ETypeName
 	TN_DWORDPTR,
 	TN_WORDPTR,
 	TN_BYTEPTR,
+};
+
+int TypeNameToStride[]={
+	0,
+	4,
+	2,
+	1,
+	4,
+	4,
+	4,
+	4
+};
+
+const char* TypeNameToInstructionSize[]={
+	".?",
+	".d",
+	".w",
+	".b",
+	".d",
+	".d",
+	".d",
+	".d"
 };
 
 const char* TypeNames[]={
@@ -360,7 +391,7 @@ struct SVariable
 	std::string m_Scope;
 	uint32_t m_NameHash{0};
 	uint32_t m_ScopeHash{0};
-	uint32_t m_CombinedHash{0};
+	uint32_t m_DynamicAllocation{0};
 	uint32_t m_Dimension{1};
 	ETypeName m_TypeName{TN_WORD};
 	int m_RefCount{0};
@@ -408,9 +439,12 @@ public:
 		return node;
 	}
 
+	EAllocationModifier m_AllocationModifier{AM_NONE};
 	EOpcode m_Opcode{OP_PASSTHROUGH};
 	EASTNodeType m_Type{EN_Default};
+	ETypeName m_TypeName{TN_VOID};
 	ENodeSide m_Side{RIGHT_HAND_SIDE};
+	int m_Offset{0};
 	int m_ScopeDepth{0};
 	int m_Visited{0};
 	uint32_t m_LineNumber{0xFFFFFFFF};
@@ -508,14 +542,6 @@ struct SASTScanContext
 		return nullptr;
 	}
 
-	SVariable *FindVariableMergedScope(uint32_t namehash)
-	{
-		for(auto &var : m_Variables)
-			if (var->m_CombinedHash == namehash)
-				return var;
-		return nullptr;
-	}
-
 	SFunction *FindFunction(uint32_t hash)
 	{
 		for(auto &fun : m_Functions)
@@ -584,6 +610,7 @@ SASTScanContext g_ASC;
 
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
+%token STATIC
 %token VOID DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
 %token VSYNC FSEL ASEL CLF SPRITE SPRITESHEET SPRITEORIGIN
 %token INC_OP DEC_OP
@@ -1260,7 +1287,17 @@ while_statement
 
 variable_declaration_item
 	: simple_identifier 																		{
-																								}
+																									$$ = new SASTNode(EN_DeclInitJunction, "");
+																									$$->m_LineNumber = yylineno;
+																									SASTNode *namenode=g_ASC.PopNode();
+																									$$->PushNode(namenode);
+																									// Fake initial value of zero since there's no initializer
+																									SASTNode *valnode=new SASTNode(EN_Constant, "");
+																									valnode->m_Value = "0x0";
+																									$$->PushNode(valnode);
+																									$$->m_Opcode = OP_STORE;
+																									$$->m_AllocationModifier = AM_DYNAMIC;
+																									g_ASC.PushNode($$);																								}
 	| simple_identifier '=' expression 															{
 																									$$ = new SASTNode(EN_DeclInitJunction, "");
 																									$$->m_LineNumber = yylineno;
@@ -1269,6 +1306,7 @@ variable_declaration_item
 																									$$->PushNode(namenode);
 																									$$->PushNode(valnode);
 																									$$->m_Opcode = OP_STORE;
+																									$$->m_AllocationModifier = AM_DYNAMIC;
 																									g_ASC.PushNode($$);
 																								}
 	| simple_identifier '[' expression ']'														{
@@ -1279,6 +1317,7 @@ variable_declaration_item
 																									$$->PushNode(namenode);
 																									$$->PushNode(dimnode);
 																									dimnode->m_Opcode = OP_DIM;
+																									$$->m_AllocationModifier = AM_DYNAMIC;
 																									g_ASC.PushNode($$);
 																								}
 	| simple_identifier '[' expression ']' '=' code_block_start expression_list code_block_end	{
@@ -1314,6 +1353,7 @@ variable_declaration_item
 																									dimnode->m_Opcode = OP_DIM;
 																									$$->PushNode(initarray);
 																									$$->m_Opcode = OP_BULKASSIGN;
+																									$$->m_AllocationModifier = AM_STATIC;
 																									g_ASC.PushNode($$);
 																								}
 	| simple_identifier '['  ']' '=' code_block_start expression_list code_block_end			{
@@ -1355,15 +1395,16 @@ variable_declaration_item
 																									dimnode->m_Opcode = OP_DIM;
 																									$$->PushNode(initarray);
 																									$$->m_Opcode = OP_BULKASSIGN;
+																									$$->m_AllocationModifier = AM_STATIC;
 																									g_ASC.PushNode($$);
 																								}
 	;
 
 type_name
-	: VOID																						{ g_ASC.m_CurrentTypeName = TN_VOID;  }
-	| DWORD																						{ g_ASC.m_CurrentTypeName = TN_DWORD;  }
-	| WORD																						{ g_ASC.m_CurrentTypeName = TN_WORD;  }
-	| BYTE																						{ g_ASC.m_CurrentTypeName = TN_BYTE;  }
+	: VOID																						{ g_ASC.m_CurrentTypeName = TN_VOID; }
+	| DWORD																						{ g_ASC.m_CurrentTypeName = TN_DWORD; }
+	| WORD																						{ g_ASC.m_CurrentTypeName = TN_WORD; }
+	| BYTE																						{ g_ASC.m_CurrentTypeName = TN_BYTE; }
 	| VOID '*'																					{ g_ASC.m_CurrentTypeName = TN_VOIDPTR; }
 	| DWORD '*'																					{ g_ASC.m_CurrentTypeName = TN_DWORDPTR; }
 	| WORD '*'																					{ g_ASC.m_CurrentTypeName = TN_WORDPTR; }
@@ -1373,62 +1414,123 @@ type_name
 variable_declaration
 	: type_name variable_declaration_item														{
 																									$$ = new SASTNode(EN_Decl, "");
+																									$$->m_Opcode = OP_DECL;
 																									$$->m_LineNumber = yylineno;
-																									SASTNode *n0=g_ASC.PopNode();
-																									$$->PushNode(n0);
+																									SASTNode *declnode=g_ASC.PopNode();
+																									$$->PushNode(declnode);
 
 																									// Also store the variable in function list for later retreival
 																									SVariable *var = new SVariable();
-																									var->m_Name = (n0->m_Type==EN_DeclInitJunction || n0->m_Type==EN_DeclArray) ? n0->m_ASTNodes[0]->m_Value : n0->m_Value;
+																									var->m_Name = (declnode->m_Type==EN_DeclInitJunction || declnode->m_Type==EN_DeclArray) ? declnode->m_ASTNodes[0]->m_Value : declnode->m_Value;
 																									var->m_Scope = g_ASC.m_CurrentFunctionName;
 																									var->m_NameHash = HashString(var->m_Name.c_str());
 																									var->m_ScopeHash = HashString(var->m_Scope.c_str());
-																									var->m_CombinedHash = HashString((var->m_Scope+":"+var->m_Name).c_str());
 																									var->m_RootNode = $$;
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
 																									var->m_Value = "";
 																									var->m_TypeName = g_ASC.m_CurrentTypeName;
 
-																									if (n0->m_ASTNodes.size())
+																									//printf("identifier: %s:%s - %s\n", g_ASC.m_CurrentFunctionName.c_str(), var->m_Name.c_str(), declnode->m_AllocationModifier==AM_STATIC ? "static" : (declnode->m_AllocationModifier==AM_DYNAMIC ? "dynamic" : "none"));
+																									if (var->m_Scope.length()>0)
+																										var->m_DynamicAllocation = 1;
+
+																									if (declnode->m_ASTNodes.size())
 																									{
-																										if (n0->m_Type == EN_DeclArray)
+																										if (declnode->m_Type == EN_DeclArray)
 																										{
-																											var->m_Dimension = strtoul(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
+																											var->m_Dimension = strtoul(declnode->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
 																											/*for (int i=0;i<var->m_Dimension;++i)
 																												var->m_InitialValues.push_back(0xCDCDCDCD);*/
 																										}
-																										else if (n0->m_Type == EN_DeclInitJunction)
+																										else if (declnode->m_Type == EN_DeclInitJunction)
 																										{
-																											if (n0->m_ASTNodes.size()>=3 && n0->m_ASTNodes[2]->m_Type == EN_ArrayWithDataJunction)
+																											if (declnode->m_ASTNodes.size()>=3 && declnode->m_ASTNodes[2]->m_Type == EN_ArrayWithDataJunction)
 																											{
-																												var->m_Dimension = strtoul(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
-																												for (auto &val : n0->m_ASTNodes[2]->m_ASTNodes)
+																												var->m_Dimension = strtoul(declnode->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
+																												int offset = 0;
+																												for (auto &val : declnode->m_ASTNodes[2]->m_ASTNodes)
 																												{
-																													uint32_t V = strtoul(val->m_Value.c_str(), nullptr, 16);
-																													var->m_InitialValues.push_back(V);
+																													if (val->m_Type == EN_Constant)
+																													{
+																														uint32_t V = strtoul(val->m_Value.c_str(), nullptr, 16);
+																														var->m_InitialValues.push_back(V);
+																													}
+																													else
+																													{
+																														printf("WARNING: expression in initializer(0) : %s, will generate code\n", var->m_Name.c_str());
+
+																														//$$->PopNode();
+																														g_ASC.PushNode(val);
+																														SASTNode *popnode = new SASTNode(EN_Default, "");
+																														popnode->m_Opcode = OP_PULLINITEXPRESSION;
+																														popnode->m_Value = var->m_Scope + ":" + var->m_Name;
+																														popnode->m_Offset = offset*TypeNameToStride[var->m_TypeName];
+																														popnode->m_TypeName = var->m_TypeName;
+																														g_ASC.PushNode(popnode);
+
+																														var->m_InitialValues.push_back(0);
+																													}
+																													++offset;
 																												}
 																											}
 																											else
 																											{
-																												//printf("VAR:%s VAL:%s\n", var->m_Name.c_str(), n0->m_ASTNodes[1]->m_Value.c_str());
-																												uint32_t V = strtoul(n0->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
-																												var->m_InitialValues.push_back(V);
+																												//printf("VAR:%s VAL:%s\n", var->m_Name.c_str(), declnode->m_ASTNodes[1]->m_Value.c_str());
+																												if (declnode->m_ASTNodes[1]->m_Type == EN_Constant)
+																												{
+																													uint32_t V = strtoul(declnode->m_ASTNodes[1]->m_Value.c_str(), nullptr, 16);
+																													var->m_InitialValues.push_back(V);
+																												}
+																												else
+																												{
+																													printf("WARNING: expression in initializer(1) : %s, will generate code\n", var->m_Name.c_str());
+
+																													//$$->PopNode();
+																													g_ASC.PushNode(declnode->m_ASTNodes[1]);
+																													SASTNode *popnode = new SASTNode(EN_Default, "");
+																													popnode->m_Opcode = OP_PULLINITEXPRESSION;
+																													popnode->m_Value = var->m_Scope + ":" + var->m_Name;
+																													popnode->m_Offset = 0;
+																													popnode->m_TypeName = var->m_TypeName;
+																													g_ASC.PushNode(popnode);
+
+																													var->m_InitialValues.push_back(0);
+																												}
 																											}
 																										}
-																										else if (n0->m_Type == EN_ArrayWithDataJunction)
+																										else if (declnode->m_Type == EN_ArrayWithDataJunction)
 																										{
-																											for (auto &val : n0->m_ASTNodes)
+																											int offset = 0;
+																											for (auto &val : declnode->m_ASTNodes)
 																											{
-																												uint32_t V = strtoul(val->m_Value.c_str(), nullptr, 16);
-																												var->m_InitialValues.push_back(V);
+																												if (val->m_Type == EN_Constant)
+																												{
+																													uint32_t V = strtoul(val->m_Value.c_str(), nullptr, 16);
+																													var->m_InitialValues.push_back(V);
+																												}
+																												else
+																												{
+																													printf("WARNING: expression in initializer(2) : %s, will generate code\n", var->m_Name.c_str());
+
+																													//$$->PopNode();
+																													g_ASC.PushNode(val);
+																													SASTNode *popnode = new SASTNode(EN_Default, "");
+																													popnode->m_Opcode = OP_PULLINITEXPRESSION;
+																													popnode->m_Value = var->m_Scope + ":" + var->m_Name;
+																													popnode->m_Offset = offset*TypeNameToStride[var->m_TypeName];
+																													popnode->m_TypeName = var->m_TypeName;
+																													g_ASC.PushNode(popnode);
+
+																													var->m_InitialValues.push_back(0);
+																												}
+																												++offset;
 																											}
 																										}
 																									}
 																									/*else
 																										var->m_InitialValues.push_back(0xCDCDCDCD);*/
 
-																									$$->m_Opcode = OP_DECL;
 																									//g_ASC.PushNode($$); // Variable already added to var stack
 																									g_ASC.m_Variables.push_back(var);
 																								}
@@ -1444,12 +1546,15 @@ variable_declaration
 																									var->m_Scope = g_ASC.m_CurrentFunctionName;
 																									var->m_NameHash = HashString(var->m_Name.c_str());
 																									var->m_ScopeHash = HashString(var->m_Scope.c_str());
-																									var->m_CombinedHash = HashString((var->m_Scope+":"+var->m_Name).c_str());
 																									var->m_RootNode = $$;
 																									var->m_Dimension = 1;
 																									var->m_RefCount = 0;
 																									var->m_Value = "";
 																									var->m_TypeName = g_ASC.m_CurrentTypeName;
+
+																									//printf("identifier: %s:%s - %s\n", g_ASC.m_CurrentFunctionName.c_str(), var->m_Name.c_str(), n0->m_AllocationModifier==AM_STATIC ? "static" : (n0->m_AllocationModifier==AM_DYNAMIC ? "dynamic" : "none"));
+																									if (var->m_Scope.length()>0)
+																										var->m_DynamicAllocation = 1;
 
 																									if (n0->m_ASTNodes.size())
 																									{
@@ -1741,7 +1846,6 @@ function_def
 																										var->m_Scope = g_ASC.m_CurrentFunctionName;
 																										var->m_NameHash = HashString(var->m_Name.c_str());
 																										var->m_ScopeHash = HashString(var->m_Scope.c_str());
-																										var->m_CombinedHash = HashString((var->m_Scope+":"+var->m_Name).c_str());
 																										var->m_RootNode = n0;
 																										var->m_Dimension = 1;
 																										var->m_RefCount = 0;
@@ -1840,11 +1944,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		uint32_t emptyhash = HashString("");
 		SVariable *var = g_ASC.FindVariable(namehash, scopehash);
 		if (!var)
-		{
 			var = g_ASC.FindVariable(namehash, emptyhash);
-			if(!var)
-				var = g_ASC.FindVariableMergedScope(namehash);
-		}
 		if (var)
 		{
 			var->m_RefCount++;
@@ -1887,11 +1987,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			uint32_t emptyhash = HashString("");
 			SVariable *var = g_ASC.FindVariable(namehash, scopehash);
 			if (!var)
-			{
 				var = g_ASC.FindVariable(namehash, emptyhash);
-				if(!var)
-					var = g_ASC.FindVariableMergedScope(namehash);
-			}
 
 			if (var)
 			{
@@ -2002,11 +2098,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			uint32_t emptyhash = HashString("");
 			SVariable *var = g_ASC.FindVariable(namehash, scopehash);
 			if (!var)
-			{
 				var = g_ASC.FindVariable(namehash, emptyhash);
-				if(!var)
-					var = g_ASC.FindVariableMergedScope(namehash);
-			}
 
 			if (var)
 			{
@@ -2065,11 +2157,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			uint32_t emptyhash = HashString("");
 			SVariable *var = g_ASC.FindVariable(namehash, scopehash);
 			if (!var)
-			{
 				var = g_ASC.FindVariable(namehash, emptyhash);
-				if(!var)
-					var = g_ASC.FindVariableMergedScope(namehash);
-			}
 			if (!var)
 			{
 				SFunction *func = g_ASC.FindFunction(namehash);
@@ -2102,11 +2190,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			uint32_t emptyhash = HashString("");
 			SVariable *var = g_ASC.FindVariable(namehash, scopehash);
 			if (!var)
-			{
 				var = g_ASC.FindVariable(namehash, emptyhash);
-				if(!var)
-					var = g_ASC.FindVariableMergedScope(namehash);
-			}
 
 			//if (var)
 			//	var->m_RefCount++;
@@ -2236,6 +2320,25 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			((g_ASC.m_CurrentTypeName == TN_WORD || g_ASC.m_CurrentTypeName == TN_WORDPTR) ? ".w" : ".b");
 			node->m_Instructions = Opcodes[node->m_Opcode] + width + " [" + trg + "], " + srcA;
 			g_ASC.m_InstructionCount+=1;
+		}
+		break;
+
+		case OP_PULLINITEXPRESSION:
+		{
+			std::string trg = g_ASC.PushRegister();
+			g_ASC.PopRegister();
+			std::string src = g_ASC.PopRegister();
+			node->m_Instructions = "lea " + trg + ", " + node->m_Value;
+			if (node->m_Offset != 0)
+			{
+				std::stringstream stream;
+				stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << node->m_Offset;
+				node->m_Instructions += std::string("\n") + "ld.d r15, 0x" + stream.str();
+				node->m_Instructions += std::string("\n") + "iadd " + trg + ", r15";
+				g_ASC.m_InstructionCount+=2;
+			}
+			node->m_Instructions += std::string("\n") + "st" + TypeNameToInstructionSize[node->m_TypeName] + " [" + trg + "], " + src;
+			g_ASC.m_InstructionCount+=2;
 		}
 		break;
 
