@@ -1995,8 +1995,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				std::string trg = g_ASC.PushRegister();
 				node->m_Instructions = Opcodes[OP_LEA] + " " + val + ", " + var->m_Scope + ":" + var->m_Name;
 				node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode] + " " + trg;
-				std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
-				node->m_Instructions += std::string("\n") + Opcodes[OP_STORE] + width + " [" + val + "], " + trg;
+				node->m_Instructions += std::string("\n") + Opcodes[OP_STORE] + TypeNameToInstructionSize[var->m_TypeName] + " [" + val + "], " + trg;
 				g_ASC.PopRegister(); // Forget trg and val
 				g_ASC.PopRegister();
 				g_ASC.m_InstructionCount+=3;
@@ -2108,8 +2107,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				// This is not a 'real' array, fetch data at address to treat as array base address
 				if (var->m_Dimension <= 1)
 				{
-					std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
-					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + tgt + ", [" + tgt + "]";
+					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + TypeNameToInstructionSize[var->m_TypeName] + " " + tgt + ", [" + tgt + "]";
 					g_ASC.m_InstructionCount+=1;
 				}
 			}
@@ -2140,8 +2138,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			// Need to make sure [] on LHS doesn't run this code path but only RHS does
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
-				std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
-				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + srcA + ", [" + srcA + "] # RHS array access, valueof: " + width;
+				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + TypeNameToInstructionSize[var->m_TypeName] + " " + srcA + ", [" + srcA + "] # RHS array access, valueof: " + TypeNameToInstructionSize[var->m_TypeName];
 				g_ASC.m_InstructionCount+=1;
 			}
 		}
@@ -2198,9 +2195,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			{
 				if (var)
 				{
-					std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
 					node->m_Instructions = Opcodes[OP_LEA] + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
-					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + trg + ", [" + trg + "]";
+					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + TypeNameToInstructionSize[var->m_TypeName] + " " + trg + ", [" + trg + "]";
 					g_ASC.m_InstructionCount+=2;
 				}
 				else
@@ -2215,8 +2211,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				{
 					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
 					g_ASC.m_InstructionCount+=1;
-					//std::string width = var->m_TypeName == TN_WORD ? ".w" : (var->m_TypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
-					//node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + width + " " + trg + ", [" + trg + "]";
+					//node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + TypeNameToInstructionSize[var->m_TypeName] + " " + trg + ", [" + trg + "]";
 				}
 				else
 				{
@@ -2338,11 +2333,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			// NOTE: target and source are swapped due to evaluation order
 			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
 			std::string srcA = g_ASC.PopRegister();
-			//std::string width = g_ASC.m_CurrentTypeName == TN_WORD ? ".w" : (g_ASC.m_CurrentTypeName == TN_BYTE ? ".b" : ".d"); // pointer types are always DWORD
-			std::string width = 
-			(g_ASC.m_CurrentTypeName == TN_DWORD || g_ASC.m_CurrentTypeName == TN_DWORDPTR || g_ASC.m_CurrentTypeName == TN_VOIDPTR) ? ".d" : 
-			((g_ASC.m_CurrentTypeName == TN_WORD || g_ASC.m_CurrentTypeName == TN_WORDPTR) ? ".w" : ".b");
-			node->m_Instructions = Opcodes[node->m_Opcode] + width + " [" + trg + "], " + srcA;
+			node->m_Instructions = Opcodes[node->m_Opcode] + TypeNameToInstructionSize[g_ASC.m_CurrentTypeName] + " [" + trg + "], " + srcA;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
