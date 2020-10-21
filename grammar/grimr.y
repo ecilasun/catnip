@@ -317,6 +317,7 @@ struct SString
 
 enum ETypeName
 {
+	TN_VOID,
 	TN_DWORD,
 	TN_WORD,
 	TN_BYTE,
@@ -326,6 +327,7 @@ enum ETypeName
 };
 
 const char* TypeNames[]={
+	"void",
 	"dword",
 	"word",
 	"byte",
@@ -353,6 +355,7 @@ struct SVariable
 struct SFunction
 {
 	std::string m_Name;
+	ETypeName m_ReturnType;
 	uint32_t m_Hash;
 	int m_RefCount{0};
 	class SASTNode *m_RootNode{nullptr};
@@ -561,7 +564,7 @@ SASTScanContext g_ASC;
 
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
-%token DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
+%token VOID DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN
 %token VSYNC FSEL ASEL CLF SPRITE SPRITESHEET SPRITEORIGIN
 %token INC_OP DEC_OP
 
@@ -1289,7 +1292,8 @@ variable_declaration_item
 	;
 
 type_name
-	: DWORD																						{ g_ASC.m_CurrentTypeName = TN_DWORD;  }
+	: VOID																						{ g_ASC.m_CurrentTypeName = TN_VOID;  }
+	| DWORD																						{ g_ASC.m_CurrentTypeName = TN_DWORD;  }
 	| WORD																						{ g_ASC.m_CurrentTypeName = TN_WORD;  }
 	| BYTE																						{ g_ASC.m_CurrentTypeName = TN_BYTE;  }
 	| DWORDPTR																					{ g_ASC.m_CurrentTypeName = TN_DWORDPTR;  }
@@ -1584,11 +1588,11 @@ code_block_body
 	;
 
 function_header
-	: FUNCTION simple_identifier																{
+	: type_name simple_identifier																{
 																									SASTNode *namenode = g_ASC.PopNode();
 																									$$ = new SASTNode(EN_FuncHeader, "");
 																									$$->PushNode(namenode);
-																									//printf("Current function: %s\n", namenode->m_Value.c_str());
+																									//printf("Current function: %s %s\n", g_ASC.m_CurrentTypeName, namenode->m_Value.c_str());
 																									g_ASC.m_CurrentFunctionName = namenode->m_Value;
 																									g_ASC.PushNode($$);
 																								}
@@ -1678,6 +1682,7 @@ function_def
 																									// Also store the function in function list for later retreival
 																									SFunction *func = new SFunction();
 																									func->m_Name = g_ASC.m_CurrentFunctionName;
+																									func->m_ReturnType = g_ASC.m_CurrentTypeName;
 																									func->m_Hash = HashString(func->m_Name.c_str());
 																									func->m_RootNode = $$;
 																									g_ASC.m_Functions.push_back(func);
@@ -2068,6 +2073,15 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_RETURNVAL:
 		{
 			// Result of return expression in register
+
+			uint32_t hash = HashString(g_ASC.m_CurrentFunctionName.c_str());
+			SFunction *func = g_ASC.FindFunction(hash);
+			//printf("return value in function %s, should be of type %s\n", func->m_Name.c_str(), TypeNames[func->m_ReturnType]);
+			if (func->m_ReturnType == TN_VOID)
+			{
+				printf("ERROR: Function %s has a return type of void but trying to return a value\n", func->m_Name.c_str());
+				g_ASC.m_CompileFailed = true;
+			}
 			std::string srcA = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[OP_PUSH] + " " + srcA;
 			node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode];

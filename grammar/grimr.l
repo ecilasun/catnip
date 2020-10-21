@@ -33,6 +33,7 @@ void stripquotes(char *string);
 "/*"						{ comment(); }
 "//"[^\n]*					{ /* consume //-comment */ }
 
+"void"						{ count();  return(VOID); }
 "dword"						{ count();  return(DWORD); }
 "word"						{ count();  return(WORD); }
 "byte"						{ count();  return(BYTE); }
@@ -47,6 +48,7 @@ void stripquotes(char *string);
 "{"							{ count();  return(BEGINBLOCK); }
 "}"							{ count();  return(ENDBLOCK); }
 "return"					{ count();  return(RETURN); }
+
 "vsync"						{ count();  return(VSYNC); }
 "fsel"						{ count();  return(FSEL); }
 "asel"						{ count();  return(ASEL); }
