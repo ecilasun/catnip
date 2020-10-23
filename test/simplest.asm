@@ -30,7 +30,7 @@ ld.w r2, 0x9
 bsl r1, r2
 xor r0, r1
 lea r1, :seed
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1539
 lea r0, :seed
 ld.w r0, [r0]
@@ -40,7 +40,7 @@ ld.w r2, 0xd
 bsr r1, r2
 xor r0, r1
 lea r1, :seed
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1540
 lea r0, :seed
 ld.w r0, [r0]
@@ -50,7 +50,7 @@ ld.w r2, 0x1
 bsl r1, r2
 xor r0, r1
 lea r1, :seed
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1541
 lea r0, :seed
 ld.w r0, [r0]
@@ -103,7 +103,7 @@ ret
 # line 1557
 ld.w r0, 0x0
 lea r1, meep:cnt
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 @LABEL beginwhile00000000
 # line 1558
 lea r0, meep:cnt
@@ -131,7 +131,7 @@ iadd r1, r2
 lea r2, :ARAM
 ld.d r2, [r2]
 iadd r1, r2
-st.b [r1], r0 # not pointer
+st.b [r1], r0
 # line 1561
 lea r0, meep:cnt
 ld.w r0, [r0]
@@ -151,28 +151,28 @@ iadd r1, r2
 lea r2, :ARAM
 ld.d r2, [r2]
 iadd r1, r2
-st.b [r1], r0 # not pointer
+st.b [r1], r0
 # line 1562
 lea r0, :ac
 ld.w r0, [r0]
 ld.w r1, 0x1
 iadd r0, r1
 lea r1, :ac
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1563
 lea r0, :ac
 ld.w r0, [r0]
 ld.w r1, 0x800
 imod r0, r1
 lea r1, :ac
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1564
 lea r0, meep:cnt
 ld.w r0, [r0]
 ld.w r1, 0x1
 iadd r0, r1
 lea r1, meep:cnt
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 jmp beginwhile00000000
 @LABEL endwhile00000001
 # line 1566
@@ -188,7 +188,7 @@ ret
 # line 1572
 ld.w r0, 0x0
 lea r1, silence:cnt
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 @LABEL beginwhile00000002
 # line 1573
 lea r0, silence:cnt
@@ -208,7 +208,7 @@ iadd r1, r2
 lea r2, :ARAM
 ld.d r2, [r2]
 iadd r1, r2
-st.b [r1], r0 # not pointer
+st.b [r1], r0
 # line 1576
 ld.w r0, 0x0
 lea r1, :ac
@@ -220,28 +220,28 @@ iadd r1, r2
 lea r2, :ARAM
 ld.d r2, [r2]
 iadd r1, r2
-st.b [r1], r0 # not pointer
+st.b [r1], r0
 # line 1577
 lea r0, :ac
 ld.w r0, [r0]
 ld.w r1, 0x1
 iadd r0, r1
 lea r1, :ac
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1578
 lea r0, :ac
 ld.w r0, [r0]
 ld.w r1, 0x800
 imod r0, r1
 lea r1, :ac
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1579
 lea r0, silence:cnt
 ld.w r0, [r0]
 ld.w r1, 0x1
 iadd r0, r1
 lea r1, silence:cnt
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 jmp beginwhile00000002
 @LABEL endwhile00000003
 # line 1581
@@ -257,14 +257,14 @@ ld.w r1, 0x0
 lea r2, :VBLANKSERVICE
 ld.d r2, [r2]
 iadd r1, r2
-st.d [r1], r0 # not pointer
+st.d [r1], r0
 # line 1597
 ld.w r0, 0x1
 ld.w r1, 0x0
 lea r2, :VBSENABLE
 ld.d r2, [r2]
 iadd r1, r2
-st.b [r1], r0 # not pointer
+st.b [r1], r0
 # line 1615
 lea r0, :mysprites
 spritesheet r0
@@ -277,7 +277,7 @@ ld.w r1, 0x0
 lea r2, :BORDERCOLOR
 ld.d r2, [r2]
 iadd r1, r2
-st.b [r1], r0 # not pointer
+st.b [r1], r0
 # line 1620
 ld.w r0, 0x0
 fsel r0
@@ -287,11 +287,11 @@ ld.w r1, 0x0
 lea r2, :BORDERCOLOR
 ld.d r2, [r2]
 iadd r1, r2
-st.b [r1], r0 # not pointer
+st.b [r1], r0
 # line 1624
 ld.w r0, 0x0
 lea r1, main:samples
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 @LABEL beginwhile0000000a
 # line 1625
 ld.w r0, 0x1
@@ -299,7 +299,7 @@ jmpifnot endwhile0000000b, r0
 # line 1633
 ld.w r0, 0x0
 lea r1, main:i
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 @LABEL beginwhile00000008
 # line 1634
 lea r0, main:i
@@ -324,7 +324,7 @@ lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:posY
 iadd r1, r2
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1637
 lea r0, main:i
 ld.w r0, [r0]
@@ -355,7 +355,7 @@ lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:dirY
 iadd r1, r2
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 @LABEL endif00000004
 # line 1644
 lea r0, main:i
@@ -373,7 +373,7 @@ lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:posX
 iadd r1, r2
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1645
 lea r0, main:i
 ld.w r0, [r0]
@@ -404,7 +404,7 @@ lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:dirX
 iadd r1, r2
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 @LABEL endif00000005
 # line 1653
 lea r0, main:i
@@ -422,7 +422,7 @@ ld.w r2, 0x0
 iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1654
 lea r0, main:i
 ld.w r0, [r0]
@@ -439,7 +439,7 @@ ld.w r2, 0x2
 iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1655
 lea r0, main:i
 ld.w r0, [r0]
@@ -458,7 +458,7 @@ ld.w r2, 0x0
 iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1656
 lea r0, main:i
 ld.w r0, [r0]
@@ -475,7 +475,7 @@ ld.w r2, 0x2
 iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1658
 lea r0, main:i
 ld.w r0, [r0]
@@ -485,7 +485,7 @@ ld.w r0, [r0] # RHS array access, valueof: .w
 ld.w r1, 0x8000
 and r0, r1
 lea r1, main:flipx
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1659
 lea r0, main:i
 ld.w r0, [r0]
@@ -497,7 +497,7 @@ and r0, r1
 ld.w r1, 0x1
 bsr r0, r1
 lea r1, main:flipy
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1661
 lea r0, main:flipy
 ld.w r0, [r0]
@@ -535,7 +535,7 @@ ld.w r2, 0x4
 iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1664
 lea r0, main:flipy
 ld.w r0, [r0]
@@ -566,7 +566,7 @@ ld.w r2, 0x4
 iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 jmp exitif00000007
 @LABEL endif00000006
 # line 1668
@@ -599,7 +599,7 @@ ld.w r2, 0x4
 iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1669
 lea r0, main:flipy
 ld.w r0, [r0]
@@ -630,7 +630,7 @@ ld.w r2, 0x4
 iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 @LABEL exitif00000007
 # line 1672
 lea r0, main:i
@@ -638,7 +638,7 @@ ld.w r0, [r0]
 ld.w r1, 0x2
 iadd r0, r1
 lea r1, main:i
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 jmp beginwhile00000008
 @LABEL endwhile00000009
 # line 1678
@@ -663,7 +663,7 @@ ld.w r2, 0x2
 iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1679
 lea r0, main:roll
 ld.w r0, [r0]
@@ -688,7 +688,7 @@ ld.w r2, 0x0
 iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1692
 ld.w r0, 0xe0
 clf r0
@@ -707,7 +707,7 @@ ineg r0
 ld.w r1, 0x80
 iadd r0, r1
 lea r1, main:scrollx
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1697
 ld.w r0, 0x0
 lea r1, main:posY
@@ -717,7 +717,7 @@ ineg r0
 ld.w r1, 0x20
 iadd r0, r1
 lea r1, main:scrolly
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1700
 lea r0, :spritelist
 ld.w r1, 0xd6
@@ -728,28 +728,28 @@ ld.w r1, 0x0
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
-st.b [r1], r0 # not pointer
+st.b [r1], r0
 # line 1703
 ld.w r0, 0xf0
 ld.w r1, 0x1
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
-st.b [r1], r0 # not pointer
+st.b [r1], r0
 # line 1704
 ld.w r0, 0x8
 ld.w r1, 0x2
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
-st.b [r1], r0 # not pointer
+st.b [r1], r0
 # line 1705
 ld.w r0, 0xff
 ld.w r1, 0xff
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
-st.b [r1], r0 # not pointer
+st.b [r1], r0
 # line 1710
 lea r0, main:frame
 ld.w r0, [r0]
@@ -758,7 +758,7 @@ iadd r0, r1
 ld.w r1, 0x100
 imod r0, r1
 lea r1, main:frame
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1711
 lea r0, main:roll
 ld.w r0, [r0]
@@ -768,7 +768,7 @@ st.w [r1], r0
 ld.w r1, 0x800
 imod r0, r1
 lea r1, main:roll
-st.w [r1], r0 # not pointer
+st.w [r1], r0
 # line 1712
 vsync 
 # line 1719
@@ -780,7 +780,7 @@ ld.w r1, 0x0
 lea r2, :BORDERCOLOR
 ld.d r2, [r2]
 iadd r1, r2
-st.b [r1], r0 # not pointer
+st.b [r1], r0
 # line 1720
 lea r0, main:frame
 ld.w r0, [r0]
