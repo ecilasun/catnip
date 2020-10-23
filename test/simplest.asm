@@ -1,4 +1,4 @@
-# Instruction count: 849
+# Instruction count: 789
 
 @ORG 0x00000000
 
@@ -93,8 +93,6 @@ imod r0, r1
 lea r1, :sinewave
 iadd r0, r1
 ld.b r0, [r0] # RHS array access, valueof: .b
-ld.w r1, 0x80
-isub r0, r1
 push r0
 ret
 # line 1552
@@ -119,8 +117,6 @@ lea r0, meep:cnt
 ld.w r0, [r0]
 ld.w r1, 0x5
 bsl r0, r1
-ld.w r1, 0xff
-imod r0, r1
 push r0
 call sin
 pop r0
@@ -141,8 +137,6 @@ lea r0, meep:cnt
 ld.w r0, [r0]
 ld.w r1, 0x4
 bsl r0, r1
-ld.w r1, 0xff
-imod r0, r1
 push r0
 call sin
 pop r0
@@ -257,88 +251,25 @@ ret
 
 # Start of function main
 @LABEL main
-# line 1594
+# line 1595
 lea r0, vblankhandler
 ld.w r1, 0x0
 lea r2, :VBLANKSERVICE
 ld.d r2, [r2]
 iadd r1, r2
 st.d [r1], r0 # not pointer
-# line 1596
+# line 1597
 ld.w r0, 0x1
 ld.w r1, 0x0
 lea r2, :VBSENABLE
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0 # not pointer
-# line 1599
+# line 1615
 lea r0, :mysprites
 spritesheet r0
-# line 1602
-ld.w r0, 0x1
-ld.w r1, 0x0
-asel r0, r1
-# line 1603
-ld.w r0, 0x0
-ld.w r1, 0x0
-asel r0, r1
-# line 1607
-ld.w r0, 0x0
-lea r1, main:i
-st.w [r1], r0 # not pointer
-@LABEL beginwhile00000004
-# line 1608
-lea r0, main:i
-ld.w r0, [r0]
-ld.w r1, 0x800
-cmp r0, r1
-test r0, less
-jmpifnot endwhile00000005, r0
-# line 1610
-ld.w r0, 0x0
-lea r1, main:i
-ld.w r1, [r1]
-ld.w r2, 0x2
-imul r1, r2
-ld.w r2, 0x0
-iadd r1, r2
-lea r2, :ARAM
-ld.d r2, [r2]
-iadd r1, r2
-st.b [r1], r0 # not pointer
-# line 1611
-ld.w r0, 0x0
-lea r1, main:i
-ld.w r1, [r1]
-ld.w r2, 0x2
-imul r1, r2
-ld.w r2, 0x1
-iadd r1, r2
-lea r2, :ARAM
-ld.d r2, [r2]
-iadd r1, r2
-st.b [r1], r0 # not pointer
-# line 1612
-lea r0, main:i
-ld.w r0, [r0]
-ld.w r1, 0x1
-iadd r0, r1
-lea r1, main:i
-st.w [r1], r0 # not pointer
-jmp beginwhile00000004
-@LABEL endwhile00000005
-# line 1616
-ld.w r0, 0x1
-fsel r0
-# line 1617
-ld.w r0, 0x5b
-ld.w r1, 0x0
-lea r2, :BORDERCOLOR
-ld.d r2, [r2]
-iadd r1, r2
-st.b [r1], r0 # not pointer
 # line 1618
-ld.w r0, 0x0
+ld.w r0, 0x1
 fsel r0
 # line 1619
 ld.w r0, 0x5b
@@ -347,27 +278,37 @@ lea r2, :BORDERCOLOR
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0 # not pointer
-# line 1622
+# line 1620
+ld.w r0, 0x0
+fsel r0
+# line 1621
+ld.w r0, 0x5b
+ld.w r1, 0x0
+lea r2, :BORDERCOLOR
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0 # not pointer
+# line 1624
 ld.w r0, 0x0
 lea r1, main:samples
 st.w [r1], r0 # not pointer
-@LABEL beginwhile0000000e
-# line 1623
+@LABEL beginwhile0000000a
+# line 1625
 ld.w r0, 0x1
-jmpifnot endwhile0000000f, r0
-# line 1631
+jmpifnot endwhile0000000b, r0
+# line 1633
 ld.w r0, 0x0
 lea r1, main:i
 st.w [r1], r0 # not pointer
-@LABEL beginwhile0000000a
-# line 1632
+@LABEL beginwhile00000008
+# line 1634
 lea r0, main:i
 ld.w r0, [r0]
 ld.w r1, 0x10
 cmp r0, r1
 test r0, less
-jmpifnot endwhile0000000b, r0
-# line 1634
+jmpifnot endwhile00000009, r0
+# line 1636
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -384,7 +325,7 @@ ld.w r1, [r1]
 lea r2, main:posY
 iadd r1, r2
 st.w [r1], r0 # not pointer
-# line 1635
+# line 1637
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -402,8 +343,8 @@ ld.w r2, 0x1
 cmp r1, r2
 test r1, less
 or r0, r1
-jmpifnot endif00000006, r0
-# line 1637
+jmpifnot endif00000004, r0
+# line 1639
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirY
@@ -415,12 +356,8 @@ ld.w r1, [r1]
 lea r2, main:dirY
 iadd r1, r2
 st.w [r1], r0 # not pointer
-# line 1639
-ld.w r0, 0x1
-ld.w r1, 0x1
-asel r0, r1
-@LABEL endif00000006
-# line 1642
+@LABEL endif00000004
+# line 1644
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -437,7 +374,7 @@ ld.w r1, [r1]
 lea r2, main:posX
 iadd r1, r2
 st.w [r1], r0 # not pointer
-# line 1643
+# line 1645
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -455,8 +392,8 @@ ld.w r2, 0x1
 cmp r1, r2
 test r1, less
 or r0, r1
-jmpifnot endif00000007, r0
-# line 1645
+jmpifnot endif00000005, r0
+# line 1647
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirX
@@ -468,12 +405,8 @@ ld.w r1, [r1]
 lea r2, main:dirX
 iadd r1, r2
 st.w [r1], r0 # not pointer
-# line 1647
-ld.w r0, 0x1
-ld.w r1, 0x1
-asel r0, r1
-@LABEL endif00000007
-# line 1651
+@LABEL endif00000005
+# line 1653
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -490,7 +423,7 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0 # not pointer
-# line 1652
+# line 1654
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -507,7 +440,7 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0 # not pointer
-# line 1653
+# line 1655
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -526,7 +459,7 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0 # not pointer
-# line 1654
+# line 1656
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -543,7 +476,7 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0 # not pointer
-# line 1656
+# line 1658
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirX
@@ -553,7 +486,7 @@ ld.w r1, 0x8000
 and r0, r1
 lea r1, main:flipx
 st.w [r1], r0 # not pointer
-# line 1657
+# line 1659
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirY
@@ -565,14 +498,14 @@ ld.w r1, 0x1
 bsr r0, r1
 lea r1, main:flipy
 st.w [r1], r0 # not pointer
-# line 1659
+# line 1661
 lea r0, main:flipy
 ld.w r0, [r0]
 ld.w r1, 0x0
 cmp r0, r1
 test r0, notequal
-jmpifnot endif00000008, r0
-# line 1661
+jmpifnot endif00000006, r0
+# line 1663
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -585,9 +518,9 @@ lea r2, main:i
 ld.w r2, [r2]
 lea r3, main:frame
 ld.w r3, [r3]
+ld.w r4, 0x4
+bsr r3, r4
 iadd r2, r3
-ld.w r3, 0x4
-bsr r2, r3
 ld.w r3, 0x4
 imod r2, r3
 imul r1, r2
@@ -603,7 +536,7 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0 # not pointer
-# line 1662
+# line 1664
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -616,9 +549,9 @@ lea r2, main:i
 ld.w r2, [r2]
 lea r3, main:frame
 ld.w r3, [r3]
+ld.w r4, 0x4
+bsr r3, r4
 iadd r2, r3
-ld.w r3, 0x4
-bsr r2, r3
 ld.w r3, 0x4
 imod r2, r3
 imul r1, r2
@@ -634,9 +567,9 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0 # not pointer
-jmp exitif00000009
-@LABEL endif00000008
-# line 1666
+jmp exitif00000007
+@LABEL endif00000006
+# line 1668
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -649,9 +582,9 @@ lea r2, main:i
 ld.w r2, [r2]
 lea r3, main:frame
 ld.w r3, [r3]
+ld.w r4, 0x4
+bsr r3, r4
 iadd r2, r3
-ld.w r3, 0x4
-bsr r2, r3
 ld.w r3, 0x4
 imod r2, r3
 imul r1, r2
@@ -667,7 +600,7 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0 # not pointer
-# line 1667
+# line 1669
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -680,9 +613,9 @@ lea r2, main:i
 ld.w r2, [r2]
 lea r3, main:frame
 ld.w r3, [r3]
+ld.w r4, 0x4
+bsr r3, r4
 iadd r2, r3
-ld.w r3, 0x4
-bsr r2, r3
 ld.w r3, 0x4
 imod r2, r3
 imul r1, r2
@@ -698,46 +631,32 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0 # not pointer
-@LABEL exitif00000009
-# line 1670
+@LABEL exitif00000007
+# line 1672
 lea r0, main:i
 ld.w r0, [r0]
 ld.w r1, 0x2
 iadd r0, r1
 lea r1, main:i
 st.w [r1], r0 # not pointer
-jmp beginwhile0000000a
-@LABEL endwhile0000000b
-# line 1676
-lea r0, main:frame
-ld.w r0, [r0]
-ld.w r1, 0x5
-bsr r0, r1
-ld.w r1, 0x2
-imod r0, r1
-ld.w r1, 0x1
-cmp r0, r1
-test r0, equal
-jmpifnot endif0000000c, r0
+jmp beginwhile00000008
+@LABEL endwhile00000009
 # line 1678
-ld.w r0, 0x3f
-ld.w r1, 0x498
-ld.w r2, 0x4
+lea r0, main:roll
+ld.w r0, [r0]
+ld.w r1, 0x2
+imul r0, r1
+push r0
+call sin
+pop r0
+ld.w r1, 0x3
+bsr r0, r1
+ld.w r1, 0x10
+isub r0, r1
+ld.w r1, 0x0
+lea r2, main:posX
 iadd r1, r2
-lea r2, :spritelist
-iadd r1, r2
-st.w [r1], r0 # not pointer
-jmp exitif0000000d
-@LABEL endif0000000c
-# line 1684
-ld.w r0, 0x0
-lea r1, main:posX
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-call numRand
-pop r1
-ld.w r2, 0x10
-imod r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
 iadd r0, r1
 ld.w r1, 0x498
 ld.w r2, 0x2
@@ -745,15 +664,24 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0 # not pointer
-# line 1687
-ld.w r0, 0x0
-lea r1, main:posY
+# line 1679
+lea r0, main:roll
+ld.w r0, [r0]
+ld.w r1, 0x2
+imul r0, r1
+ld.w r1, 0x40
 iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-call numRand
-pop r1
-ld.w r2, 0x10
-imod r1, r2
+push r0
+call sin
+pop r0
+ld.w r1, 0x3
+bsr r0, r1
+ld.w r1, 0x10
+isub r0, r1
+ld.w r1, 0x0
+lea r2, main:posY
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
 iadd r0, r1
 ld.w r1, 0x498
 ld.w r2, 0x0
@@ -761,25 +689,16 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0 # not pointer
-# line 1690
-ld.w r0, 0xffff
-ld.w r1, 0x498
-ld.w r2, 0x4
-iadd r1, r2
-lea r2, :spritelist
-iadd r1, r2
-st.w [r1], r0 # not pointer
-@LABEL exitif0000000d
-# line 1705
+# line 1692
 ld.w r0, 0xe0
 clf r0
-# line 1708
+# line 1695
 lea r0, main:scrollx
 ld.w r0, [r0]
 lea r1, main:scrolly
 ld.w r1, [r1]
 spriteorigin r0, r1
-# line 1709
+# line 1696
 ld.w r0, 0x0
 lea r1, main:posX
 iadd r0, r1
@@ -789,7 +708,7 @@ ld.w r1, 0x80
 iadd r0, r1
 lea r1, main:scrollx
 st.w [r1], r0 # not pointer
-# line 1710
+# line 1697
 ld.w r0, 0x0
 lea r1, main:posY
 iadd r0, r1
@@ -799,78 +718,96 @@ ld.w r1, 0x20
 iadd r0, r1
 lea r1, main:scrolly
 st.w [r1], r0 # not pointer
-# line 1713
+# line 1700
 lea r0, :spritelist
 ld.w r1, 0xd6
 sprite r0, r1
-# line 1715
+# line 1702
 ld.w r0, 0xf
 ld.w r1, 0x0
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0 # not pointer
-# line 1716
+# line 1703
 ld.w r0, 0xf0
 ld.w r1, 0x1
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0 # not pointer
-# line 1717
+# line 1704
 ld.w r0, 0x8
 ld.w r1, 0x2
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0 # not pointer
-# line 1718
+# line 1705
 ld.w r0, 0xff
 ld.w r1, 0xff
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0 # not pointer
-# line 1721
+# line 1710
 lea r0, main:frame
 ld.w r0, [r0]
 ld.w r1, 0x1
 iadd r0, r1
+ld.w r1, 0x100
+imod r0, r1
 lea r1, main:frame
 st.w [r1], r0 # not pointer
-# line 1722
+# line 1711
+lea r0, main:roll
+ld.w r0, [r0]
+inc r0
+lea r1, main:roll
+st.w [r1], r0
+ld.w r1, 0x800
+imod r0, r1
+lea r1, main:roll
+st.w [r1], r0 # not pointer
+# line 1712
 vsync 
-# line 1725
-ld.w r0, 0x0
+# line 1719
+lea r0, main:roll
+ld.w r0, [r0]
+ld.w r1, 0x3
+bsr r0, r1
 ld.w r1, 0x0
-asel r0, r1
-# line 1729
+lea r2, :BORDERCOLOR
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0 # not pointer
+# line 1720
 lea r0, main:frame
 ld.w r0, [r0]
 fsel r0
-jmp beginwhile0000000e
-@LABEL endwhile0000000f
-# line 1733
+jmp beginwhile0000000a
+@LABEL endwhile0000000b
+# line 1724
 ret 
-# line 1734
+# line 1725
 # End of function main
 
 #-------------Symbol Table-------------
 
 # function 'vblankhandler', hash: C6B9BD0B, refcount: 2
-# function 'numRand', hash: 07CB724A, refcount: 2
+# function 'numRand', hash: 07CB724A, refcount: 0
 # function 'numSquareRoot', hash: 1EB0646E, refcount: 0
-# function 'sin', hash: 22706EF9, refcount: 2
+# function 'sin', hash: 22706EF9, refcount: 4
 # function 'meep', hash: A06C2D14, refcount: 0
 # function 'silence', hash: B54A925A, refcount: 0
 # function 'main', hash: BC76E6BA, refcount: 1
 # variable 'VRAM', dim:1 typename:(null) refcount:4
 @LABEL :VRAM
 @DW 0x8000 0x0000
-# variable 'ARAM', dim:1 typename:(null) refcount:6
+# variable 'ARAM', dim:1 typename:(null) refcount:4
 @LABEL :ARAM
 @DW 0x4000 0x0000
-# variable 'BORDERCOLOR', dim:1 typename:(null) refcount:2
+# variable 'BORDERCOLOR', dim:1 typename:(null) refcount:3
 @LABEL :BORDERCOLOR
 @DW 0x8000 0xC000
 # variable 'VBSENABLE', dim:1 typename:(null) refcount:1
@@ -903,7 +840,7 @@ ret
 @DW 0x0B0C 0x0D0F 0x1011 0x1315 0x1618 0x1A1C 0x1E20 0x2224 
 @DW 0x2628 0x2B2D 0x2F32 0x3437 0x393C 0x3F41 0x4447 0x4A4D 
 @DW 0x4F52 0x5558 0x5B5E 0x6164 0x676A 0x6D70 0x7477 0x7A7D 
-# variable 'spritelist', dim:642 typename:word refcount:13
+# variable 'spritelist', dim:642 typename:word refcount:11
 @LABEL :spritelist
 @DW 0x0000 0x0000 0x0030 0x0000 0x0010 0x0030 0x0000 0x0020 
 @DW 0x0030 0x0000 0x0030 0x0030 0x0000 0x0040 0x0030 0x0000 
@@ -2248,10 +2185,10 @@ ret
 # variable 'cnt', dim:1 typename:word refcount:4
 @LABEL silence:cnt
 @DW 0x0000 
-# variable 'frame', dim:1 typename:word refcount:8
+# variable 'frame', dim:1 typename:word refcount:7
 @LABEL main:frame
 @DW 0x0000 
-# variable 'i', dim:1 typename:word refcount:42
+# variable 'i', dim:1 typename:word refcount:36
 @LABEL main:i
 @DW 0x0000 
 # variable 'samples', dim:1 typename:word refcount:1
@@ -2282,4 +2219,7 @@ ret
 @DW 0x0000 
 # variable 'flipy', dim:1 typename:word refcount:6
 @LABEL main:flipy
+@DW 0x0000 
+# variable 'roll', dim:1 typename:word refcount:5
+@LABEL main:roll
 @DW 0x0000 

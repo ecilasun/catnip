@@ -1548,7 +1548,7 @@ short numSquareRoot(short x)
 
 short sin(short s)
 {
-    return(sinewave[s%255]-128);
+    return(sinewave[s%255]);
 }
 
 short meep()
@@ -1557,8 +1557,8 @@ short meep()
     cnt=0;
     while(cnt<32)
     {
-        ARAM[ac*2+0] = sin((cnt<<5)%255)-128;
-        ARAM[ac*2+1] = sin((cnt<<4)%255)-128;
+        ARAM[ac*2+0] = sin(cnt<<5)-128;
+        ARAM[ac*2+1] = sin(cnt<<4)-128;
         ac=ac+1;
         ac = ac%2048;
         cnt=cnt+1;
@@ -1589,28 +1589,30 @@ void main()
     short scrollx = 50, scrolly = 30;
     short scrolldirx = 1, scrolldiry = 1;
     short flipx = 0, flipy = 0;
+    short roll = 0;
 
     // Set up vblank service function address
     VBLANKSERVICE[0] = &vblankhandler;
     // Enable vblank service
     VBSENABLE[0] = 1;
 
-    // Sample uses only one sprite sheet, so we set it once
-    spritesheet(&mysprites);
-
     // Quiet both audio buffers
-    asel(1,0);
-    asel(0,0);
+    //asel(1,0);
+    //asel(0,0);
 
     // Generate sine wave based sample in buffer 0
     // At this point, playback is routed to buffer 1
-    i=0;
+    /*i=0;
     while(i<2048)
     {
         ARAM[i*2+0] = 0;
         ARAM[i*2+1] = 0;
         i=i+1;
-    }
+    }*/
+
+    // Set sprite sheet to use
+    // This is done once because we don't need a second sprite sheet in this demo
+    spritesheet(&mysprites);
 
     // Set border color for both framebuffers
     fsel(1);
@@ -1636,7 +1638,7 @@ void main()
             {
                 dirY[i] = -dirY[i];
                 //samples = samples + meep();
-                asel(1,1);
+                //asel(1,1);
             }
 
             posX[i] = posX[i] + dirX[i];
@@ -1644,7 +1646,7 @@ void main()
             {
                 dirX[i] = -dirX[i];
                 //samples = samples + meep();
-                asel(1,1);
+                //asel(1,1);
             }
 
             // Update character positions with the bounce position
@@ -1658,13 +1660,13 @@ void main()
 
             if (flipy != 0)
             {
-                spritelist[0x4AA+i*6+4] = flipy + flipx + 0x0046 + 2*((i+frame>>4)%4);
-                spritelist[0x4A4+i*6+4] = flipy + flipx + 0x0047 + 2*((i+frame>>4)%4);
+                spritelist[0x4AA+i*6+4] = flipy + flipx + 0x0046 + 2*((i+(frame>>4))%4);
+                spritelist[0x4A4+i*6+4] = flipy + flipx + 0x0047 + 2*((i+(frame>>4))%4);
             }
             else
             {
-                spritelist[0x4A4+i*6+4] = flipy + flipx + 0x0046 + 2*((i+frame>>4)%4);
-                spritelist[0x4AA+i*6+4] = flipy + flipx + 0x0047 + 2*((i+frame>>4)%4);
+                spritelist[0x4A4+i*6+4] = flipy + flipx + 0x0046 + 2*((i+(frame>>4))%4);
+                spritelist[0x4AA+i*6+4] = flipy + flipx + 0x0047 + 2*((i+(frame>>4))%4);
             }
 
             i = i+2;
@@ -1672,24 +1674,9 @@ void main()
 
         //silence();
 
-        // Blink a gem somewhere in the world
-        if (((frame>>5)%0x2) == 1)
-        {
-            spritelist[0x498+4] = 0x003F;
-            //spritelist[0x49E+4] = 0x0040;
-        }
-        else
-        {
-            // Random X
-            spritelist[0x498+2] = posX[0]+(numRand()%16);
-
-            // Random Y
-            spritelist[0x498+0] = posY[0]+(numRand()%16);
-
-            // But hide
-            spritelist[0x498+4] = 0xFFFF;
-            //spritelist[0x49E+4] = 9;
-        }
+        // Spin a gem around the character's head
+        spritelist[0x498+2] = (sin(roll*2)>>3)-16 + posX[0];
+        spritelist[0x498+0] = (sin(roll*2+64)>>3)-16 + posY[0];
 
         // Clear screen by blitting sprites
         //spriteorigin(0, 0);
@@ -1706,8 +1693,8 @@ void main()
 
         // Set sprite origin
         spriteorigin(scrollx, scrolly);
-        scrollx = -posX[0]+128;//(sinewave[(frame+32)%255]-128)>>1;
-        scrolly = -posY[0]+32;//((sinewave[frame%255]-128)>>2);
+        scrollx = -posX[0]+128;
+        scrolly = -posY[0]+32;
 
         // Draw all sprites in the list
         sprite(&spritelist, 0xD6);
@@ -1718,14 +1705,18 @@ void main()
         VRAM[255] = 0xFF;
 
         // Advance frame and wait for vsync
-        frame=frame+1;
+        // Make sure to use even/odd because if this wraps around
+        // we'll get negative numbers
+        frame = (frame+1)%256;
+        roll = (++roll)%2048;
         vsync();
 
         // Turn off sound by using the enable/disable bit
-        asel(0,0);
+        //asel(0,0);
 
         // Swap frames to reveal what we've drawn so far
         // while simultaneously selecting the other frame for write
+        BORDERCOLOR[0] = roll>>3;
         fsel(frame);
     }
 
