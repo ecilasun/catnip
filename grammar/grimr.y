@@ -368,6 +368,17 @@ const char* TypeNameToInstructionSize[]={
 	".d"
 };
 
+const char* TypeNameToInstructionSizeNotPointer[]={
+	".?",
+	".d",
+	".w",
+	".b",
+	".d",
+	".d",
+	".w",
+	".b"
+};
+
 const char* TypeNames[]={
 	"void",
 	"dword",
@@ -2333,7 +2344,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			// NOTE: target and source are swapped due to evaluation order
 			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
 			std::string srcA = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + TypeNameToInstructionSize[g_ASC.m_CurrentTypeName] + " [" + trg + "], " + srcA;
+			node->m_Instructions = Opcodes[node->m_Opcode] + TypeNameToInstructionSizeNotPointer[g_ASC.m_CurrentTypeName] + " [" + trg + "], " + srcA + " # not pointer";
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;

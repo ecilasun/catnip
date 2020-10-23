@@ -204,7 +204,7 @@ The instruction encoding for the LOGICOP base instruction is as follows
   rB   rA   000:OR rA,rB (Default NOOP instruction encoding when rA rB are both equal to `r0`, maps to byte code '0')
   E:B  A:7  001:AND rA,rB
             010:XOR rA,rB
-            011:NOT rA
+            011:NOT rA,rB
             100:BSL rA,rB
             101:BSR rA,rB
             110:BSWAP rA, rB
@@ -269,11 +269,11 @@ This instruction shifts bits of rA by rB positions and writes the output back to
 rA = rA>>rB;
 ```
 
-### BSWAP rA, rB
-Swaps the lower 8 bits of the 16 bit value in register rB with the higher 8 bits and writes the output to rA. rB remains untouched unless it's also the target register. This is equivalent to:
+### BSWAP_L rA, rB
+Swaps the lower 8 bits of the lower 16 bit value in register rB with the higher 8 bits and writes the output to rA. rB remains untouched unless it's also the target register. This is equivalent to:
 ```c
-upper = (rB&0xFF00)>>8;
-lower = rB&0x00FF;
+lower = rB&0x000000FF;
+upper = (rB&0x0000FF00)>>8;
 rA = (lower<<8)|upper;
 ```
 

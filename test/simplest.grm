@@ -1604,13 +1604,13 @@ void main()
 
     // Generate sine wave based sample in buffer 0
     // At this point, playback is routed to buffer 1
-    /*i=0;
+    i=0;
     while(i<2048)
     {
         ARAM[i*2+0] = 0;
         ARAM[i*2+1] = 0;
-        ++i;
-    }*/
+        i=i+1;
+    }
 
     // Set border color for both framebuffers
     fsel(1);
@@ -1636,7 +1636,7 @@ void main()
             {
                 dirY[i] = -dirY[i];
                 //samples = samples + meep();
-                //asel(1,1);
+                asel(1,1);
             }
 
             posX[i] = posX[i] + dirX[i];
@@ -1644,7 +1644,7 @@ void main()
             {
                 dirX[i] = -dirX[i];
                 //samples = samples + meep();
-                //asel(1,1);
+                asel(1,1);
             }
 
             // Update character positions with the bounce position
