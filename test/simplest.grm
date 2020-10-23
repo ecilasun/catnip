@@ -1559,9 +1559,9 @@ short meep()
     {
         ARAM[ac*2+0] = sin((cnt<<5)%255)-128;
         ARAM[ac*2+1] = sin((cnt<<4)%255)-128;
-        ++ac;
+        ac=ac+1;
         ac = ac%2048;
-        ++cnt;
+        cnt=cnt+1;
     }
     return(cnt);
 }
@@ -1574,9 +1574,9 @@ void silence()
     {
         ARAM[ac*2+0] = 0;
         ARAM[ac*2+1] = 0;
-        ++ac;
+        ac=ac+1;
         ac = ac%2048;
-        ++cnt;
+        cnt=cnt+1;
     }
     return;
 }
@@ -1718,7 +1718,7 @@ void main()
         VRAM[255] = 0xFF;
 
         // Advance frame and wait for vsync
-        ++frame;
+        frame=frame+1;
         vsync();
 
         // Turn off sound by using the enable/disable bit

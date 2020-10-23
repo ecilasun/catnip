@@ -1,4 +1,4 @@
-# Instruction count: 844
+# Instruction count: 849
 
 @ORG 0x00000000
 
@@ -161,28 +161,30 @@ st.b [r1], r0 # not pointer
 # line 1562
 lea r0, :ac
 ld.w r0, [r0]
-inc r0
+ld.w r1, 0x1
+iadd r0, r1
 lea r1, :ac
-st.w [r1], r0
+st.w [r1], r0 # not pointer
 # line 1563
+lea r0, :ac
+ld.w r0, [r0]
+ld.w r1, 0x800
+imod r0, r1
 lea r1, :ac
-ld.w r1, [r1]
-ld.w r2, 0x800
-imod r1, r2
-lea r2, :ac
-st.w [r2], r1 # not pointer
+st.w [r1], r0 # not pointer
 # line 1564
+lea r0, meep:cnt
+ld.w r0, [r0]
+ld.w r1, 0x1
+iadd r0, r1
 lea r1, meep:cnt
-ld.w r1, [r1]
-inc r1
-lea r2, meep:cnt
-st.w [r2], r1
+st.w [r1], r0 # not pointer
 jmp beginwhile00000000
 @LABEL endwhile00000001
 # line 1566
-lea r2, meep:cnt
-ld.w r2, [r2]
-push r2
+lea r0, meep:cnt
+ld.w r0, [r0]
+push r0
 ret
 # line 1567
 # End of function meep
@@ -228,22 +230,24 @@ st.b [r1], r0 # not pointer
 # line 1577
 lea r0, :ac
 ld.w r0, [r0]
-inc r0
+ld.w r1, 0x1
+iadd r0, r1
 lea r1, :ac
-st.w [r1], r0
+st.w [r1], r0 # not pointer
 # line 1578
+lea r0, :ac
+ld.w r0, [r0]
+ld.w r1, 0x800
+imod r0, r1
 lea r1, :ac
-ld.w r1, [r1]
-ld.w r2, 0x800
-imod r1, r2
-lea r2, :ac
-st.w [r2], r1 # not pointer
+st.w [r1], r0 # not pointer
 # line 1579
+lea r0, silence:cnt
+ld.w r0, [r0]
+ld.w r1, 0x1
+iadd r0, r1
 lea r1, silence:cnt
-ld.w r1, [r1]
-inc r1
-lea r2, silence:cnt
-st.w [r2], r1
+st.w [r1], r0 # not pointer
 jmp beginwhile00000002
 @LABEL endwhile00000003
 # line 1581
@@ -830,19 +834,20 @@ st.b [r1], r0 # not pointer
 # line 1721
 lea r0, main:frame
 ld.w r0, [r0]
-inc r0
+ld.w r1, 0x1
+iadd r0, r1
 lea r1, main:frame
-st.w [r1], r0
+st.w [r1], r0 # not pointer
 # line 1722
 vsync 
 # line 1725
+ld.w r0, 0x0
 ld.w r1, 0x0
-ld.w r2, 0x0
-asel r1, r2
+asel r0, r1
 # line 1729
-lea r1, main:frame
-ld.w r1, [r1]
-fsel r1
+lea r0, main:frame
+ld.w r0, [r0]
+fsel r0
 jmp beginwhile0000000e
 @LABEL endwhile0000000f
 # line 1733
@@ -877,7 +882,7 @@ ret
 # variable 'seed', dim:1 typename:word refcount:10
 @LABEL :seed
 @DW 0x0007 
-# variable 'ac', dim:1 typename:word refcount:10
+# variable 'ac', dim:1 typename:word refcount:12
 @LABEL :ac
 @DW 0x0000 
 # variable 'sinewave', dim:256 typename:byte refcount:1
@@ -2237,13 +2242,13 @@ ret
 # variable 's', dim:1 typename:word refcount:1
 @LABEL sin:s
 @DW 0xCDCD 
-# variable 'cnt', dim:1 typename:word refcount:6
+# variable 'cnt', dim:1 typename:word refcount:7
 @LABEL meep:cnt
 @DW 0x0000 
-# variable 'cnt', dim:1 typename:word refcount:3
+# variable 'cnt', dim:1 typename:word refcount:4
 @LABEL silence:cnt
 @DW 0x0000 
-# variable 'frame', dim:1 typename:word refcount:7
+# variable 'frame', dim:1 typename:word refcount:8
 @LABEL main:frame
 @DW 0x0000 
 # variable 'i', dim:1 typename:word refcount:42
