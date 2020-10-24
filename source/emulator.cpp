@@ -34,22 +34,23 @@
 #define V_SYNC_TICKS (V_FRONT_PORCH+V_SYNC+V_BACK_PORCH+V_ACTIVE)
 
 // CPU state machine
-#define CPU_INIT						0b0000
-#define CPU_ROM_STEP					0b0001
-#define CPU_ROM_FETCH					0b0010
-#define CPU_CLEARVRAM					0b0011
-#define CPU_FETCH_INSTRUCTION			0b0100
-#define CPU_EXECUTE_INSTRUCTION			0b0101
-#define CPU_READ_DATAH					0b0110
-#define CPU_READ_DATAL					0b0111
-#define CPU_READ_DATA					0b1000
-#define CPU_READ_DATA_BYTE				0b1001
-#define CPU_WRITE_DATAH					0b1010
-#define CPU_WRITE_DATA					0b1011
-#define CPU_SET_BRANCH_ADDRESSH			0b1100
-#define CPU_FETCH_ADDRESS_AND_BRANCH	0b1101
-#define CPU_WAIT_VSYNC					0b1110
-#define CPU_SPRITECOPY					0b1111
+#define CPU_INIT						0b00000
+#define CPU_ROM_STEP					0b00001
+#define CPU_ROM_FETCH					0b00010
+#define CPU_CLEARVRAM					0b00011
+#define CPU_FETCH_INSTRUCTION			0b00100
+#define CPU_EXECUTE_INSTRUCTION			0b00101
+#define CPU_READ_DATAH					0b00110
+#define CPU_READ_DATAL					0b00111
+#define CPU_READ_DATA					0b01000
+#define CPU_READ_DATA_BYTE				0b01001
+#define CPU_WRITE_DATAH					0b01010
+#define CPU_WRITE_DATA					0b01011
+#define CPU_SET_BRANCH_ADDRESSH			0b01100
+#define CPU_FETCH_ADDRESS_AND_BRANCH	0b01101
+#define CPU_WAIT_VSYNC					0b01110
+#define CPU_SPRITECOPY					0b01111
+#define CPU_DIV							0b10000
 
 // Sprite state machine
 #define SPRITE_IDLE						0b00
@@ -80,12 +81,18 @@ uint32_t BRANCHTARGET;			// Branch target
 uint32_t IP;					// Instruction pointer
 uint32_t SP;					// Stack pointer
 uint16_t instruction;			// Current instruction
-int32_t register_file[16];		// Array of 16 x 32bit registers
+uint32_t register_file[16];		// Array of 16 x 32bit registers
 uint16_t flags_register;	   	// Flag registers [ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL]
 uint16_t target_register;		// Target for some memory read operations
 uint16_t cpu_state = CPU_INIT;	// Default state to boot from
 uint16_t CALLSP;				// Branch stack pointer
 uint32_t CALLSTACK[16];			// Branch stack
+uint32_t div_R;					// Div remainder
+uint32_t div_Q;					// Div quotient
+uint32_t div_D;					// Abs B
+uint32_t div_A;					// Divident
+uint32_t div_B;					// Divisor
+uint32_t div_state;
 
 uint32_t sram_addr;
 uint16_t sram_read_req;
@@ -470,50 +477,84 @@ void execute(uint16_t instr)
 			{
 				case 0: // Iadd
 				{
-					register_file[r1] = register_file[r1] + register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("%.8X: iadd r%d, r%d (r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1]);
+					printf("%.8X: iadd r%d, r%d (r%d = %.8X + r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1], r2, register_file[r2]);
 					#endif
+					register_file[r1] = register_file[r1] + register_file[r2];
+					sram_addr = IP + 2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
 				case 1: // Isub
 				{
-					register_file[r1] = register_file[r1] - register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("%.8X: isub r%d, r%d (r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1]);
+					printf("%.8X: isub r%d, r%d (r%d = %.8X + r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1], r2, register_file[r2]);
 					#endif
+					register_file[r1] = register_file[r1] + ((register_file[r2]^0xFFFFFFFF) + 1);
+					sram_addr = IP + 2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
 				case 2: // Imul
 				{
-					register_file[r1] = register_file[r1] * register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("%.8X: imul r%d, r%d (r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1]);
+					printf("%.8X: imul r%d, r%d (r%d = %.8X + r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1], r2, register_file[r2]);
 					#endif
+					register_file[r1] = register_file[r1] * register_file[r2];
+					sram_addr = IP + 2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
 				case 3: // Idiv
 				{
-					register_file[r1] = register_file[r1] / register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("%.8X: idiv r%d, r%d (r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1]);
+					printf("%.8X: idiv r%d, r%d (r%d = %.8X + r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1], r2, register_file[r2]);
 					#endif
+					div_A = register_file[r1];
+					div_B = register_file[r2];
+					div_Q = 0;
+					div_state = 0;
+					target_register = r1;
+					sram_addr = IP + 2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_DIV;
 				}
 				break;
 				case 4: // Imod
 				{
 					register_file[r1] = register_file[r1] % register_file[r2];
 					#if defined(DEBUG_EXECUTE)
-					printf("%.8X: imod r%d, r%d (r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1]);
+					printf("%.8X: imod r%d, r%d (r%d = %.8X + r%d = %.8X)\n", IP, r1, r2, r1, register_file[r1], r2, register_file[r2]);
 					#endif
+					sram_addr = IP + 2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
 				case 5: // Ineg
 				{
-					register_file[r1] = -register_file[r1];//^0x80000000; // Flip integer sign bit
+					register_file[r1] = (register_file[r1]^0xFFFFFFFF)+1;
 					#if defined(DEBUG_EXECUTE)
 					printf("%.8X: ineg r%d (r%d = %.8X)\n", IP, r1, r1, register_file[r1]);
 					#endif
+					sram_addr = IP + 2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
 				case 6: // Inc
@@ -522,6 +563,11 @@ void execute(uint16_t instr)
 					#if defined(DEBUG_EXECUTE)
 					printf("%.8X: inc r%d (r%d = %.8X)\n", IP, r1, r1, register_file[r1]);
 					#endif
+					sram_addr = IP + 2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
 				case 7: // Dec
@@ -530,14 +576,14 @@ void execute(uint16_t instr)
 					#if defined(DEBUG_EXECUTE)
 					printf("%.8X: dec r%d (r%d = %.8X)\n", IP, r1, r1, register_file[r1]);
 					#endif
+					sram_addr = IP + 2;
+					IP = IP + 2;
+					sram_enable_byteaddress = 0;
+					sram_read_req = 1;
+					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
 			}
-			sram_addr = IP + 2;
-			IP = IP + 2;
-			sram_enable_byteaddress = 0;
-			sram_read_req = 1;
-			cpu_state = CPU_FETCH_INSTRUCTION;
 		}
 		break;
 
@@ -1083,6 +1129,13 @@ void CPUMain()
 	{
 		case CPU_INIT:
 		{
+			div_A = 0;
+			div_B = 0;
+			div_Q = 0;
+			div_R = 0;
+			div_D = 0;
+			div_state = 0;
+
 			sprite_list_addr = 0;
 			sprite_list_count = 0;
 			sprite_list_countup = 0;
@@ -1271,8 +1324,8 @@ void CPUMain()
 
 		case CPU_READ_DATA:
 		{
-			uint16_t signextend = sram_rdata&0x8000 ? 0xFFFF:0x0000;
-			register_file[target_register] = (signextend<<16) | sram_rdata;
+			//uint32_t signextend = sram_rdata&0x8000 ? 0xFFFF0000:0x00000000;
+			register_file[target_register] = /*signextend |*/ sram_rdata;
 			sram_enable_byteaddress = 0;
 			sram_addr = IP;
 			sram_read_req = 1;
@@ -1282,7 +1335,8 @@ void CPUMain()
 
 		case CPU_READ_DATA_BYTE:
 		{
-			register_file[target_register] = sram_rdata&0x00FF;
+			//uint32_t signextend = sram_rdata&0x80 ? 0xFFFFFF00:0x00000000;
+			register_file[target_register] = /*signextend |*/ (sram_rdata&0xFF);
 			sram_enable_byteaddress = 0;
 			sram_addr = IP;
 			sram_read_req = 1;
@@ -1469,6 +1523,45 @@ void CPUMain()
 						sram_read_req = 0;
 						sprite_state = SPRITE_READ_DATA;
 					}
+				}
+				break;
+			}
+		}
+		break;
+
+		case CPU_DIV:
+		{
+			switch(div_state)
+			{
+				case 0:
+				{
+					div_R = div_A&0x80000000 ? ((div_A^0xFFFFFFFF) + 1)&0x7FFFFFFF : div_A; // Abs A
+					div_D = div_B&0x80000000 ? ((div_B^0xFFFFFFFF) + 1)&0x7FFFFFFF : div_B; // Abs B
+					div_state = 1;
+					cpu_state = CPU_DIV;
+				}
+				break;
+				case 1:
+				{
+					div_R = div_R + ((div_D^0xFFFFFFFF)+1);
+					if((div_R&0x80000000)) // Done dividing when remainder goes negative
+						div_state = 2;
+					else
+						div_Q++;
+					cpu_state = CPU_DIV;
+				}
+				break;
+				case 2:
+				{
+					// Final result has the sign of xor of A and B
+					register_file[target_register] = div_Q | ((div_A&0x80000000) ^ (div_B&0x80000000));
+					div_state = 0;
+					cpu_state = CPU_FETCH_INSTRUCTION;
+				}
+				break;
+				default:
+				{
+					cpu_state = CPU_FETCH_INSTRUCTION;
 				}
 				break;
 			}

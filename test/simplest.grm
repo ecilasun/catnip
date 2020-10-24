@@ -1548,7 +1548,7 @@ short numSquareRoot(short x)
 
 short sin(short s)
 {
-    return(sinewave[s%255]);
+    return(sinewave[s%256]);
 }
 
 short meep()
@@ -1557,8 +1557,8 @@ short meep()
     cnt=0;
     while(cnt<32)
     {
-        ARAM[ac*2+0] = sin(cnt<<5)-128;
-        ARAM[ac*2+1] = sin(cnt<<4)-128;
+        ARAM[ac*2+0] = sin(cnt<<5);
+        ARAM[ac*2+1] = sin(cnt<<4);
         ac=ac+1;
         ac = ac%2048;
         cnt=cnt+1;
@@ -1675,8 +1675,8 @@ void main()
         //silence();
 
         // Spin a gem around the character's head
-        spritelist[0x498+2] = (sin(roll*2)>>3)-16 + posX[0];
-        spritelist[0x498+0] = (sin(roll*2+64)>>3)-16 + posY[0];
+        spritelist[0x498+2] = (sin(roll+64))/8 + posX[0];
+        spritelist[0x498+0] = (sin(roll))/8 + posY[0];
 
         // Clear screen by blitting sprites
         //spriteorigin(0, 0);
@@ -1693,8 +1693,8 @@ void main()
 
         // Set sprite origin
         spriteorigin(scrollx, scrolly);
-        scrollx = -posX[0]+128;
-        scrolly = -posY[0]+32;
+        scrollx = 128-posX[0];
+        scrolly = 32-posY[0];
 
         // Draw all sprites in the list
         sprite(&spritelist, 0xD6);

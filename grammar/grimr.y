@@ -903,8 +903,20 @@ additive_expression
 																									SASTNode *rightnode = g_ASC.PopNode();
 																									SASTNode *leftnode = g_ASC.PopNode();
 																									$$->PushNode(leftnode);
-																									$$->PushNode(rightnode);
-																									$$->m_Opcode = OP_SUB;
+
+																									// Hardware doesn't have sub instruction
+																									// Apply a neg and an add instead
+																									SASTNode *negnode = new SASTNode(EN_UnaryNegate, "");
+																									negnode->m_LineNumber = yylineno;
+																									negnode->PushNode(rightnode);
+																									negnode->m_Opcode = OP_NEG;
+																									$$->PushNode(negnode);
+																									$$->m_Opcode = OP_ADD;
+
+																									// Sub instruction exists
+																									/*$$->PushNode(rightnode);
+																									$$->m_Opcode = OP_SUB;*/
+
 																									g_ASC.PushNode($$);
 																								}
 	;

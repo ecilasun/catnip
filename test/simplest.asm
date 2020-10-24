@@ -1,4 +1,4 @@
-# Instruction count: 789
+# Instruction count: 777
 
 @ORG 0x00000000
 
@@ -88,7 +88,7 @@ st.w [r0], r1
 # line 1551
 lea r0, sin:s
 ld.w r0, [r0]
-ld.w r1, 0xff
+ld.w r1, 0x100
 imod r0, r1
 lea r1, :sinewave
 iadd r0, r1
@@ -120,8 +120,6 @@ bsl r0, r1
 push r0
 call sin
 pop r0
-ld.w r1, 0x80
-isub r0, r1
 lea r1, :ac
 ld.w r1, [r1]
 ld.w r2, 0x2
@@ -140,8 +138,6 @@ bsl r0, r1
 push r0
 call sin
 pop r0
-ld.w r1, 0x80
-isub r0, r1
 lea r1, :ac
 ld.w r1, [r1]
 ld.w r2, 0x2
@@ -644,15 +640,13 @@ jmp beginwhile00000008
 # line 1678
 lea r0, main:roll
 ld.w r0, [r0]
-ld.w r1, 0x2
-imul r0, r1
+ld.w r1, 0x40
+iadd r0, r1
 push r0
 call sin
 pop r0
-ld.w r1, 0x3
-bsr r0, r1
-ld.w r1, 0x10
-isub r0, r1
+ld.w r1, 0x8
+idiv r0, r1
 ld.w r1, 0x0
 lea r2, main:posX
 iadd r1, r2
@@ -667,17 +661,11 @@ st.w [r1], r0
 # line 1679
 lea r0, main:roll
 ld.w r0, [r0]
-ld.w r1, 0x2
-imul r0, r1
-ld.w r1, 0x40
-iadd r0, r1
 push r0
 call sin
 pop r0
-ld.w r1, 0x3
-bsr r0, r1
-ld.w r1, 0x10
-isub r0, r1
+ld.w r1, 0x8
+idiv r0, r1
 ld.w r1, 0x0
 lea r2, main:posY
 iadd r1, r2
@@ -699,22 +687,22 @@ lea r1, main:scrolly
 ld.w r1, [r1]
 spriteorigin r0, r1
 # line 1696
-ld.w r0, 0x0
-lea r1, main:posX
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-ineg r0
-ld.w r1, 0x80
+ld.w r0, 0x80
+ld.w r1, 0x0
+lea r2, main:posX
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+ineg r1
 iadd r0, r1
 lea r1, main:scrollx
 st.w [r1], r0
 # line 1697
-ld.w r0, 0x0
-lea r1, main:posY
-iadd r0, r1
-ld.w r0, [r0] # RHS array access, valueof: .w
-ineg r0
-ld.w r1, 0x20
+ld.w r0, 0x20
+ld.w r1, 0x0
+lea r2, main:posY
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+ineg r1
 iadd r0, r1
 lea r1, main:scrolly
 st.w [r1], r0
