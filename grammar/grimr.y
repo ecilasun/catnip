@@ -631,6 +631,16 @@ SASTScanContext g_ASC;
 %token ABS VSYNC FSEL ASEL CLF SPRITE SPRITESHEET SPRITEORIGIN
 %token INC_OP DEC_OP
 
+//%glr-parser
+//%expect-rr 1
+
+%precedence '='
+%left '-' '+'
+%left '*' '/'
+// %precedence NEG
+// %right '^'
+//%nonassoc '('
+
 %type <astnode> simple_identifier
 %type <astnode> simple_constant
 %type <astnode> simple_string
@@ -679,6 +689,7 @@ SASTScanContext g_ASC;
 %type <astnode> program
 
 %start program
+
 %%
 
 simple_identifier
@@ -715,31 +726,7 @@ simple_string
 
 primary_expression
 	: simple_identifier
-	| simple_constant
-	| simple_string
-	| '(' expression ')'																		{}
-	;
-
-postfix_expression
-	: primary_expression																		/*{
-																									SASTNode *exprnode = g_ASC.PopNode();
-																									$$ = new SASTNode(EN_PrimaryExpression, "");
-																									$$->m_LineNumber = yylineno;
-																									$$->PushNode(exprnode);
-																									g_ASC.PushNode($$);
-																								}*/
-	| postfix_expression '[' expression ']'														{
-																									SASTNode *offsetexpressionnode = g_ASC.PopNode();
-																									SASTNode *exprnode = g_ASC.PopNode();
-																									$$ = new SASTNode(EN_PostfixArrayExpression, "");
-																									$$->m_LineNumber = yylineno;
-																									// We need to evaluate offset first
-																									$$->PushNode(offsetexpressionnode);
-																									$$->PushNode(exprnode);
-																									exprnode->m_Opcode = OP_ARRAYINDEX;
-																									g_ASC.PushNode($$);
-																								}
-	| postfix_expression parameter_list															{
+	| simple_identifier parameter_list															{
 																									// We need a 'call' as a child node
 																									SASTNode *callnode = new SASTNode(EN_Call, "");
 																									bool done = false;
@@ -788,6 +775,30 @@ postfix_expression
 																									$$->PushNode(callnode);
 																									//g_ASC.PushNode(callnode);
 																								}
+	| simple_constant
+	| simple_string
+	| '(' expression ')'																		{}
+	;
+
+postfix_expression
+	: primary_expression																		/*{
+																									SASTNode *exprnode = g_ASC.PopNode();
+																									$$ = new SASTNode(EN_PrimaryExpression, "");
+																									$$->m_LineNumber = yylineno;
+																									$$->PushNode(exprnode);
+																									g_ASC.PushNode($$);
+																								}*/
+	| postfix_expression '[' expression ']'														{
+																									SASTNode *offsetexpressionnode = g_ASC.PopNode();
+																									SASTNode *exprnode = g_ASC.PopNode();
+																									$$ = new SASTNode(EN_PostfixArrayExpression, "");
+																									$$->m_LineNumber = yylineno;
+																									// We need to evaluate offset first
+																									$$->PushNode(offsetexpressionnode);
+																									$$->PushNode(exprnode);
+																									exprnode->m_Opcode = OP_ARRAYINDEX;
+																									g_ASC.PushNode($$);
+																								}
 	;
 
 unary_expression
@@ -802,11 +813,24 @@ unary_expression
 																								}
 	| '-' unary_expression																		{
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();
-																									$$ = new SASTNode(EN_UnaryNegate, "");
-																									$$->m_LineNumber = yylineno;
-																									$$->PushNode(unaryexpressionnode);
-																									$$->m_Opcode = OP_NEG;
-																									g_ASC.PushNode($$);
+																									// Hardcode a negative constant if the node is a constant
+																									if (unaryexpressionnode->m_Type == EN_Constant)
+																									{
+																										uint32_t constval = strtoul(unaryexpressionnode->m_Value.c_str(), nullptr, 16);
+																										constval = (constval^0xFFFFFFFF)+1;
+																										std::stringstream stream;
+																										stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << constval;
+																										unaryexpressionnode->m_Value = "0x"+stream.str();
+																										g_ASC.PushNode(unaryexpressionnode);
+																									}
+																									else
+																									{
+																										$$ = new SASTNode(EN_UnaryNegate, "");
+																										$$->m_LineNumber = yylineno;
+																										$$->PushNode(unaryexpressionnode);
+																										$$->m_Opcode = OP_NEG;
+																										g_ASC.PushNode($$);
+																									}
 																								}
 	| '!' unary_expression																		{
 																									SASTNode *unaryexpressionnode = g_ASC.PopNode();

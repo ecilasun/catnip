@@ -2381,7 +2381,7 @@ ret
 @DW 0x0032 
 # variable 'scrolly', dim:1 typename:word refcount:2
 @LABEL main:scrolly
-@DW 0x001E 
+@DW 0xFFFFFFE2 
 # variable 'scrolldirx', dim:1 typename:word refcount:0
 # variable 'scrolldiry', dim:1 typename:word refcount:0
 # variable 'flipx', dim:1 typename:word refcount:5
