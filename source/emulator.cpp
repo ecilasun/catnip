@@ -1366,7 +1366,7 @@ void CPUMain()
 		case CPU_WAIT_VSYNC:
 		{
 			//if (vga_y>=V_FRONT_PORCH && vga_y<(V_FRONT_PORCH+V_SYNC)) // Wait for beam to reach vsync region
-			if (vga_y==0)
+			if (vga_y>=490 && vga_y<492)
 			{
 				// TODO: Kick vblank handler here?
 				// Will resume from next instruction
