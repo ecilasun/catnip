@@ -1,4 +1,4 @@
-# Instruction count: 934
+# Instruction count: 929
 
 @ORG 0x00000000
 
@@ -790,33 +790,18 @@ ld.w r1, 0x2
 iadd r0, r1
 lea r1, main:i
 st.w [r1], r0
-# line 1692
-lea r0, main:samples
-ld.w r0, [r0]
-ld.w r1, 0x0
-lea r2, :BORDERCOLOR
-ld.d r2, [r2]
-iadd r1, r2
-st.b [r1], r0
-# line 1693
-lea r0, main:samples
-ld.w r0, [r0]
-ld.w r1, 0x4
-iadd r0, r1
-lea r1, main:samples
-st.w [r1], r0
 jmp beginwhile0000000c
 @LABEL endwhile0000000d
-# line 1696
+# line 1694
 lea r0, main:hit
 ld.w r0, [r0]
 jmpifnot endif0000000e, r0
-# line 1698
+# line 1696
 call meep
-# line 1699
+# line 1697
 call silence
 @LABEL endif0000000e
-# line 1703
+# line 1701
 lea r0, main:roll
 ld.w r0, [r0]
 push r0
@@ -835,7 +820,7 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0
-# line 1704
+# line 1702
 lea r0, main:roll
 ld.w r0, [r0]
 push r0
@@ -854,16 +839,16 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0
-# line 1717
+# line 1715
 ld.w r0, 0xe0
 clf r0
-# line 1720
+# line 1718
 lea r0, main:scrollx
 ld.w r0, [r0]
 lea r1, main:scrolly
 ld.w r1, [r1]
 spriteorigin r0, r1
-# line 1721
+# line 1719
 ld.w r0, 0x80
 ld.w r1, 0x0
 lea r2, main:posX
@@ -873,7 +858,7 @@ ineg r1
 iadd r0, r1
 lea r1, main:scrollx
 st.w [r1], r0
-# line 1722
+# line 1720
 ld.w r0, 0x20
 ld.w r1, 0x0
 lea r2, main:posY
@@ -883,39 +868,39 @@ ineg r1
 iadd r0, r1
 lea r1, main:scrolly
 st.w [r1], r0
-# line 1725
+# line 1723
 lea r0, :spritelist
 ld.w r1, 0xd6
 sprite r0, r1
-# line 1727
+# line 1725
 ld.w r0, 0xf
 ld.w r1, 0x0
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-# line 1728
+# line 1726
 ld.w r0, 0xf0
 ld.w r1, 0x1
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-# line 1729
+# line 1727
 ld.w r0, 0x8
 ld.w r1, 0x2
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-# line 1730
+# line 1728
 ld.w r0, 0xff
 ld.w r1, 0xff
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-# line 1735
+# line 1733
 lea r0, main:frame
 ld.w r0, [r0]
 ld.w r1, 0x1
@@ -924,7 +909,7 @@ ld.w r1, 0x100
 imod r0, r1
 lea r1, main:frame
 st.w [r1], r0
-# line 1736
+# line 1734
 lea r0, main:roll
 ld.w r0, [r0]
 inc r0
@@ -934,17 +919,27 @@ ld.w r1, 0x800
 imod r0, r1
 lea r1, main:roll
 st.w [r1], r0
-# line 1737
+# line 1735
 vsync 
-# line 1742
+# line 1739
+lea r0, main:roll
+ld.w r0, [r0]
+ld.w r1, 0x3
+bsr r0, r1
+ld.w r1, 0x0
+lea r2, :BORDERCOLOR
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0
+# line 1740
 lea r0, main:frame
 ld.w r0, [r0]
 fsel r0
 jmp beginwhile0000000f
 @LABEL endwhile00000010
-# line 1746
+# line 1744
 ret 
-# line 1747
+# line 1745
 # End of function main
 
 #-------------Symbol Table-------------
@@ -2366,7 +2361,7 @@ ret
 # variable 'i', dim:1 typename:word refcount:48
 @LABEL main:i
 @DW 0x0000 
-# variable 'samples', dim:1 typename:word refcount:4
+# variable 'samples', dim:1 typename:word refcount:1
 @LABEL main:samples
 @DW 0x0000 
 # variable 'posX', dim:8 typename:word refcount:8
@@ -2395,7 +2390,7 @@ ret
 # variable 'flipy', dim:1 typename:word refcount:6
 @LABEL main:flipy
 @DW 0x0000 
-# variable 'roll', dim:1 typename:word refcount:4
+# variable 'roll', dim:1 typename:word refcount:5
 @LABEL main:roll
 @DW 0x0000 
 # variable 'hit', dim:1 typename:word refcount:4

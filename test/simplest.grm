@@ -1689,8 +1689,6 @@ void main()
             }
 
             i = i+2;
-            BORDERCOLOR[0] = samples;
-            samples = samples+4;
         }
 
         if (hit)
@@ -1738,7 +1736,7 @@ void main()
 
         // Swap frames to reveal what we've drawn so far
         // while simultaneously selecting the other frame for write
-        //BORDERCOLOR[0] = roll>>3;
+        BORDERCOLOR[0] = roll>>3;
         fsel(frame);
     }
 
