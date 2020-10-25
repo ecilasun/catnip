@@ -1543,11 +1543,12 @@ void CPUMain()
 				break;
 				case 1:
 				{
-					div_R = div_R + ((div_D^0xFFFFFFFF)+1);
-					if((div_R&0x80000000)) // Done dividing when remainder goes negative
+					div_Q = div_R / div_D;
+					//div_R = div_R + ((div_D^0xFFFFFFFF)+1);
+					//if((div_R&0x80000000)) // Done dividing when remainder goes negative
 						div_state = 2;
-					else
-						div_Q++;
+					//else
+					//	div_Q++;
 					cpu_state = CPU_DIV;
 				}
 				break;
