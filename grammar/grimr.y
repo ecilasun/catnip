@@ -620,13 +620,14 @@ SASTScanContext g_ASC;
 }
 
 %token <string> IDENTIFIER
+%token <string> LABEL
 %token <numeric> CONSTANT
 %token <string> STRING_LITERAL
 
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
 %token STATIC
-%token VOID DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN BREAK
+%token VOID DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN BREAK GOTO
 %token ABS VSYNC FSEL ASEL CLF SPRITE SPRITESHEET SPRITEORIGIN
 %token INC_OP DEC_OP
 
@@ -1141,7 +1142,34 @@ expression_statement
 	;
 
 if_statement
-	: IF '(' expression ')' code_block_start code_block_body code_block_end						{
+	: IF '(' expression ')' any_statement														{
+																									$$ = new SASTNode(EN_If, "");
+																									$$->m_LineNumber = yylineno;
+
+																									// Create code block node
+																									SASTNode *ifblocknode = new SASTNode(EN_BeginCodeBlock, "");
+																									//ifblocknode->m_Opcode = OP_PUSHCONTEXT;
+
+																									// Grab the anystatement and insert it
+																									SASTNode *anystatement = g_ASC.PopNode();
+																									ifblocknode->m_ASTNodes.emplace(ifblocknode->m_ASTNodes.begin(), anystatement);
+
+																									std::string label = g_ASC.PushLabel("endif");
+																									SASTNode *callcode = new SASTNode(EN_JumpNZ, label);
+																									callcode->m_Opcode = OP_JUMPIFNOT;
+																									SASTNode *endlabel = new SASTNode(EN_Label, label);
+																									endlabel->m_Opcode = OP_LABEL;
+																									//g_ASC.PopLabel("endif");
+
+																									SASTNode *exprnode=g_ASC.PopNode();
+																									$$->PushNode(exprnode);
+																									$$->PushNode(callcode);
+																									$$->PushNode(ifblocknode);
+																									$$->PushNode(endlabel);
+																									//$$->m_Opcode = OP_IF;
+																									g_ASC.PushNode($$);
+																								}
+	| IF '(' expression ')' code_block_start code_block_body code_block_end						{
 																									$$ = new SASTNode(EN_If, "");
 																									$$->m_LineNumber = yylineno;
 
@@ -1787,6 +1815,12 @@ builtin_statement
 																									$$->m_Opcode = OP_VSYNC;
 																									g_ASC.PushNode($$);
 																								}
+	| GOTO IDENTIFIER ';'																		{
+																									$$ = new SASTNode(EN_Jump, $2);
+																									$$->m_LineNumber = yylineno;
+																									$$->m_Opcode = OP_JUMP;
+																									g_ASC.PushNode($$);
+																								}
 	;
 
 any_statement
@@ -1801,6 +1835,13 @@ any_statement
 	| variable_declaration_statement															{
 																								}
 	| builtin_statement																			{
+																								}
+	| LABEL																						{
+																									$$ = new SASTNode(EN_Label, $1);
+																									$$->m_Value = $$->m_Value.substr(0, $$->m_Value.size()-1); // Remove trailing column
+																									$$->m_LineNumber = yylineno;
+																									$$->m_Opcode = OP_LABEL;
+																									g_ASC.PushNode($$);
 																								}
 	;
 

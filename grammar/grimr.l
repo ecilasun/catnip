@@ -47,6 +47,7 @@ void stripquotes(char *string);
 "}"							{ count();  return(ENDBLOCK); }
 "return"					{ count();  return(RETURN); }
 "break"						{ count();  return(BREAK); }
+"goto"						{ count();  return(GOTO); }
 
 "abs"						{ count();  return(ABS); }
 "vsync"						{ count();  return(VSYNC); }
@@ -94,6 +95,7 @@ void stripquotes(char *string);
 "++"						{ count();  return(INC_OP); }
 "--"						{ count();  return(DEC_OP); }
 
+{L}*":"						{ count(); sscanf(yytext, "%s", yylval.string); return(LABEL); }
 {L}({L}|{D})*				{ count(); sscanf(yytext, "%s", yylval.string); return(IDENTIFIER); }
 
 0[xX]{H}+{IS}?				{ count(); sscanf(yytext, "%x", &yylval.numeric); return(CONSTANT); }

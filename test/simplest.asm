@@ -1,4 +1,4 @@
-# Instruction count: 802
+# Instruction count: 806
 
 @ORG 0x00000000
 
@@ -278,37 +278,40 @@ ret
 
 # Start of function main
 @LABEL main
-# line 1600
+# line 1601
 lea r0, vblankhandler
 ld.w r1, 0x0
 lea r2, :VBLANKSERVICE
 ld.d r2, [r2]
 iadd r1, r2
 st.d [r1], r0
-# line 1602
+# line 1603
 ld.w r0, 0x1
 ld.w r1, 0x0
 lea r2, :VBSENABLE
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-# line 1620
+# line 1621
 lea r0, :mysprites
 spritesheet r0
-# line 1623
+# line 1624
 ld.w r0, 0x1
 fsel r0
-# line 1624
+# line 1625
 ld.w r0, 0x5b
 ld.w r1, 0x0
 lea r2, :BORDERCOLOR
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-# line 1625
+# line 1626
+ld.w r0, 0x5b
+clf r0
+# line 1627
 ld.w r0, 0x0
 fsel r0
-# line 1626
+# line 1628
 ld.w r0, 0x5b
 ld.w r1, 0x0
 lea r2, :BORDERCOLOR
@@ -316,26 +319,29 @@ ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
 # line 1629
+ld.w r0, 0x5b
+clf r0
+# line 1632
 ld.w r0, 0x0
 lea r1, main:samples
 st.w [r1], r0
 @LABEL beginwhile0000000a
-# line 1630
+# line 1633
 ld.w r0, 0x1
 jmpifnot endwhile0000000b, r0
-# line 1638
+# line 1641
 ld.w r0, 0x0
 lea r1, main:i
 st.w [r1], r0
 @LABEL beginwhile00000008
-# line 1639
+# line 1642
 lea r0, main:i
 ld.w r0, [r0]
 ld.w r1, 0x10
 cmp r0, r1
 test r0, less
 jmpifnot endwhile00000009, r0
-# line 1641
+# line 1644
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -352,7 +358,7 @@ ld.w r1, [r1]
 lea r2, main:posY
 iadd r1, r2
 st.w [r1], r0
-# line 1642
+# line 1645
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -371,7 +377,7 @@ cmp r1, r2
 test r1, less
 or r0, r1
 jmpifnot endif00000004, r0
-# line 1644
+# line 1646
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirY
@@ -384,7 +390,7 @@ lea r2, main:dirY
 iadd r1, r2
 st.w [r1], r0
 @LABEL endif00000004
-# line 1649
+# line 1648
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -401,7 +407,7 @@ ld.w r1, [r1]
 lea r2, main:posX
 iadd r1, r2
 st.w [r1], r0
-# line 1650
+# line 1649
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -420,7 +426,7 @@ cmp r1, r2
 test r1, less
 or r0, r1
 jmpifnot endif00000005, r0
-# line 1652
+# line 1650
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirX
@@ -433,7 +439,7 @@ lea r2, main:dirX
 iadd r1, r2
 st.w [r1], r0
 @LABEL endif00000005
-# line 1658
+# line 1653
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -450,7 +456,7 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0
-# line 1659
+# line 1654
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -467,7 +473,7 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0
-# line 1660
+# line 1655
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -486,7 +492,7 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0
-# line 1661
+# line 1656
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -503,7 +509,7 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0
-# line 1663
+# line 1658
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirX
@@ -513,7 +519,7 @@ ld.w r1, 0x8000
 and r0, r1
 lea r1, main:flipx
 st.w [r1], r0
-# line 1664
+# line 1659
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirY
@@ -525,14 +531,14 @@ ld.w r1, 0x1
 bsr r0, r1
 lea r1, main:flipy
 st.w [r1], r0
-# line 1666
+# line 1661
 lea r0, main:flipy
 ld.w r0, [r0]
 ld.w r1, 0x0
 cmp r0, r1
 test r0, notequal
 jmpifnot endif00000006, r0
-# line 1668
+# line 1663
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -563,7 +569,7 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0
-# line 1669
+# line 1664
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -596,7 +602,7 @@ iadd r1, r2
 st.w [r1], r0
 jmp exitif00000007
 @LABEL endif00000006
-# line 1673
+# line 1668
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -627,7 +633,7 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0
-# line 1674
+# line 1669
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -659,7 +665,7 @@ lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0
 @LABEL exitif00000007
-# line 1677
+# line 1672
 lea r0, main:i
 ld.w r0, [r0]
 ld.w r1, 0x2
@@ -668,7 +674,7 @@ lea r1, main:i
 st.w [r1], r0
 jmp beginwhile00000008
 @LABEL endwhile00000009
-# line 1683
+# line 1678
 lea r0, main:roll
 ld.w r0, [r0]
 push r0
@@ -687,7 +693,7 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0
-# line 1684
+# line 1679
 lea r0, main:roll
 ld.w r0, [r0]
 push r0
@@ -706,16 +712,16 @@ iadd r1, r2
 lea r2, :spritelist
 iadd r1, r2
 st.w [r1], r0
-# line 1697
+# line 1692
 ld.w r0, 0xe0
 clf r0
-# line 1700
+# line 1695
 lea r0, main:scrollx
 ld.w r0, [r0]
 lea r1, main:scrolly
 ld.w r1, [r1]
 spriteorigin r0, r1
-# line 1701
+# line 1696
 ld.w r0, 0x80
 ld.w r1, 0x0
 lea r2, main:posX
@@ -725,7 +731,7 @@ ineg r1
 iadd r0, r1
 lea r1, main:scrollx
 st.w [r1], r0
-# line 1702
+# line 1697
 ld.w r0, 0x20
 ld.w r1, 0x0
 lea r2, main:posY
@@ -735,39 +741,39 @@ ineg r1
 iadd r0, r1
 lea r1, main:scrolly
 st.w [r1], r0
-# line 1705
+# line 1700
 lea r0, :spritelist
 ld.w r1, 0xd6
 sprite r0, r1
-# line 1707
+# line 1702
 ld.w r0, 0xf
 ld.w r1, 0x0
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-# line 1708
+# line 1703
 ld.w r0, 0xf0
 ld.w r1, 0x1
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-# line 1709
+# line 1704
 ld.w r0, 0x8
 ld.w r1, 0x2
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-# line 1710
+# line 1705
 ld.w r0, 0xff
 ld.w r1, 0xff
 lea r2, :VRAM
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-# line 1715
+# line 1710
 lea r0, main:frame
 ld.w r0, [r0]
 ld.w r1, 0x1
@@ -776,7 +782,7 @@ ld.w r1, 0x100
 imod r0, r1
 lea r1, main:frame
 st.w [r1], r0
-# line 1716
+# line 1711
 lea r0, main:roll
 ld.w r0, [r0]
 inc r0
@@ -786,9 +792,9 @@ ld.w r1, 0x800
 imod r0, r1
 lea r1, main:roll
 st.w [r1], r0
-# line 1717
+# line 1712
 vsync 
-# line 1724
+# line 1719
 lea r0, main:roll
 ld.w r0, [r0]
 ld.w r1, 0x3
@@ -798,15 +804,15 @@ lea r2, :BORDERCOLOR
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-# line 1725
+# line 1720
 lea r0, main:frame
 ld.w r0, [r0]
 fsel r0
 jmp beginwhile0000000a
 @LABEL endwhile0000000b
-# line 1729
+# line 1724
 ret 
-# line 1730
+# line 1725
 # End of function main
 
 #-------------Symbol Table-------------
