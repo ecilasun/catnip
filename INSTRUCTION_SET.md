@@ -326,7 +326,7 @@ Sets the IP to the 2 words following this instruction or the contents of registe
 0000 0000 0000 0010
 |    |    |    MATHOP
 rB   rA   0000:IADD rA,rB (rA=rA+rB)
-F:C  B:8  0001:ISUB rA,rB (rA=rA-rB)
+F:C  B:8  0001:IABS rA (rA=abs(rA))
           0010:IMUL rA,rB (rA=rA*rB)
           0011:IDIV rA,rB (rA=rA/rB)
           0100:IMOD rA,rB (rA=rA%rB)
@@ -350,10 +350,10 @@ rA = rA+rB;
 ```
 NOTE: Overflow is currently not detected and will be ignored, which might give wrong results.
 
-### ISUB rA,rB
-This is an integer subtraction between rA and rB where the result is written back to rA, which is equivalent to the following code:
+### IABS rA
+This will yield the absolute value of the number provided in rA and write it back to rA
 ```c
-rA = rA-rB;
+rA = abs(rA);
 ```
 NOTE: Overflow is currently not detected and will be ignored, which might give wrong results.
 

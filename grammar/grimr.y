@@ -58,7 +58,7 @@ enum EASTNodeType
 	EN_Div,
 	EN_Mod,
 	EN_Add,
-	EN_Sub,
+	EN_Abs,
 	EN_BitShiftLeft,
 	EN_BitShiftRight,
 	EN_Expression,
@@ -132,7 +132,7 @@ const char* NodeTypes[]=
 	"EN_Div                       ",
 	"EN_Mod                       ",
 	"EN_Add                       ",
-	"EN_Sub                       ",
+	"EN_Abs                       ",
 	"EN_BitShiftLeft              ",
 	"EN_BitShiftRight             ",
 	"EN_Expression                ",
@@ -203,7 +203,7 @@ enum EOpcode
 	OP_DIV,
 	OP_MOD,
 	OP_ADD,
-	OP_SUB,
+	OP_ABS,
 	OP_BSL,
 	OP_BSR,
 	OP_ARRAYINDEX,
@@ -265,7 +265,7 @@ const std::string Opcodes[]={
 	"idiv",
 	"imod",
 	"iadd",
-	"isub",
+	"iabs",
 	"bsl",
 	"bsr",
 	"arrayindex",
@@ -627,7 +627,7 @@ SASTScanContext g_ASC;
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
 %token STATIC
 %token VOID DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN BREAK
-%token VSYNC FSEL ASEL CLF SPRITE SPRITESHEET SPRITEORIGIN
+%token ABS VSYNC FSEL ASEL CLF SPRITE SPRITESHEET SPRITEORIGIN
 %token INC_OP DEC_OP
 
 %type <astnode> simple_identifier
@@ -847,6 +847,14 @@ unary_expression
 																									$$->m_Opcode = OP_DEC;
 																									g_ASC.PushNode($$);
 																								}
+	| ABS '(' expression ')'																	{
+																									SASTNode *exprnode = g_ASC.PopNode();
+																									$$ = new SASTNode(EN_Abs, "");
+																									$$->m_LineNumber = yylineno;
+																									$$->PushNode(exprnode);
+																									$$->m_Opcode = OP_ABS;
+																									g_ASC.PushNode($$);
+																								}
 	;
 
 // Accumulates right
@@ -898,7 +906,7 @@ additive_expression
 																									g_ASC.PushNode($$);
 																								}
 	| additive_expression '-' multiplicative_expression											{
-																									$$ = new SASTNode(EN_Sub, "");
+																									$$ = new SASTNode(EN_Add, "");
 																									$$->m_LineNumber = yylineno;
 																									SASTNode *rightnode = g_ASC.PopNode();
 																									SASTNode *leftnode = g_ASC.PopNode();
@@ -913,7 +921,7 @@ additive_expression
 																									$$->PushNode(negnode);
 																									$$->m_Opcode = OP_ADD;
 
-																									// Sub instruction exists
+																									// Sub instruction does not exist
 																									/*$$->PushNode(rightnode);
 																									$$->m_Opcode = OP_SUB;*/
 
@@ -2082,11 +2090,19 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		}
 		break;
 
+		case OP_ABS:
+		{
+			std::string srcA = g_ASC.PopRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcA;
+			g_ASC.PushRegister(); // Result goes back into srcA
+			g_ASC.m_InstructionCount+=1;
+		}
+		break;
+
 		case OP_MUL:
 		case OP_DIV:
 		case OP_MOD:
 		case OP_ADD:
-		case OP_SUB:
 		case OP_BSL:
 		case OP_BSR:
 		{

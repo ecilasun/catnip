@@ -48,6 +48,7 @@ void stripquotes(char *string);
 "return"					{ count();  return(RETURN); }
 "break"						{ count();  return(BREAK); }
 
+"abs"						{ count();  return(ABS); }
 "vsync"						{ count();  return(VSYNC); }
 "fsel"						{ count();  return(FSEL); }
 "asel"						{ count();  return(ASEL); }

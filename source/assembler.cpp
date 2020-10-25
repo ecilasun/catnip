@@ -385,7 +385,7 @@ public:
 
 	// INSTRUCTION: 0x00002
 	// iadd r0,r1 : r0=r0+r1
-	// isub r0,r1 : r0=r0-r1
+	// iabs r0 : r0=abs(r0)
 	// imul r0,r1 : r0=r0*r1
 	// idiv r0,r1 : r0=r0/r1
 	// imod r0,r1 : r0=r0%r1
@@ -407,7 +407,7 @@ public:
 			sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
 			marker |= 0x0000;
 		}
-		if (strcmp(_parser_table[_current_parser_offset].m_Value, "isub") == 0)
+		if (strcmp(_parser_table[_current_parser_offset].m_Value, "iabs") == 0)
 		{
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 			sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
@@ -1119,7 +1119,7 @@ const SAssemblerPair keywords[] =
 	{{"jmpifnot"}, &s_callop},
 
 	{{"iadd"}, &s_mathop},
-	{{"isub"}, &s_mathop},
+	{{"iabs"}, &s_mathop},
 	{{"imul"}, &s_mathop},
 	{{"idiv"}, &s_mathop},
 	{{"imod"}, &s_mathop},
