@@ -1,4 +1,4 @@
-# Instruction count: 929
+# Instruction count: 958
 
 @ORG 0x00000000
 
@@ -90,9 +90,9 @@ lea r0, sin:s
 ld.w r0, [r0]
 ld.w r1, 0x100
 imod r0, r1
-ld.w r1, 0x2
-imul r0, r1
 lea r1, :sinewave
+ld.w r2, 0x1
+bsl r0, r2
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
 ld.w r1, 0x800
@@ -116,9 +116,9 @@ ld.w r1, 0x40
 iadd r0, r1
 ld.w r1, 0x100
 imod r0, r1
-ld.w r1, 0x2
-imul r0, r1
 lea r1, :sinewave
+ld.w r2, 0x1
+bsl r0, r2
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
 ld.w r1, 0x800
@@ -277,6 +277,8 @@ lea r0, vblankhandler
 ld.w r1, 0x0
 lea r2, :VBLANKSERVICE
 ld.d r2, [r2]
+ld.w r3, 0x2
+bsl r1, r3
 iadd r1, r2
 st.d [r1], r0
 # line 1603
@@ -443,7 +445,7 @@ st.w [r1], r0
 # line 1653
 lea r0, main:i
 ld.w r0, [r0]
-ld.w r1, 0x10
+ld.w r1, 0x8
 cmp r0, r1
 test r0, less
 jmpifnot endwhile0000000d, r0
@@ -455,23 +457,31 @@ st.w [r1], r0
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
+ld.w r2, 0x1
+bsl r0, r2
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
 lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:dirY
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 ld.w r1, [r1] # RHS array access, valueof: .w
 iadd r0, r1
 lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:posY
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 # line 1658
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
+ld.w r2, 0x1
+bsl r0, r2
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
 ld.w r1, 0x9e
@@ -480,6 +490,8 @@ test r0, greater
 lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:posY
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 ld.w r1, [r1] # RHS array access, valueof: .w
 ld.w r2, 0x1
@@ -491,12 +503,16 @@ jmpifnot endif00000008, r0
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirY
+ld.w r2, 0x1
+bsl r0, r2
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
 ineg r0
 lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:dirY
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 # line 1661
@@ -508,23 +524,31 @@ st.w [r1], r0
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
+ld.w r2, 0x1
+bsl r0, r2
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
 lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:dirX
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 ld.w r1, [r1] # RHS array access, valueof: .w
 iadd r0, r1
 lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:posX
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 # line 1665
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
+ld.w r2, 0x1
+bsl r0, r2
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
 ld.w r1, 0xf0
@@ -533,6 +557,8 @@ test r0, greater
 lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:posX
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 ld.w r1, [r1] # RHS array access, valueof: .w
 ld.w r2, 0x1
@@ -544,12 +570,16 @@ jmpifnot endif00000009, r0
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirX
+ld.w r2, 0x1
+bsl r0, r2
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
 ineg r0
 lea r1, main:i
 ld.w r1, [r1]
 lea r2, main:dirX
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 # line 1668
@@ -561,9 +591,11 @@ st.w [r1], r0
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
+ld.w r2, 0x1
+bsl r0, r2
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
-ld.w r1, 0x4a4
+ld.w r1, 0x252
 lea r2, main:i
 ld.w r2, [r2]
 ld.w r3, 0x6
@@ -572,34 +604,42 @@ iadd r1, r2
 ld.w r2, 0x0
 iadd r1, r2
 lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 # line 1673
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
+ld.w r2, 0x1
+bsl r0, r2
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
-ld.w r1, 0x4a4
+ld.w r1, 0x252
 lea r2, main:i
 ld.w r2, [r2]
 ld.w r3, 0x6
 imul r2, r3
 iadd r1, r2
-ld.w r2, 0x2
+ld.w r2, 0x1
 iadd r1, r2
 lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 # line 1674
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
+ld.w r2, 0x1
+bsl r0, r2
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
 ld.w r1, 0x10
 iadd r0, r1
-ld.w r1, 0x4aa
+ld.w r1, 0x255
 lea r2, main:i
 ld.w r2, [r2]
 ld.w r3, 0x6
@@ -608,29 +648,37 @@ iadd r1, r2
 ld.w r2, 0x0
 iadd r1, r2
 lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 # line 1675
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
+ld.w r2, 0x1
+bsl r0, r2
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
-ld.w r1, 0x4aa
+ld.w r1, 0x255
 lea r2, main:i
 ld.w r2, [r2]
 ld.w r3, 0x6
 imul r2, r3
 iadd r1, r2
-ld.w r2, 0x2
+ld.w r2, 0x1
 iadd r1, r2
 lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 # line 1677
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirX
+ld.w r2, 0x1
+bsl r0, r2
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
 ld.w r1, 0x8000
@@ -641,6 +689,8 @@ st.w [r1], r0
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirY
+ld.w r2, 0x1
+bsl r0, r2
 iadd r0, r1
 ld.w r0, [r0] # RHS array access, valueof: .w
 ld.w r1, 0x8000
@@ -676,15 +726,17 @@ ld.w r3, 0x4
 imod r2, r3
 imul r1, r2
 iadd r0, r1
-ld.w r1, 0x4aa
+ld.w r1, 0x255
 lea r2, main:i
 ld.w r2, [r2]
 ld.w r3, 0x6
 imul r2, r3
 iadd r1, r2
-ld.w r2, 0x4
+ld.w r2, 0x2
 iadd r1, r2
 lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 # line 1683
@@ -707,15 +759,17 @@ ld.w r3, 0x4
 imod r2, r3
 imul r1, r2
 iadd r0, r1
-ld.w r1, 0x4a4
+ld.w r1, 0x252
 lea r2, main:i
 ld.w r2, [r2]
 ld.w r3, 0x6
 imul r2, r3
 iadd r1, r2
-ld.w r2, 0x4
+ld.w r2, 0x2
 iadd r1, r2
 lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 jmp exitif0000000b
@@ -740,15 +794,17 @@ ld.w r3, 0x4
 imod r2, r3
 imul r1, r2
 iadd r0, r1
-ld.w r1, 0x4a4
+ld.w r1, 0x252
 lea r2, main:i
 ld.w r2, [r2]
 ld.w r3, 0x6
 imul r2, r3
 iadd r1, r2
-ld.w r2, 0x4
+ld.w r2, 0x2
 iadd r1, r2
 lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 # line 1688
@@ -771,22 +827,24 @@ ld.w r3, 0x4
 imod r2, r3
 imul r1, r2
 iadd r0, r1
-ld.w r1, 0x4aa
+ld.w r1, 0x255
 lea r2, main:i
 ld.w r2, [r2]
 ld.w r3, 0x6
 imul r2, r3
 iadd r1, r2
-ld.w r2, 0x4
+ld.w r2, 0x2
 iadd r1, r2
 lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 @LABEL exitif0000000b
 # line 1691
 lea r0, main:i
 ld.w r0, [r0]
-ld.w r1, 0x2
+ld.w r1, 0x1
 iadd r0, r1
 lea r1, main:i
 st.w [r1], r0
@@ -811,13 +869,15 @@ ld.w r1, 0x40
 idiv r0, r1
 ld.w r1, 0x0
 lea r2, main:posX
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 ld.w r1, [r1] # RHS array access, valueof: .w
 iadd r0, r1
-ld.w r1, 0x498
-ld.w r2, 0x2
-iadd r1, r2
+ld.w r1, 0x24d
 lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 # line 1702
@@ -830,13 +890,15 @@ ld.w r1, 0x40
 idiv r0, r1
 ld.w r1, 0x0
 lea r2, main:posY
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 ld.w r1, [r1] # RHS array access, valueof: .w
 iadd r0, r1
-ld.w r1, 0x498
-ld.w r2, 0x0
-iadd r1, r2
+ld.w r1, 0x24c
 lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 # line 1715
@@ -852,6 +914,8 @@ spriteorigin r0, r1
 ld.w r0, 0x80
 ld.w r1, 0x0
 lea r2, main:posX
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 ld.w r1, [r1] # RHS array access, valueof: .w
 ineg r1
@@ -862,6 +926,8 @@ st.w [r1], r0
 ld.w r0, 0x20
 ld.w r1, 0x0
 lea r2, main:posY
+ld.w r3, 0x1
+bsl r1, r3
 iadd r1, r2
 ld.w r1, [r1] # RHS array access, valueof: .w
 ineg r1

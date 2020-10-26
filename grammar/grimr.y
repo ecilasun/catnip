@@ -2221,19 +2221,27 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				g_ASC.m_CompileFailed = true;
 			}
 
+			// Temporary register in case we need to use the BSL code path
+			std::string trg = "";
+			if (var->m_TypeName != TN_BYTE && var->m_TypeName != TN_BYTEPTR)
+			{
+				trg = g_ASC.PushRegister();
+				g_ASC.PopRegister(); // No need after this step
+			}
+
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();
 
-			/*if (var->m_TypeName != TN_BYTE && var->m_TypeName != TN_BYTEPTR)
+			if (var->m_TypeName != TN_BYTE && var->m_TypeName != TN_BYTEPTR)
 			{
 				// Need to multiply address by two for WORD or four for DWORD
 				if (var->m_TypeName == TN_WORD || var->m_TypeName == TN_WORDPTR)
-					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + ".w r15, 0x2";
+					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + ".w " + trg + ", 0x1";
 				else
-					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + ".w r15, 0x4";
-				node->m_Instructions += std::string("\n") + Opcodes[OP_MUL] + " " + srcA + ", r15";
-				g_ASC.m_InstructionCount+=2;
-			}*/
+					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + ".w " + trg + ", 0x2";
+				node->m_Instructions += std::string("\n") + Opcodes[OP_BSL] + " " + srcA + ", " + trg;
+				g_ASC.m_InstructionCount+=1;
+			}
 
 			node->m_Instructions += std::string("\n") + Opcodes[OP_ADD] + " " + srcA + ", " + srcB;
 			g_ASC.m_InstructionCount+=1;

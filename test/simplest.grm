@@ -1548,12 +1548,12 @@ short numSquareRoot(short x)
 
 short sin(short s)
 {
-    return(sinewave[(s%256)*2]-2048);
+    return(sinewave[(s%256)]-2048);
 }
 
 short cos(short c)
 {
-    return(sinewave[((c+64)%256)*2]-2048);
+    return(sinewave[((c+64)%256)]-2048);
 }
 
 short meep()
@@ -1650,7 +1650,7 @@ void main()
         // Note that array offsets are in bytes, not indices!
         i = 0;
         short hit;
-        while (i<16)
+        while (i<8)
         {
             hit = 0;
 
@@ -1669,26 +1669,26 @@ void main()
             }
 
             // Update character positions with the bounce position
-            spritelist[0x4A4+i*6+0] = posY[i];
-            spritelist[0x4A4+i*6+2] = posX[i];
-            spritelist[0x4AA+i*6+0] = posY[i]+16;
-            spritelist[0x4AA+i*6+2] = posX[i];
+            spritelist[0x252+i*6+0] = posY[i];
+            spritelist[0x252+i*6+1] = posX[i];
+            spritelist[0x255+i*6+0] = posY[i]+16;
+            spritelist[0x255+i*6+1] = posX[i];
 
             flipx = dirX[i]&0x8000;
             flipy = (dirY[i]&0x8000)>>1;
 
             if (flipy != 0)
             {
-                spritelist[0x4AA+i*6+4] = flipy + flipx + 0x0046 + 2*((i+(frame>>4))%4);
-                spritelist[0x4A4+i*6+4] = flipy + flipx + 0x0047 + 2*((i+(frame>>4))%4);
+                spritelist[0x255+i*6+2] = flipy + flipx + 0x0046 + 2*((i+(frame>>4))%4);
+                spritelist[0x252+i*6+2] = flipy + flipx + 0x0047 + 2*((i+(frame>>4))%4);
             }
             else
             {
-                spritelist[0x4A4+i*6+4] = flipy + flipx + 0x0046 + 2*((i+(frame>>4))%4);
-                spritelist[0x4AA+i*6+4] = flipy + flipx + 0x0047 + 2*((i+(frame>>4))%4);
+                spritelist[0x252+i*6+2] = flipy + flipx + 0x0046 + 2*((i+(frame>>4))%4);
+                spritelist[0x255+i*6+2] = flipy + flipx + 0x0047 + 2*((i+(frame>>4))%4);
             }
 
-            i = i+2;
+            i=i+1;
         }
 
         if (hit)
@@ -1698,8 +1698,8 @@ void main()
         }
 
         // Spin a gem around the character's head
-        spritelist[0x498+2] = cos(roll)/64 + posX[0];
-        spritelist[0x498+0] = sin(roll)/64 + posY[0];
+        spritelist[0x24D] = cos(roll)/64 + posX[0];
+        spritelist[0x24C] = sin(roll)/64 + posY[0];
 
         // Clear screen by blitting sprites
         //spriteorigin(0, 0);
