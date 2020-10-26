@@ -1790,8 +1790,8 @@ void main()
         }
 
         // Spin a gem around the character's head
-        spritelist[0x24D] = cos(roll)/512 + posX[0];
-        spritelist[0x24C] = sin(roll)/512 + posY[0];
+        spritelist[0x24D] = cos(roll*4)/512 + posX[0];
+        spritelist[0x24C] = sin(roll*4)/512 + posY[0];
 
         // Clear screen by blitting sprites
         //spriteorigin(0, 0);

@@ -1,4 +1,4 @@
-# Instruction count: 903
+# Instruction count: 907
 
 @ORG 0x00000000
 
@@ -804,6 +804,8 @@ jmp beginwhile00000008
 # line 1793
 lea r0, main:roll
 ld.w r0, [r0]
+ld.w r1, 0x4
+imul r0, r1
 push r0
 call cos
 pop r0
@@ -825,6 +827,8 @@ st.w [r1], r0
 # line 1794
 lea r0, main:roll
 ld.w r0, [r0]
+ld.w r1, 0x4
+imul r0, r1
 push r0
 call sin
 pop r0
