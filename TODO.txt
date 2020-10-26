@@ -1,5 +1,4 @@
 TODO
 
-- Fix array index to be indices, not bytes
 - Fix branching to functions with their names starting with 'r' (gets confused for a register by assembler)
 - Add scaling/size bits to sprite routine for 8x8 sprites
