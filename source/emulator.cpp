@@ -1752,7 +1752,7 @@ bool InitEmulator(uint16_t *_rom_binary)
 	rom_out = 0;
 
 	// Start SDL
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
+	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
 		printf("Failed to initialize SDL video: %s\n", SDL_GetError());
 		return false;
@@ -1772,10 +1772,11 @@ bool InitEmulator(uint16_t *_rom_binary)
 		}
 	}
 
+	SDL_InitSubSystem(SDL_INIT_AUDIO);
 	SDL_AudioSpec want, have;
 	SDL_AudioDeviceID dev;
 	SDL_memset(&want, 0, sizeof(want)); /* or SDL_zero(want) */
-	want.freq = 44000;
+	want.freq = 18750;
 	want.format = AUDIO_F32;
 	want.channels = 2;
 	want.samples = 512; // *2 for stereo
@@ -1789,8 +1790,6 @@ bool InitEmulator(uint16_t *_rom_binary)
 			SDL_Log("We didn't get correct audio format.");
 		}
 		SDL_PauseAudioDevice(dev, 0); /* start audio playing. */
-		//SDL_Delay(1000);
-		//SDL_CloseAudioDevice(dev);
 	}
 
 	 if (SDL_MUSTLOCK(s_Surface))
@@ -1808,6 +1807,7 @@ void TerminateEmulator()
 
 	SDL_FreeSurface(s_Surface);
 	SDL_DestroyWindow(s_Window);
+	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 	SDL_Quit();
 	
 	// Clean up memory
