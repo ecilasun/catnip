@@ -128,7 +128,7 @@ uint16_t audio_enable;
 uint16_t aram_select;
 uint16_t aram_address;
 uint16_t aram_writeena;
-uint8_t aram_data;
+uint16_t aram_data;
 
 // ROM unit
 uint16_t rom_out;
@@ -147,7 +147,7 @@ uint32_t s_VGAClockFallingEdge = 0;
 uint16_t *ROM;					// ROM
 uint8_t *SRAM;					// SRAM
 static uint8_t *VRAM;			// VRAM (Larger than FRAME_HEIGHT, including top and bottom borders)
-static uint8_t *ARAM;			// ARAM (Audio RAM, 4096 entries, double-buffered)
+static uint16_t *ARAM;			// ARAM (Audio RAM, 512 entries, double-buffered)
 int vga_x = 0;
 int vga_y = 0;
 SDL_Window *s_Window;
@@ -596,39 +596,21 @@ void execute(uint16_t instr)
 			{
 				case 0: // [r1] <- (word)r2
 				{
+					bool is_aram_address = (register_file[r1]&0x40000000)>>30 ? true:false;
 					bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
-					if (is_vram_address) // VRAM write (address>=0x80000000)
+					if (is_aram_address) // ARAM write (0x40000000)
 					{
-						if ((register_file[r1]&0x0000FFFF) < 0xD000) // Only if within VRAM region
-						{
-							#if defined(DEBUG_EXECUTE)
-							printf("%.8X: st.w(vram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
-							#endif
-							// NOTE: VRAM ends at 0xC000 but we need to be able to address the rest for
-							// other attributes such as border color etc
-							framebuffer_address = register_file[r1]&0x0000FFFF;
-							framebuffer_writeena = 1;
-							// TODO: Somehow need to implement a WORD mov to VRAM
-							framebuffer_data = uint8_t(register_file[r2]&0x00FF);
-							sram_addr = IP + 2;
-							IP = IP + 2;
-							sram_enable_byteaddress = 0;
-							sram_read_req = 1;
-							cpu_state = CPU_FETCH_INSTRUCTION;
-						}
-						else // Otherwise noop
-						{
-							#if defined(DEBUG_EXECUTE)
-							uint16_t *wordsram0 = (uint16_t *)&SRAM[register_file[IP+2]];
-							uint16_t *wordsram1 = (uint16_t *)&SRAM[register_file[IP+4]];
-							printf("%.8X: st.w(sram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
-							#endif
-							sram_addr = IP + 2;
-							IP = IP + 2;
-							sram_enable_byteaddress = 0;
-							sram_read_req = 1;
-							cpu_state = CPU_FETCH_INSTRUCTION;
-						}
+						#if defined(DEBUG_EXECUTE)
+						printf("%.8X: st.b(aram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
+						#endif
+						aram_address = register_file[r1]&0x0000FFFF;
+						aram_writeena = 1;
+						aram_data = uint16_t(register_file[r2]&0x0000FFFF);
+						sram_addr = IP + 2;
+						IP = IP + 2;
+						sram_enable_byteaddress = 0;
+						sram_read_req = 1;
+						cpu_state = CPU_FETCH_INSTRUCTION;
 					}
 					else
 					{
@@ -709,22 +691,7 @@ void execute(uint16_t instr)
 				case 5: // [r1] <- (byte)r2
 				{
 					bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
-					bool is_aram_address = (register_file[r1]&0x40000000)>>30 ? true:false;
-					if (is_aram_address) // ARAM write (0x40000000)
-					{
-						#if defined(DEBUG_EXECUTE)
-						printf("%.8X: st.b(aram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
-						#endif
-						aram_address = register_file[r1]&0x0000FFFF;
-						aram_writeena = 1;
-						aram_data = uint8_t(register_file[r2]&0x00FF);
-						sram_addr = IP + 2;
-						IP = IP + 2;
-						sram_enable_byteaddress = 0;
-						sram_read_req = 1;
-						cpu_state = CPU_FETCH_INSTRUCTION;
-					}
-					else if (is_vram_address) // VRAM write (0x80000000)
+					if (is_vram_address) // VRAM write (0x80000000)
 					{
 						if ((register_file[r1]&0x0000FFFF) < 0xD000) // Only if within VRAM region
 						{
@@ -1628,7 +1595,7 @@ void MemoryMain()
 
 	// TODO: ARAM write access
 	if (aram_writeena)
-		ARAM[(1-aram_select)*4096+aram_address] = aram_data;
+		ARAM[(1-aram_select)*1024+aram_address] = aram_data;
 
 	// VRAM write access
 	if (framebuffer_writeena)
@@ -1744,7 +1711,7 @@ void MyAudioCallback(void*  userdata,
 	float *output = (float*)stream;
 	int count = len/sizeof(float); // bytes to indices
 	for(int i=0; i<count; ++i)
-		output[i] = audio_enable ? (float)ARAM[aram_select*4096 + i]/256.f : 0.f;
+		output[i] = audio_enable ? ((float)ARAM[aram_select*1024 + i]+16384.f)/32768.f : 0.f;
 }
 
 bool InitEmulator(uint16_t *_rom_binary)
@@ -1764,8 +1731,8 @@ bool InitEmulator(uint16_t *_rom_binary)
 		VRAM[i] = 0;
 
 	// Init ARAM
-	ARAM = new uint8_t[4096 * 2];
-	for (uint32_t i=0;i<4096 * 2;++i)
+	ARAM = new uint16_t[1024 * 2];
+	for (uint32_t i=0;i<1024 * 2;++i)
 		ARAM[i] = 0;
 
 	// Init SRAM to all zeros
@@ -1810,8 +1777,8 @@ bool InitEmulator(uint16_t *_rom_binary)
 	want.freq = 44000;
 	want.format = AUDIO_F32;
 	want.channels = 2;
-	want.samples = 2048; // *2 for stereo
-	want.callback = MyAudioCallback; /* you wrote this function elsewhere -- see SDL_AudioSpec for details */
+	want.samples = 512; // *2 for stereo
+	want.callback = MyAudioCallback;
 
 	dev = SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
 	if (dev == 0) {

@@ -2,3 +2,4 @@ TODO
 
 - Fix branching to functions with their names starting with 'r' (gets confused for a register by assembler)
 - Add scaling/size bits to sprite routine for 8x8 sprites
+- Work on audio output
