@@ -603,7 +603,8 @@ void execute(uint16_t instr)
 						#if defined(DEBUG_EXECUTE)
 						printf("%.8X: st.b(aram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
 						#endif
-						aram_address = register_file[r1]&0x0000FFFF;
+						// Warning! In hardware, incoming addresses will be byte-adjusted therefore are x2 (even), we need to divide them by 2 (i.e use [10:1] instead of [9:0])
+						aram_address = (register_file[r1]&0x0000FFFF)>>1;
 						aram_writeena = 1;
 						aram_data = uint16_t(register_file[r2]&0x0000FFFF);
 						sram_addr = IP + 2;

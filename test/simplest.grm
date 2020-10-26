@@ -1665,7 +1665,7 @@ short squareWaveHarmonics()
         a=0;
         b=0;
         p=dutycycle*2*314159/10000000;
-        while(harmonics<8)
+        while(harmonics<10)
         {
             c = 10*f*2*314159/10000000*cnt;
             a=a+sin(c)/10;
@@ -1674,9 +1674,9 @@ short squareWaveHarmonics()
         }
         ARAM[ac*2+0] = a-b;
         ARAM[ac*2+1] = a-b;
-        ac = ac+1;
+        ++ac;
         ac = ac%512;
-        cnt=cnt+1;
+        ++cnt;
     }
     return(cnt);
 }
@@ -1703,16 +1703,6 @@ void main()
     asel(0,1);
     samples = squareWaveHarmonics();
 
-    // Generate sine wave based sample in buffer 0
-    // At this point, playback is routed to buffer 1
-    /*i=0;
-    while(i<512)
-    {
-        ARAM[i*2+0] = 0;
-        ARAM[i*2+1] = 0;
-        i=i+1;
-    }*/
-
     // Set sprite sheet to use
     // This is done once because we don't need a second sprite sheet in this demo
     spritesheet(&mysprites);
@@ -1729,19 +1719,6 @@ void main()
     samples = 0;
     while(1)
     {
-        /*asel(frame%2, 0);
-        i=0;
-        while(i<512)
-        {
-            ARAM[i*2+0] = 0;
-            ARAM[i*2+1] = 0;
-            i=i+1;
-        }
-        asel(frame%2, 1);*/
-
-        // If we're filling the whole screen there's no need for a CLF
-        //clf(0xEC);
-
         // Handle bouncing sprites and change border color on collision
         // Also triggers audio playback of buffer 0 by switching writes to buffer 0
         i = 0;
