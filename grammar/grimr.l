@@ -34,11 +34,11 @@ void stripquotes(char *string);
 
 "static"					{ count();  return(STATIC); }
 
+"construct"					{ count();  return(CONSTRUCT); }
 "void"						{ count();  return(VOID); }
 "int"						{ count();  return(DWORD); }
 "short"						{ count();  return(WORD); }
 "char"						{ count();  return(BYTE); }
-"struct"					{ count();  return(STRUCT); }
 
 "def"						{ count();  return(FUNCTION); }
 "if"						{ count();  return(IF); }

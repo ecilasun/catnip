@@ -43,6 +43,7 @@ uint32_t HashString(const char *_str)
 enum EASTNodeType
 {
 	EN_Default,
+	EN_StructDecl,
 	EN_Identifier,
 	EN_StrucName,
 	EN_ArrayIdentifier,
@@ -105,7 +106,6 @@ enum EASTNodeType
 	EN_StackPush,
 	EN_StackPop,
 	EN_Decl,
-	EN_StructDecl,
 	EN_DeclInitJunction,
 	EN_DeclArray,
 	EN_ArrayJunction,
@@ -121,6 +121,7 @@ enum EASTNodeType
 const char* NodeTypes[]=
 {
 	"EN_Default                   ",
+	"EN_StructDecl                ",
 	"EN_Identifier                ",
 	"EN_StrucName                 ",
 	"EN_ArrayIdentifier           ",
@@ -183,7 +184,6 @@ const char* NodeTypes[]=
 	"EN_StackPush                 ",
 	"EN_StackPop                  ",
 	"EN_Decl                      ",
-	"EN_StructDecl                ",
 	"EN_DeclInitJunction          ",
 	"EN_DeclArray                 ",
 	"EN_ArrayJunction             ",
@@ -248,7 +248,6 @@ enum EOpcode
 	OP_JUMPIFNOT,
 	OP_LABEL,
 	OP_DECL,
-	OP_STRUCTDECL,
 	OP_DIM,
 	OP_CMPL,
 	OP_CMPG,
@@ -313,7 +312,6 @@ const std::string Opcodes[]={
 	"jmpifnot",
 	"@LABEL",
 	"decl",
-	"struct",
 	"dim",
 	"cmp",
 	"cmp",
@@ -350,6 +348,7 @@ enum EAllocationModifier
 
 enum ETypeName
 {
+	TN_CONSTRUCT,
 	TN_VOID,
 	TN_DWORD,
 	TN_WORD,
@@ -362,6 +361,7 @@ enum ETypeName
 
 int TypeNameToStride[]={
 	0,
+	0,
 	4,
 	2,
 	1,
@@ -372,6 +372,7 @@ int TypeNameToStride[]={
 };
 
 const char* TypeNameToInstructionSize[]={
+	".?",
 	".?",
 	".d",
 	".w",
@@ -384,6 +385,7 @@ const char* TypeNameToInstructionSize[]={
 
 const char* TypeNameToInstructionSizeNotPointer[]={
 	".?",
+	".?",
 	".d",
 	".w",
 	".b",
@@ -394,6 +396,7 @@ const char* TypeNameToInstructionSizeNotPointer[]={
 };
 
 const char* TypeNames[]={
+	"construct",
 	"void",
 	"dword",
 	"word",
@@ -404,6 +407,7 @@ const char* TypeNames[]={
 };
 
 const char* ReturnTypes[]={
+	"construct",
 	"void",
 	"int",
 	"short",
@@ -428,6 +432,14 @@ struct SVariable
 	class SASTNode *m_RootNode{nullptr};
 	SString *m_String{nullptr};
 	std::vector<uint32_t> m_InitialValues;
+};
+
+struct SConstruct
+{
+	std::string m_Name;
+	uint32_t m_Hash;
+	int m_RefCount{0};
+	class SASTNode *m_RootNode{nullptr};
 };
 
 struct SFunction
@@ -579,12 +591,21 @@ struct SASTScanContext
 		return nullptr;
 	}
 
+	SConstruct *FindConstruct(uint32_t hash)
+	{
+		for(auto &fun : m_Constructs)
+			if (fun->m_Hash == hash)
+				return fun;
+		return nullptr;
+	}
+
 	std::vector<SASTNode*> m_ASTNodes;
 	std::string m_CurrentFunctionName;
 	ETypeName m_CurrentFunctionTypeName{TN_VOID};
 	ETypeName m_CurrentTypeName{TN_WORD};
 	std::vector<SVariable*> m_Variables;
 	std::vector<SFunction*> m_Functions;
+	std::vector<SConstruct*> m_Constructs;
 	std::map<uint32_t, SSymbol> m_SymbolTable;
 	std::map<uint32_t, SString*> m_StringTable;
 	uint32_t m_StringAddress{0};
@@ -641,7 +662,7 @@ SASTScanContext g_ASC;
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
 %token STATIC
-%token VOID DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR STRUCT FUNCTION IF ELSE WHILE DO FOR BEGINBLOCK ENDBLOCK RETURN BREAK GOTO
+%token CONSTRUCT VOID DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE DO FOR BEGINBLOCK ENDBLOCK RETURN BREAK GOTO
 %token ABS VSYNC FSEL ASEL CLF SPRITE SPRITESHEET SPRITEORIGIN
 %token INC_OP DEC_OP
 
@@ -659,7 +680,6 @@ SASTScanContext g_ASC;
 %type <astnode> simple_constant
 %type <astnode> simple_string
 
-%type <astnode> variable_declaration_statement_list
 %type <astnode> variable_declaration_statement
 %type <astnode> functioncall_statement
 %type <astnode> expression_statement
@@ -681,6 +701,7 @@ SASTScanContext g_ASC;
 %type <astnode> variable_declaration
 %type <astnode> function_header
 %type <astnode> function_def
+%type <astnode> struct_def
 
 %type <astnode> parameter_list
 %type <astnode> function_parameters
@@ -1590,7 +1611,8 @@ variable_declaration_item
 	;
 
 type_name
-	: VOID																						{ g_ASC.m_CurrentTypeName = TN_VOID; }
+	: CONSTRUCT																					{ g_ASC.m_CurrentTypeName = TN_CONSTRUCT; }
+	| VOID																						{ g_ASC.m_CurrentTypeName = TN_VOID; }
 	| DWORD																						{ g_ASC.m_CurrentTypeName = TN_DWORD; }
 	| WORD																						{ g_ASC.m_CurrentTypeName = TN_WORD; }
 	| BYTE																						{ g_ASC.m_CurrentTypeName = TN_BYTE; }
@@ -1601,29 +1623,7 @@ type_name
 	;
 
 variable_declaration
-	: STRUCT  simple_identifier code_block_start variable_declaration_statement_list code_block_end	{
-																									$$ = new SASTNode(EN_StructDecl, "");
-																									$$->m_LineNumber = yylineno;
-																									$$->m_Opcode = OP_STRUCTDECL;
-
-																									// Remove epilogue
-																									g_ASC.PopNode();
-
-																									// Grab declaration node
-																									SASTNode *declnode = g_ASC.PopNode();
-
-																									// Remove prologue
-																									g_ASC.PopNode();
-
-																									// Grab name node
-																									SASTNode *namenode = g_ASC.PopNode();
-																									namenode->m_Type = EN_StrucName; // No longer an identifier
-
-																									$$->PushNode(namenode);
-																									$$->PushNode(declnode);
-																									g_ASC.PushNode($$);
-																								}
-	| type_name variable_declaration_item														{
+	: type_name variable_declaration_item														{
 																									$$ = new SASTNode(EN_Decl, "");
 																									$$->m_Opcode = OP_DECL;
 																									$$->m_LineNumber = yylineno;
@@ -1642,7 +1642,6 @@ variable_declaration
 																									var->m_Value = "";
 																									var->m_TypeName = g_ASC.m_CurrentTypeName;
 
-																									//printf("identifier: %s:%s - %s\n", g_ASC.m_CurrentFunctionName.c_str(), var->m_Name.c_str(), declnode->m_AllocationModifier==AM_STATIC ? "static" : (declnode->m_AllocationModifier==AM_DYNAMIC ? "dynamic" : "none"));
 																									if (var->m_Scope.length()>0)
 																										var->m_DynamicAllocation = 1;
 
@@ -1763,7 +1762,6 @@ variable_declaration
 																									var->m_Value = "";
 																									var->m_TypeName = g_ASC.m_CurrentTypeName;
 
-																									//printf("identifier: %s:%s - %s\n", g_ASC.m_CurrentFunctionName.c_str(), var->m_Name.c_str(), n0->m_AllocationModifier==AM_STATIC ? "static" : (n0->m_AllocationModifier==AM_DYNAMIC ? "dynamic" : "none"));
 																									if (var->m_Scope.length()>0)
 																										var->m_DynamicAllocation = 1;
 
@@ -1818,20 +1816,6 @@ variable_declaration_statement
 																									g_ASC.PushNode($$);
 																								}
 	;
-
-variable_declaration_statement_list
-	: variable_declaration_statement															{
-																									$$ = new SASTNode(EN_Default, "");
-																									$$->m_LineNumber = yylineno;
-																									SASTNode *declnode=g_ASC.PopNode();
-																									$$->PushNode(declnode);
-																									g_ASC.PushNode($$);
-																								}
-	| variable_declaration_statement_list variable_declaration_statement						{
-																									SASTNode *rootnode = g_ASC.PeekNode();
-																									SASTNode *nextnode=g_ASC.PopNode();
-																									rootnode->PushNode(nextnode);
-																								}
 
 expression_list
 	: expression																				{
@@ -2035,10 +2019,63 @@ function_header
 																									$$ = new SASTNode(EN_FuncHeader, "");
 																									$$->m_LineNumber = yylineno;
 																									$$->PushNode(namenode);
-																									//printf("Current function: %s %s\n", g_ASC.m_CurrentTypeName, namenode->m_Value.c_str());
 																									g_ASC.m_CurrentFunctionName = namenode->m_Value;
 																									g_ASC.m_CurrentFunctionTypeName = g_ASC.m_CurrentTypeName;
 																									g_ASC.PushNode($$);
+																								}
+	;
+
+struct_def
+	: function_header code_block_start code_block_body code_block_end ';'						{
+																									SASTNode *declnode = new SASTNode(EN_StructDecl, "");
+																									declnode->m_LineNumber = yylineno;
+
+																									// Remove epilogue
+																									g_ASC.PopNode();
+
+																									// Create code block node
+																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
+																									//codeblocknode->m_Opcode = OP_PUSHCONTEXT;
+
+																									//SASTNode *endcodeblocknode = new SASTNode(EN_EndCodeBlock, "");
+																									//endcodeblocknode->m_Opcode = OP_POPCONTEXT;
+
+																									// Collect everything up till prologue
+																									bool done = false;
+																									do
+																									{
+																										SASTNode *n0 = g_ASC.PeekNode();
+																										done = n0->m_Type == EN_Prologue ? true:false;
+																										if (done)
+																											break;
+																										g_ASC.PopNode();
+																										codeblocknode->m_ASTNodes.emplace(codeblocknode->m_ASTNodes.begin(), n0);
+																									} while (1);
+
+																									// Remove prologue
+																									g_ASC.PopNode();
+
+																									// Remove header (contains name as subnode)
+																									g_ASC.PopNode();
+
+																									SASTNode *labelnode = new SASTNode(EN_Label, g_ASC.m_CurrentFunctionName);
+																									labelnode->m_Opcode = OP_LABEL;
+																									declnode->PushNode(labelnode);
+
+																									// Add the code block after name
+																									declnode->PushNode(codeblocknode);
+																									//declnode->PushNode(endcodeblocknode);
+
+																									declnode->m_Opcode = OP_RESETREGISTERS;
+																									//g_ASC.PushNode($$);
+
+																									// Store construct in list for easy search
+																									SConstruct *construct = new SConstruct();
+																									construct->m_Name = g_ASC.m_CurrentFunctionName;
+																									construct->m_Hash = HashString(construct->m_Name.c_str());
+																									construct->m_RootNode = declnode;
+																									g_ASC.m_Constructs.push_back(construct);
+																									g_ASC.m_CurrentFunctionName = "";
 																								}
 	;
 
@@ -2136,14 +2173,17 @@ function_def
 																									func->m_Hash = HashString(func->m_Name.c_str());
 																									func->m_RootNode = declnode;
 																									g_ASC.m_Functions.push_back(func);
+																									g_ASC.m_CurrentFunctionName = "";
 																								}
 	;
 
 translation_unit
-	: translation_unit variable_declaration_statement
-	| translation_unit function_def
-	| variable_declaration_statement
+	: variable_declaration_statement
+	| struct_def
 	| function_def
+	| translation_unit variable_declaration_statement
+	| translation_unit struct_def
+	| translation_unit function_def
 	;
 
 program
@@ -2225,11 +2265,6 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 
 	switch(node->m_Opcode)
 	{
-		case OP_STRUCTDECL:
-		{
-			printf("declstruct %s\n", node->m_ASTNodes[0]->m_Value.c_str());
-		}
-
 		case OP_DIRECTTOREGISTER:
 		{
 			std::string src = g_ASC.PushRegister();

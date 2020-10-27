@@ -3,9 +3,10 @@
     which tries to show as many language features as possible
 */
 
-/*struct SSprite {
-    short X;//,Y,ID;
-};*/
+construct TestConstruct
+{
+    short posX, posY, posZ;
+};
 
 char* VRAM = 0x80000000;
 short* ARAM = 0x40000000;
