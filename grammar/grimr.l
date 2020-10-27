@@ -42,7 +42,9 @@ void stripquotes(char *string);
 "def"						{ count();  return(FUNCTION); }
 "if"						{ count();  return(IF); }
 "else"						{ count();  return(ELSE); }
+"do"						{ count();  return(DO); }
 "while"						{ count();  return(WHILE); }
+"for"						{ count();  return(FOR); }
 "{"							{ count();  return(BEGINBLOCK); }
 "}"							{ count();  return(ENDBLOCK); }
 "return"					{ count();  return(RETURN); }

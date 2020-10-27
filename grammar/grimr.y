@@ -79,6 +79,8 @@ enum EASTNodeType
 	EN_LogicOr,
 	EN_SelectExpression,
 	EN_While,
+	EN_Do,
+	EN_For,
 	EN_If,
 	EN_Label,
 	EN_Jump,
@@ -153,6 +155,8 @@ const char* NodeTypes[]=
 	"EN_LogicOr                   ",
 	"EN_SelectExpression          ",
 	"EN_While                     ",
+	"EN_Do                        ",
+	"EN_For                       ",
 	"EN_If                        ",
 	"EN_Label                     ",
 	"EN_Jump                      ",
@@ -229,6 +233,8 @@ enum EOpcode
 	OP_POPLOCALREGISTERS,
 	OP_IF,
 	OP_WHILE,
+	OP_DO,
+	OP_FOR,
 	OP_CALL,
 	OP_PUSH,
 	OP_POP,
@@ -291,6 +297,8 @@ const std::string Opcodes[]={
 	"popregs",
 	"if",
 	"while",
+	"do",
+	"for",
 	"call",
 	"push",
 	"pop",
@@ -627,7 +635,7 @@ SASTScanContext g_ASC;
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
 %token STATIC
-%token VOID DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE BEGINBLOCK ENDBLOCK RETURN BREAK GOTO
+%token VOID DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE DO FOR BEGINBLOCK ENDBLOCK RETURN BREAK GOTO
 %token ABS VSYNC FSEL ASEL CLF SPRITE SPRITESHEET SPRITEORIGIN
 %token INC_OP DEC_OP
 
@@ -648,6 +656,7 @@ SASTScanContext g_ASC;
 %type <astnode> variable_declaration_statement
 %type <astnode> functioncall_statement
 %type <astnode> expression_statement
+%type <astnode> for_statement
 %type <astnode> while_statement
 %type <astnode> if_statement
 %type <astnode> builtin_statement
@@ -1307,6 +1316,60 @@ if_statement
 																								}
 	;
 
+for_statement
+	: FOR '(' expression ';' expression ';' expression ')' code_block_start code_block_body code_block_end
+																								{
+																									$$ = new SASTNode(EN_For, "");
+																									$$->m_LineNumber = yylineno;
+
+																									// Remove epilogue
+																									g_ASC.PopNode();
+
+																									// Create code block node
+																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
+
+																									// Collect everything up till prologue
+																									bool done = false;
+																									do
+																									{
+																										SASTNode *n0 = g_ASC.PeekNode();
+																										done = n0->m_Type == EN_Prologue ? true:false;
+																										if (done)
+																											break;
+																										g_ASC.PopNode();
+																										codeblocknode->m_ASTNodes.emplace(codeblocknode->m_ASTNodes.begin(),n0);
+																									} while (1);
+
+																									// Remove prologue
+																									g_ASC.PopNode();
+
+																									std::string startlabel = g_ASC.PushLabel("beginfor");
+																									std::string label = g_ASC.PushLabel("endfor");
+																									SASTNode *callcode = new SASTNode(EN_JumpNZ, label);
+																									callcode->m_Opcode = OP_JUMPIFNOT;
+																									SASTNode *callcodeend = new SASTNode(EN_Jump, startlabel);
+																									callcodeend->m_Opcode = OP_JUMP;
+																									SASTNode *beginlabel = new SASTNode(EN_Label, startlabel);
+																									beginlabel->m_Opcode = OP_LABEL;
+																									SASTNode *endlabel = new SASTNode(EN_Label, label);
+																									endlabel->m_Opcode = OP_LABEL;
+
+																									SASTNode *exprnodeC=g_ASC.PopNode();
+																									SASTNode *exprnodeB=g_ASC.PopNode();
+																									SASTNode *exprnodeA=g_ASC.PopNode();
+																									$$->PushNode(exprnodeA);
+																									$$->PushNode(beginlabel);
+																									$$->PushNode(exprnodeB);
+																									$$->PushNode(callcode);
+																									$$->PushNode(codeblocknode);
+																									$$->PushNode(exprnodeC);
+																									$$->PushNode(callcodeend);
+																									$$->PushNode(endlabel);
+																									//$$->m_Opcode = OP_FOR;
+																									g_ASC.PushNode($$);
+																								}
+;
+
 while_statement
 	: WHILE '(' expression ')' code_block_start code_block_body code_block_end					{
 																									$$ = new SASTNode(EN_While, "");
@@ -1317,10 +1380,6 @@ while_statement
 
 																									// Create code block node
 																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
-																									//codeblocknode->m_Opcode = OP_PUSHCONTEXT;
-
-																									//SASTNode *endcodeblocknode = new SASTNode(EN_EndCodeBlock, "");
-																									//endcodeblocknode->m_Opcode = OP_POPCONTEXT;
 
 																									// Collect everything up till prologue
 																									bool done = false;
@@ -1354,6 +1413,53 @@ while_statement
 																									$$->PushNode(callcode);
 																									$$->PushNode(codeblocknode);
 																									//$$->PushNode(endcodeblocknode);
+																									$$->PushNode(callcodeend);
+																									$$->PushNode(endlabel);
+																									//$$->m_Opcode = OP_WHILE;
+																									g_ASC.PushNode($$);
+																								}
+	| DO code_block_start code_block_body code_block_end WHILE '(' expression ')' ';'			{
+																									$$ = new SASTNode(EN_Do, "");
+																									$$->m_LineNumber = yylineno;
+
+																									SASTNode *exprnode=g_ASC.PopNode();
+
+																									// Remove epilogue
+																									g_ASC.PopNode();
+
+																									// Create code block node
+																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
+
+																									// Collect everything up till prologue
+																									bool done = false;
+																									do
+																									{
+																										SASTNode *n0 = g_ASC.PeekNode();
+																										done = n0->m_Type == EN_Prologue ? true:false;
+																										if (done)
+																											break;
+																										g_ASC.PopNode();
+																										codeblocknode->m_ASTNodes.emplace(codeblocknode->m_ASTNodes.begin(),n0);
+																									} while (1);
+
+																									// Remove prologue
+																									g_ASC.PopNode();
+
+																									std::string startlabel = g_ASC.PushLabel("begindowhile");
+																									std::string label = g_ASC.PushLabel("enddowhile");
+																									SASTNode *callcode = new SASTNode(EN_JumpNZ, label);
+																									callcode->m_Opcode = OP_JUMPIFNOT;
+																									SASTNode *callcodeend = new SASTNode(EN_Jump, startlabel);
+																									callcodeend->m_Opcode = OP_JUMP;
+																									SASTNode *beginlabel = new SASTNode(EN_Label, startlabel);
+																									beginlabel->m_Opcode = OP_LABEL;
+																									SASTNode *endlabel = new SASTNode(EN_Label, label);
+																									endlabel->m_Opcode = OP_LABEL;
+
+																									$$->PushNode(beginlabel);
+																									$$->PushNode(codeblocknode);
+																									$$->PushNode(exprnode);
+																									$$->PushNode(callcode);
 																									$$->PushNode(callcodeend);
 																									$$->PushNode(endlabel);
 																									//$$->m_Opcode = OP_WHILE;
@@ -1855,6 +1961,8 @@ any_statement
 	| if_statement																				{
 																								}
 	| while_statement																			{
+																								}
+	| for_statement																				{
 																								}
 	| variable_declaration_statement															{
 																								}

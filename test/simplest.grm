@@ -1659,25 +1659,24 @@ short squareWaveHarmonics()
     cnt=0;
     dutycycle = 50;
     f = 16;
-    while(cnt<512)
+    do
     {
         harmonics = 0;
         a=0;
         b=0;
         p=dutycycle*2*314159/10000000;
-        while(harmonics<10)
+        for(harmonics=0;harmonics<10;++harmonics)
         {
             c = 10*f*2*314159/10000000*cnt;
             a=a+sin(c)/10;
             b=b+sin(c-p*10)/10;
-            ++harmonics;
         }
         ARAM[ac*2+0] = a-b;
         ARAM[ac*2+1] = a-b;
         ++ac;
         ac = ac%512;
         ++cnt;
-    }
+    } while (cnt<512);
     return(cnt);
 }
 
@@ -1721,9 +1720,8 @@ void main()
     {
         // Handle bouncing sprites and change border color on collision
         // Also triggers audio playback of buffer 0 by switching writes to buffer 0
-        i = 0;
         short hit;
-        while (i<8)
+        for (i=0; i<8; ++i)
         {
             hit = 0;
 
@@ -1762,8 +1760,6 @@ void main()
                 spritelist[0x252+i*6+2] = flipy + flipx + 0x0046 + 2*((i+(frame>>4))%4);
                 spritelist[0x255+i*6+2] = flipy + flipx + 0x0047 + 2*((i+(frame>>4))%4);
             }
-
-            i=i+1;
         }
 
         // Spin a gem around the character's head
