@@ -496,7 +496,7 @@ public:
 				}
 			}
 			if (labelfound == false)
-				printf("ERROR: label not found for LEA intrinsic.\n");
+				printf("ERROR: label %s not found for LEA intrinsic.\n", _parser_table[_current_parser_offset+2].m_Value);
 		}
 
 		unsigned int code = 0x04; // DW2R

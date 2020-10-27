@@ -1,4 +1,4 @@
-# Instruction count: 904
+# Instruction count: 918
 
 @ORG 0x00000000
 
@@ -10,82 +10,20 @@ vsync
 fsel r0
 inc r0
 jmp infloop
-# End of program
+# End boot
 
-# Start of function vblankhandler
 @LABEL vblankhandler
-# line 1629
+# line 1633
 ret 
-# line 1630
+# line 1634
 # End of function vblankhandler
 
-# Start of function numRand
-@LABEL numRand
-# line 1634
-lea r0, :seed
-ld.w r0, [r0]
-lea r1, :seed
-ld.w r1, [r1]
-ld.w r2, 0x9
-bsl r1, r2
-xor r0, r1
-lea r1, :seed
-st.w [r1], r0
-# line 1635
-lea r0, :seed
-ld.w r0, [r0]
-lea r1, :seed
-ld.w r1, [r1]
-ld.w r2, 0xd
-bsr r1, r2
-xor r0, r1
-lea r1, :seed
-st.w [r1], r0
-# line 1636
-lea r0, :seed
-ld.w r0, [r0]
-lea r1, :seed
-ld.w r1, [r1]
-ld.w r2, 0x1
-bsl r1, r2
-xor r0, r1
-lea r1, :seed
-st.w [r1], r0
-# line 1637
-lea r0, :seed
-ld.w r0, [r0]
-push r0
-ret
-# line 1638
-# End of function numRand
-
-# Start of function numSquareRoot
-@LABEL numSquareRoot
-# line 1640
-lea r0, numSquareRoot:x
-pop r1
-st.w [r0], r1
-# line 1642
-lea r0, numSquareRoot:x
-ld.w r0, [r0]
-ld.w r1, 0x7f
-iadd r0, r1
-ld.w r1, 0x17
-bsl r0, r1
-ld.w r1, 0x1
-bsr r0, r1
-push r0
-ret
-# line 1643
-# End of function numSquareRoot
-
-# Start of function sin
 @LABEL sin
-# line 1645
+# line 1649
 lea r0, sin:s
 pop r1
 st.w [r0], r1
-# line 1647
+# line 1651
 lea r0, sin:s
 ld.w r0, [r0]
 ld.w r1, 0x400
@@ -100,16 +38,15 @@ ineg r1
 iadd r0, r1
 push r0
 ret
-# line 1648
+# line 1652
 # End of function sin
 
-# Start of function cos
 @LABEL cos
-# line 1650
+# line 1654
 lea r0, cos:c
 pop r1
 st.w [r0], r1
-# line 1652
+# line 1656
 lea r0, cos:c
 ld.w r0, [r0]
 ld.w r1, 0x100
@@ -126,37 +63,36 @@ ineg r1
 iadd r0, r1
 push r0
 ret
-# line 1653
+# line 1657
 # End of function cos
 
-# Start of function squareWaveHarmonics
 @LABEL squareWaveHarmonics
-# line 1659
+# line 1663
 ld.w r0, 0x0
 lea r1, squareWaveHarmonics:cnt
 st.w [r1], r0
-# line 1660
+# line 1664
 ld.w r0, 0x32
 lea r1, squareWaveHarmonics:dutycycle
 st.w [r1], r0
-# line 1661
+# line 1665
 ld.w r0, 0x10
 lea r1, squareWaveHarmonics:f
 st.w [r1], r0
 @LABEL begindowhile00000002
-# line 1664
+# line 1668
 ld.w r0, 0x0
 lea r1, squareWaveHarmonics:harmonics
 st.w [r1], r0
-# line 1665
+# line 1669
 ld.w r0, 0x0
 lea r1, squareWaveHarmonics:a
 st.w [r1], r0
-# line 1666
+# line 1670
 ld.w r0, 0x0
 lea r1, squareWaveHarmonics:b
 st.w [r1], r0
-# line 1667
+# line 1671
 lea r0, squareWaveHarmonics:dutycycle
 ld.w r0, [r0]
 ld.w r1, 0x2
@@ -167,7 +103,7 @@ ld.d r1, 0x989680
 idiv r0, r1
 lea r1, squareWaveHarmonics:p
 st.w [r1], r0
-# line 1668
+# line 1672
 ld.w r0, 0x0
 lea r1, squareWaveHarmonics:harmonics
 st.w [r1], r0
@@ -178,7 +114,7 @@ ld.w r1, 0xa
 cmp r0, r1
 test r0, less
 jmpifnot endfor00000001, r0
-# line 1670
+# line 1674
 ld.w r0, 0xa
 lea r1, squareWaveHarmonics:f
 ld.w r1, [r1]
@@ -194,7 +130,7 @@ ld.w r1, [r1]
 imul r0, r1
 lea r1, squareWaveHarmonics:c
 st.w [r1], r0
-# line 1671
+# line 1675
 lea r0, squareWaveHarmonics:a
 ld.w r0, [r0]
 lea r1, squareWaveHarmonics:c
@@ -207,7 +143,7 @@ idiv r1, r2
 iadd r0, r1
 lea r1, squareWaveHarmonics:a
 st.w [r1], r0
-# line 1672
+# line 1676
 lea r0, squareWaveHarmonics:b
 ld.w r0, [r0]
 lea r1, squareWaveHarmonics:c
@@ -226,7 +162,7 @@ idiv r1, r2
 iadd r0, r1
 lea r1, squareWaveHarmonics:b
 st.w [r1], r0
-# line 1668
+# line 1672
 lea r0, squareWaveHarmonics:harmonics
 ld.w r0, [r0]
 inc r0
@@ -234,7 +170,7 @@ lea r1, squareWaveHarmonics:harmonics
 st.w [r1], r0
 jmp beginfor00000000
 @LABEL endfor00000001
-# line 1674
+# line 1678
 lea r1, squareWaveHarmonics:a
 ld.w r1, [r1]
 lea r2, squareWaveHarmonics:b
@@ -253,7 +189,7 @@ ld.w r4, 0x1
 bsl r2, r4
 iadd r2, r3
 st.w [r2], r1
-# line 1675
+# line 1679
 lea r1, squareWaveHarmonics:a
 ld.w r1, [r1]
 lea r2, squareWaveHarmonics:b
@@ -272,26 +208,26 @@ ld.w r4, 0x1
 bsl r2, r4
 iadd r2, r3
 st.w [r2], r1
-# line 1676
+# line 1680
 lea r1, :ac
 ld.w r1, [r1]
 inc r1
 lea r2, :ac
 st.w [r2], r1
-# line 1677
+# line 1681
 lea r2, :ac
 ld.w r2, [r2]
 ld.w r3, 0x200
 imod r2, r3
 lea r3, :ac
 st.w [r3], r2
-# line 1678
+# line 1682
 lea r2, squareWaveHarmonics:cnt
 ld.w r2, [r2]
 inc r2
 lea r3, squareWaveHarmonics:cnt
 st.w [r3], r2
-# line 1679
+# line 1683
 lea r3, squareWaveHarmonics:cnt
 ld.w r3, [r3]
 ld.w r4, 0x200
@@ -300,17 +236,16 @@ test r3, less
 jmpifnot enddowhile00000003, r3
 jmp begindowhile00000002
 @LABEL enddowhile00000003
-# line 1680
+# line 1684
 lea r3, squareWaveHarmonics:cnt
 ld.w r3, [r3]
 push r3
 ret
-# line 1681
+# line 1685
 # End of function squareWaveHarmonics
 
-# Start of function main
 @LABEL main
-# line 1695
+# line 1699
 lea r0, vblankhandler
 ld.w r1, 0x0
 lea r2, :VBLANKSERVICE
@@ -319,69 +254,69 @@ ld.w r3, 0x2
 bsl r1, r3
 iadd r1, r2
 st.d [r1], r0
-# line 1697
+# line 1701
 ld.w r0, 0x1
 ld.w r1, 0x0
 lea r2, :VBSENABLE
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-# line 1700
+# line 1704
 ld.w r0, 0x1
 ld.w r1, 0x1
 asel r0, r1
 call squareWaveHarmonics
-# line 1701
+# line 1705
 pop r0
 lea r1, main:samples
 st.w [r1], r0
-# line 1702
+# line 1706
 ld.w r0, 0x0
 ld.w r1, 0x1
 asel r0, r1
 call squareWaveHarmonics
-# line 1703
+# line 1707
 pop r0
 lea r1, main:samples
 st.w [r1], r0
-# line 1707
+# line 1711
 lea r0, :mysprites
 spritesheet r0
-# line 1710
+# line 1714
 ld.w r0, 0x1
 fsel r0
-# line 1711
-ld.w r0, 0x5b
-ld.w r1, 0x0
-lea r2, :BORDERCOLOR
-ld.d r2, [r2]
-iadd r1, r2
-st.b [r1], r0
-# line 1712
-ld.w r0, 0x5b
-clf r0
-# line 1713
-ld.w r0, 0x0
-fsel r0
-# line 1714
-ld.w r0, 0x5b
-ld.w r1, 0x0
-lea r2, :BORDERCOLOR
-ld.d r2, [r2]
-iadd r1, r2
-st.b [r1], r0
 # line 1715
 ld.w r0, 0x5b
+ld.w r1, 0x0
+lea r2, :BORDERCOLOR
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0
+# line 1716
+ld.w r0, 0x5b
 clf r0
+# line 1717
+ld.w r0, 0x0
+fsel r0
 # line 1718
+ld.w r0, 0x5b
+ld.w r1, 0x0
+lea r2, :BORDERCOLOR
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0
+# line 1719
+ld.w r0, 0x5b
+clf r0
+# line 1722
 ld.w r0, 0x0
 lea r1, main:samples
 st.w [r1], r0
 @LABEL beginwhile0000000a
-# line 1719
+# line 1723
 ld.w r0, 0x1
 jmpifnot endwhile0000000b, r0
-# line 1724
+# line 1728
 ld.w r0, 0x0
 lea r1, main:i
 st.w [r1], r0
@@ -392,11 +327,11 @@ ld.w r1, 0x8
 cmp r0, r1
 test r0, less
 jmpifnot endfor00000009, r0
-# line 1726
+# line 1730
 ld.w r0, 0x0
 lea r1, main:hit
 st.w [r1], r0
-# line 1728
+# line 1732
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -419,7 +354,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1729
+# line 1733
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -442,7 +377,7 @@ cmp r1, r2
 test r1, less
 or r0, r1
 jmpifnot endif00000004, r0
-# line 1731
+# line 1735
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirY
@@ -458,16 +393,16 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1732
+# line 1736
 ld.w r0, 0x1
 lea r1, main:hit
 st.w [r1], r0
-# line 1733
+# line 1737
 ld.w r0, 0x0
 ld.w r1, 0x1
 asel r0, r1
 @LABEL endif00000004
-# line 1736
+# line 1740
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -490,7 +425,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1737
+# line 1741
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -513,7 +448,7 @@ cmp r1, r2
 test r1, less
 or r0, r1
 jmpifnot endif00000005, r0
-# line 1739
+# line 1743
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirX
@@ -529,16 +464,16 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1740
+# line 1744
 ld.w r0, 0x1
 lea r1, main:hit
 st.w [r1], r0
-# line 1741
+# line 1745
 ld.w r0, 0x0
 ld.w r1, 0x1
 asel r0, r1
 @LABEL endif00000005
-# line 1745
+# line 1749
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -559,7 +494,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1746
+# line 1750
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -580,7 +515,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1747
+# line 1751
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -603,7 +538,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1748
+# line 1752
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -624,7 +559,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1750
+# line 1754
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirX
@@ -636,7 +571,7 @@ ld.w r1, 0x8000
 and r0, r1
 lea r1, main:flipx
 st.w [r1], r0
-# line 1751
+# line 1755
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirY
@@ -650,14 +585,14 @@ ld.w r1, 0x1
 bsr r0, r1
 lea r1, main:flipy
 st.w [r1], r0
-# line 1753
+# line 1757
 lea r0, main:flipy
 ld.w r0, [r0]
 ld.w r1, 0x0
 cmp r0, r1
 test r0, notequal
 jmpifnot endif00000006, r0
-# line 1755
+# line 1759
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -690,7 +625,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1756
+# line 1760
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -725,7 +660,7 @@ iadd r1, r2
 st.w [r1], r0
 jmp exitif00000007
 @LABEL endif00000006
-# line 1760
+# line 1764
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -758,7 +693,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1761
+# line 1765
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -792,7 +727,7 @@ bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 @LABEL exitif00000007
-# line 1724
+# line 1728
 lea r0, main:i
 ld.w r0, [r0]
 inc r0
@@ -800,7 +735,7 @@ lea r1, main:i
 st.w [r1], r0
 jmp beginfor00000008
 @LABEL endfor00000009
-# line 1766
+# line 1770
 lea r1, main:roll
 ld.w r1, [r1]
 ld.w r2, 0x4
@@ -823,7 +758,7 @@ ld.w r4, 0x1
 bsl r2, r4
 iadd r2, r3
 st.w [r2], r1
-# line 1767
+# line 1771
 lea r1, main:roll
 ld.w r1, [r1]
 ld.w r2, 0x4
@@ -846,16 +781,16 @@ ld.w r4, 0x1
 bsl r2, r4
 iadd r2, r3
 st.w [r2], r1
-# line 1780
+# line 1784
 ld.w r1, 0xe0
 clf r1
-# line 1783
+# line 1787
 lea r1, main:scrollx
 ld.w r1, [r1]
 lea r2, main:scrolly
 ld.w r2, [r2]
 spriteorigin r1, r2
-# line 1784
+# line 1788
 ld.w r1, 0x80
 ld.w r2, 0x0
 lea r3, main:posX
@@ -867,7 +802,7 @@ ineg r2
 iadd r1, r2
 lea r2, main:scrollx
 st.w [r2], r1
-# line 1785
+# line 1789
 ld.w r1, 0x20
 ld.w r2, 0x0
 lea r3, main:posY
@@ -879,39 +814,39 @@ ineg r2
 iadd r1, r2
 lea r2, main:scrolly
 st.w [r2], r1
-# line 1788
+# line 1792
 lea r1, :spritelist
 ld.w r2, 0xd6
 sprite r1, r2
-# line 1790
+# line 1794
 ld.w r1, 0xf
 ld.w r2, 0x0
 lea r3, :VRAM
 ld.d r3, [r3]
 iadd r2, r3
 st.b [r2], r1
-# line 1791
+# line 1795
 ld.w r1, 0xf0
 ld.w r2, 0x1
 lea r3, :VRAM
 ld.d r3, [r3]
 iadd r2, r3
 st.b [r2], r1
-# line 1792
+# line 1796
 ld.w r1, 0x8
 ld.w r2, 0x2
 lea r3, :VRAM
 ld.d r3, [r3]
 iadd r2, r3
 st.b [r2], r1
-# line 1793
+# line 1797
 ld.w r1, 0xff
 ld.w r2, 0xff
 lea r3, :VRAM
 ld.d r3, [r3]
 iadd r2, r3
 st.b [r2], r1
-# line 1798
+# line 1802
 lea r1, main:frame
 ld.w r1, [r1]
 ld.w r2, 0x1
@@ -920,7 +855,7 @@ ld.w r2, 0x100
 imod r1, r2
 lea r2, main:frame
 st.w [r2], r1
-# line 1799
+# line 1803
 lea r1, main:roll
 ld.w r1, [r1]
 inc r1
@@ -930,13 +865,13 @@ ld.w r2, 0x800
 imod r1, r2
 lea r2, main:roll
 st.w [r2], r1
-# line 1800
+# line 1804
 vsync 
-# line 1801
+# line 1805
 ld.w r1, 0x0
 ld.w r2, 0x0
 asel r1, r2
-# line 1805
+# line 1809
 lea r1, main:roll
 ld.w r1, [r1]
 ld.w r2, 0x3
@@ -946,16 +881,17 @@ lea r3, :BORDERCOLOR
 ld.d r3, [r3]
 iadd r2, r3
 st.b [r2], r1
-# line 1806
+# line 1810
 lea r1, main:frame
 ld.w r1, [r1]
 fsel r1
 jmp beginwhile0000000a
 @LABEL endwhile0000000b
-# line 1810
+# line 1814
 ret 
-# line 1811
+# line 1815
 # End of function main
+
 
 #-------------Symbol Table-------------
 
@@ -1117,7 +1053,7 @@ ret
 @DW 0x369C 0x36FF 0x3763 0x37C7 0x382A 0x388E 0x38F2 0x3956 
 @DW 0x39BA 0x3A1E 0x3A82 0x3AE6 0x3B4B 0x3BAF 0x3C13 0x3C78 
 @DW 0x3CDC 0x3D40 0x3DA5 0x3E09 0x3E6E 0x3ED2 0x3F37 0x3F9B 
-# variable 'spritelist', dim:642 typename:word refcount:11
+# variable 'spritelist', dim:642 typename:word refcount:12
 @LABEL :spritelist
 @DW 0x0000 0x0000 0x0030 0x0000 0x0010 0x0030 0x0000 0x0020 
 @DW 0x0030 0x0000 0x0030 0x0030 0x0000 0x0040 0x0030 0x0000 
@@ -1200,7 +1136,7 @@ ret
 @DW 0x0010 0x0005 0x0046 0x0020 0x0005 0x0047 0x0030 0x0045 
 @DW 0x0046 0x0040 0x0045 0x0047 0x0050 0x0075 0x0046 0x0060 
 @DW 0x0075 0x0047 
-# variable 'mysprites', dim:9984 typename:word refcount:1
+# variable 'mysprites', dim:9984 typename:word refcount:2
 @LABEL :mysprites
 @DW 0xFF08 0x0808 0x0808 0x0808 0x0808 0x0808 0x0808 0x0808 
 @DW 0x0873 0x7373 0x7373 0x7373 0x7373 0x7373 0x7373 0x7373 

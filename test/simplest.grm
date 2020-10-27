@@ -3,6 +3,10 @@
     which tries to show as many language features as possible
 */
 
+/*struct SSprite {
+    short X;//,Y,ID;
+};*/
+
 char* VRAM = 0x80000000;
 short* ARAM = 0x40000000;
 char* BORDERCOLOR = 0x8000C000;

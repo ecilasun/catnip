@@ -44,6 +44,7 @@ enum EASTNodeType
 {
 	EN_Default,
 	EN_Identifier,
+	EN_StrucName,
 	EN_ArrayIdentifier,
 	EN_Constant,
 	EN_String,
@@ -104,6 +105,7 @@ enum EASTNodeType
 	EN_StackPush,
 	EN_StackPop,
 	EN_Decl,
+	EN_StructDecl,
 	EN_DeclInitJunction,
 	EN_DeclArray,
 	EN_ArrayJunction,
@@ -120,6 +122,7 @@ const char* NodeTypes[]=
 {
 	"EN_Default                   ",
 	"EN_Identifier                ",
+	"EN_StrucName                 ",
 	"EN_ArrayIdentifier           ",
 	"EN_Constant                  ",
 	"EN_String                    ",
@@ -180,6 +183,7 @@ const char* NodeTypes[]=
 	"EN_StackPush                 ",
 	"EN_StackPop                  ",
 	"EN_Decl                      ",
+	"EN_StructDecl                ",
 	"EN_DeclInitJunction          ",
 	"EN_DeclArray                 ",
 	"EN_ArrayJunction             ",
@@ -244,6 +248,7 @@ enum EOpcode
 	OP_JUMPIFNOT,
 	OP_LABEL,
 	OP_DECL,
+	OP_STRUCTDECL,
 	OP_DIM,
 	OP_CMPL,
 	OP_CMPG,
@@ -308,6 +313,7 @@ const std::string Opcodes[]={
 	"jmpifnot",
 	"@LABEL",
 	"decl",
+	"struct",
 	"dim",
 	"cmp",
 	"cmp",
@@ -635,7 +641,7 @@ SASTScanContext g_ASC;
 %token LESS_OP GREATER_OP LESSEQUAL_OP GREATEREQUAL_OP EQUAL_OP NOTEQUAL_OP AND_OP OR_OP
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
 %token STATIC
-%token VOID DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE DO FOR BEGINBLOCK ENDBLOCK RETURN BREAK GOTO
+%token VOID DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR STRUCT FUNCTION IF ELSE WHILE DO FOR BEGINBLOCK ENDBLOCK RETURN BREAK GOTO
 %token ABS VSYNC FSEL ASEL CLF SPRITE SPRITESHEET SPRITEORIGIN
 %token INC_OP DEC_OP
 
@@ -653,6 +659,7 @@ SASTScanContext g_ASC;
 %type <astnode> simple_constant
 %type <astnode> simple_string
 
+%type <astnode> variable_declaration_statement_list
 %type <astnode> variable_declaration_statement
 %type <astnode> functioncall_statement
 %type <astnode> expression_statement
@@ -1594,7 +1601,29 @@ type_name
 	;
 
 variable_declaration
-	: type_name variable_declaration_item														{
+	: STRUCT  simple_identifier code_block_start variable_declaration_statement_list code_block_end	{
+																									$$ = new SASTNode(EN_StructDecl, "");
+																									$$->m_LineNumber = yylineno;
+																									$$->m_Opcode = OP_STRUCTDECL;
+
+																									// Remove epilogue
+																									g_ASC.PopNode();
+
+																									// Grab declaration node
+																									SASTNode *declnode = g_ASC.PopNode();
+
+																									// Remove prologue
+																									g_ASC.PopNode();
+
+																									// Grab name node
+																									SASTNode *namenode = g_ASC.PopNode();
+																									namenode->m_Type = EN_StrucName; // No longer an identifier
+
+																									$$->PushNode(namenode);
+																									$$->PushNode(declnode);
+																									g_ASC.PushNode($$);
+																								}
+	| type_name variable_declaration_item														{
 																									$$ = new SASTNode(EN_Decl, "");
 																									$$->m_Opcode = OP_DECL;
 																									$$->m_LineNumber = yylineno;
@@ -1783,8 +1812,26 @@ variable_declaration
 	;
 
 variable_declaration_statement
-	: variable_declaration ';'																	/*{}*/
+	: variable_declaration ';'																	{
+																									$$ = new SASTNode(EN_Default, "");
+																									$$->m_LineNumber = yylineno;
+																									g_ASC.PushNode($$);
+																								}
 	;
+
+variable_declaration_statement_list
+	: variable_declaration_statement															{
+																									$$ = new SASTNode(EN_Default, "");
+																									$$->m_LineNumber = yylineno;
+																									SASTNode *declnode=g_ASC.PopNode();
+																									$$->PushNode(declnode);
+																									g_ASC.PushNode($$);
+																								}
+	| variable_declaration_statement_list variable_declaration_statement						{
+																									SASTNode *rootnode = g_ASC.PeekNode();
+																									SASTNode *nextnode=g_ASC.PopNode();
+																									rootnode->PushNode(nextnode);
+																								}
 
 expression_list
 	: expression																				{
@@ -1997,8 +2044,8 @@ function_header
 
 function_def
 	: function_header function_parameters code_block_start code_block_body code_block_end		{
-																									$$ = new SASTNode(EN_FuncDecl, "");
-																									$$->m_LineNumber = yylineno;
+																									SASTNode *declnode = new SASTNode(EN_FuncDecl, "");
+																									declnode->m_LineNumber = yylineno;
 
 																									// Remove epilogue
 																									g_ASC.PopNode();
@@ -2061,33 +2108,33 @@ function_def
 																									// Remove function header (contains name as subnode)
 																									g_ASC.PopNode();
 
-																									SASTNode *commentnode = new SASTNode(EN_Default, g_ASC.m_CurrentFunctionName);
+																									/*SASTNode *commentnode = new SASTNode(EN_Default, g_ASC.m_CurrentFunctionName);
 																									commentnode->m_Opcode = OP_PASSTHROUGH;
 																									commentnode->m_Value = "\n# Start of function " + g_ASC.m_CurrentFunctionName;
-																									g_ASC.PushNode(commentnode);
+																									g_ASC.PushNode(commentnode);*/
 
 																									SASTNode *labelnode = new SASTNode(EN_Label, g_ASC.m_CurrentFunctionName);
 																									labelnode->m_Opcode = OP_LABEL;
-																									$$->PushNode(labelnode);
+																									declnode->PushNode(labelnode);
 
 																									// Copy the parameter pop instructions
 																									for (auto &P : tmp->m_ASTNodes)
-																										$$->PushNode(P);
+																										declnode->PushNode(P);
 																									delete tmp;
 
 																									// Add the code block after name
-																									$$->PushNode(codeblocknode);
-																									//$$->PushNode(endcodeblocknode);
+																									declnode->PushNode(codeblocknode);
+																									//declnode->PushNode(endcodeblocknode);
 
-																									$$->m_Opcode = OP_RESETREGISTERS;
-																									g_ASC.PushNode($$);
+																									declnode->m_Opcode = OP_RESETREGISTERS;
+																									//g_ASC.PushNode($$);
 
 																									// Also store the function in function list for later retreival
 																									SFunction *func = new SFunction();
 																									func->m_Name = g_ASC.m_CurrentFunctionName;
 																									func->m_ReturnType = g_ASC.m_CurrentFunctionTypeName;
 																									func->m_Hash = HashString(func->m_Name.c_str());
-																									func->m_RootNode = $$;
+																									func->m_RootNode = declnode;
 																									g_ASC.m_Functions.push_back(func);
 																								}
 	;
@@ -2136,6 +2183,9 @@ void DumpCode(FILE *_fp, SASTNode *node)
 
 void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 {
+	if (g_ASC.m_CompileFailed)
+		return;
+
 	// Set current scope name
 	if (node->m_Type == EN_FuncDecl)
 		g_ASC.m_CurrentFunctionName = node->m_ASTNodes[0]->m_Value;
@@ -2158,6 +2208,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			SFunction *func = g_ASC.FindFunction(namehash);
 			if (!func)
 			{
+				//if (prevnode->m_Type == EN_Struct)
 				printf("ERROR: Variable or function %s not declared before use (1)\n", node->m_Value.c_str());
 				g_ASC.m_CompileFailed = true;
 			}
@@ -2174,6 +2225,11 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 
 	switch(node->m_Opcode)
 	{
+		case OP_STRUCTDECL:
+		{
+			printf("declstruct %s\n", node->m_ASTNodes[0]->m_Value.c_str());
+		}
+
 		case OP_DIRECTTOREGISTER:
 		{
 			std::string src = g_ASC.PushRegister();
@@ -2392,6 +2448,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			else
 			{
 				node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
+				var->m_RefCount++;
 				g_ASC.m_InstructionCount+=1;
 			}
 		}
@@ -2421,7 +2478,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				}
 				else
 				{
-					node->m_Instructions = "ERROR: cannot find symbol " + node->m_Value;
+					printf("ERROR: Cannot find symbol %s\n", node->m_Value.c_str());
 					g_ASC.m_CompileFailed = true;
 				}
 			}
@@ -2587,7 +2644,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_RESETREGISTERS:
 		{
 			g_ASC.m_CurrentRegister = 0;
-			node->m_Instructions = "# End of function " + g_ASC.m_CurrentFunctionName;
+			node->m_Instructions = "# End of function " + g_ASC.m_CurrentFunctionName + "\n";
 		}
 		break;
 
@@ -2614,9 +2671,27 @@ bool CompileGrimR(const char *_filename)
 	for (auto &node : g_ASC.m_ASTNodes)
 		AssignScopeNode(fp, scopeDepth, node);
 
-	// Assign registers and generate code
+	// Increment ref count of 'main' (entry point) if there's one
+	uint32_t mainhash = HashString("main");
+	SFunction *mainfunc = g_ASC.FindFunction(mainhash);
+	if (mainfunc)
+		mainfunc->m_RefCount++;
+	else
+		printf("WARNING: No entry point (main) found in input file.\n");
+
+
+	// Dump free-standing code
 	for (auto &node : g_ASC.m_ASTNodes)
 		AssignRegistersAndGenerateCode(fp, node);
+
+	// Dump functions
+	for (uint32_t i=0;i<g_ASC.m_Functions.size();++i)
+	{
+		//if (g_ASC.m_Functions[i]->m_RefCount != 0)
+		{
+			AssignRegistersAndGenerateCode(fp, g_ASC.m_Functions[i]->m_RootNode);
+		}
+	}
 
 	// Add boot code
 	fprintf(fp, "# Instruction count: %d\n\n", g_ASC.m_InstructionCount);
@@ -2628,23 +2703,25 @@ bool CompileGrimR(const char *_filename)
 	fprintf(fp, "fsel r0\n");
 	fprintf(fp, "inc r0\n");
 	fprintf(fp, "jmp infloop\n");
-	fprintf(fp, "# End of program\n");
+	fprintf(fp, "# End boot\n\n");
 	
-	// Dump asm code
+	// Dump free-standing code
 	s_prevLineNo = 0xCCCCCCCC;
 	for (auto &node : g_ASC.m_ASTNodes)
 		DumpCode(fp, node);
 
-	// Increment ref count of 'main' (entry point) if there's one
-	uint32_t mainhash = HashString("main");
-	SFunction *mainfunc = g_ASC.FindFunction(mainhash);
-	if (mainfunc)
-		mainfunc->m_RefCount++;
-	else
-		printf("WARNING: No entry point (main) found in input file.\n");
+	// Dump functions
+	for (uint32_t i=0;i<g_ASC.m_Functions.size();++i)
+	{
+		if (g_ASC.m_Functions[i]->m_RefCount != 0)
+		{
+			DumpCode(fp, g_ASC.m_Functions[i]->m_RootNode);
+		}
+	}
+
 	for (uint32_t i=0;i<g_ASC.m_Functions.size();++i)
 		if (g_ASC.m_Functions[i]->m_RefCount == 0)
-			printf("WARNING: Function '%s %s' not referenced in code\n", TypeNames[g_ASC.m_Functions[i]->m_ReturnType], g_ASC.m_Functions[i]->m_Name.c_str());
+			printf("WARNING: Function '%s %s' not referenced in code, removing code.\n", TypeNames[g_ASC.m_Functions[i]->m_ReturnType], g_ASC.m_Functions[i]->m_Name.c_str());
 
 	/* uint32_t interruptservice = HashString("vblank");
 	if (interruptservice)
@@ -2661,7 +2738,7 @@ bool CompileGrimR(const char *_filename)
 		fprintf(fp, "# variable '%s', dim:%d typename:%s refcount:%d\n", var->m_Name.c_str(), var->m_Dimension, TypeNames[var->m_TypeName], var->m_RefCount);
 		if (var->m_RefCount == 0)
 		{
-			printf("WARNING: Variable '%s %s' not referenced in code\n", TypeNames[var->m_TypeName], var->m_Name.c_str());
+			printf("WARNING: Variable '%s %s' not referenced in code, removing initializer and allocated space.\n", TypeNames[var->m_TypeName], var->m_Name.c_str());
 			continue;
 		}
 		fprintf(fp, "@LABEL %s:%s\n", var->m_Scope.c_str(), var->m_Name.c_str());

@@ -38,6 +38,7 @@ void stripquotes(char *string);
 "int"						{ count();  return(DWORD); }
 "short"						{ count();  return(WORD); }
 "char"						{ count();  return(BYTE); }
+"struct"					{ count();  return(STRUCT); }
 
 "def"						{ count();  return(FUNCTION); }
 "if"						{ count();  return(IF); }
