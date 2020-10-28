@@ -1,3 +1,8 @@
+
+# --------------------------------------
+#                Bootstrap              
+# --------------------------------------
+
 # Instruction count: 918
 
 @ORG 0x00000000
@@ -11,6 +16,16 @@ fsel r0
 inc r0
 jmp infloop
 # End boot
+
+
+# --------------------------------------
+#              Global Code              
+# --------------------------------------
+
+
+# --------------------------------------
+#               Functions               
+# --------------------------------------
 
 @LABEL vblankhandler
 # line 1634
@@ -893,7 +908,18 @@ ret
 # End of function main
 
 
-#-------------Symbol Table-------------
+# --------------------------------------
+#               Constructs              
+# --------------------------------------
+
+# Construct: TestConstruct
+# construct var: TestConstruct:spritePosX
+# construct var: TestConstruct:spritePosY
+# construct var: TestConstruct:spriteID
+
+# --------------------------------------
+#              Symbol Table             
+# --------------------------------------
 
 # function 'vblankhandler', hash: C6B9BD0B, refcount: 2
 # function 'numRand', hash: 07CB724A, refcount: 0
@@ -902,22 +928,28 @@ ret
 # function 'cos', hash: 4097AD32, refcount: 1
 # function 'squareWaveHarmonics', hash: EB86A1A1, refcount: 2
 # function 'main', hash: BC76E6BA, refcount: 1
-# variable 'posX', dim:1 typename:word refcount:0
-# variable 'posY', dim:1 typename:word refcount:0
-# variable 'posZ', dim:1 typename:word refcount:0
-# variable 'VRAM', dim:1 typename:¨«‰êˆ refcount:4
+# variable 'spritePosX', dim:1 typename:word refcount:1
+@LABEL TestConstruct:spritePosX
+@DW 0x0000 
+# variable 'spritePosY', dim:1 typename:word refcount:1
+@LABEL TestConstruct:spritePosY
+@DW 0x0000 
+# variable 'spriteID', dim:1 typename:word refcount:1
+@LABEL TestConstruct:spriteID
+@DW 0x0000 
+# variable 'VRAM', dim:1 typename:byteptr refcount:4
 @LABEL :VRAM
 @DW 0x8000 0x0000
-# variable 'ARAM', dim:1 typename:byteptr refcount:2
+# variable 'ARAM', dim:1 typename:wordptr refcount:2
 @LABEL :ARAM
 @DW 0x4000 0x0000
-# variable 'BORDERCOLOR', dim:1 typename:¨«‰êˆ refcount:3
+# variable 'BORDERCOLOR', dim:1 typename:byteptr refcount:3
 @LABEL :BORDERCOLOR
 @DW 0x8000 0xC000
-# variable 'VBSENABLE', dim:1 typename:¨«‰êˆ refcount:1
+# variable 'VBSENABLE', dim:1 typename:byteptr refcount:1
 @LABEL :VBSENABLE
 @DW 0x8000 0xC001
-# variable 'VBLANKSERVICE', dim:1 typename:wordptr refcount:1
+# variable 'VBLANKSERVICE', dim:1 typename:dwordptr refcount:1
 @LABEL :VBLANKSERVICE
 @DW 0x8000 0xC004
 # variable 'seed', dim:1 typename:word refcount:10

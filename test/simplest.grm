@@ -5,7 +5,7 @@
 
 construct TestConstruct
 {
-    short posX, posY, posZ;
+    short spritePosX=0, spritePosY=0, spriteID=0;
 };
 
 char* VRAM = 0x80000000;

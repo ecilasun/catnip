@@ -43,7 +43,8 @@ uint32_t HashString(const char *_str)
 enum EASTNodeType
 {
 	EN_Default,
-	EN_StructDecl,
+	EN_VarDeclStatement,
+	EN_ConstructDecl,
 	EN_Identifier,
 	EN_StrucName,
 	EN_ArrayIdentifier,
@@ -121,7 +122,8 @@ enum EASTNodeType
 const char* NodeTypes[]=
 {
 	"EN_Default                   ",
-	"EN_StructDecl                ",
+	"EN_VarDeclStatement          ",
+	"EN_ConstructDecl             ",
 	"EN_Identifier                ",
 	"EN_StrucName                 ",
 	"EN_ArrayIdentifier           ",
@@ -401,6 +403,7 @@ const char* TypeNames[]={
 	"dword",
 	"word",
 	"byte",
+	"voidptr",
 	"dwordptr",
 	"wordptr",
 	"byteptr",
@@ -437,9 +440,14 @@ struct SVariable
 struct SConstruct
 {
 	std::string m_Name;
+	void PushVariable(std::string var)
+	{
+		m_Variables.push_back(var);
+	}
 	uint32_t m_Hash;
 	int m_RefCount{0};
 	class SASTNode *m_RootNode{nullptr};
+	std::vector<std::string> m_Variables;
 };
 
 struct SFunction
@@ -612,6 +620,7 @@ struct SASTScanContext
 	int m_CurrentRegister{0};
 	int m_CurrentAutoLabel{0};
 	int m_InstructionCount{0};
+	bool m_IsConstruct{false};
 	bool m_CompileFailed{false};
 };
 
@@ -701,7 +710,7 @@ SASTScanContext g_ASC;
 %type <astnode> variable_declaration
 %type <astnode> function_header
 %type <astnode> function_def
-%type <astnode> struct_def
+%type <astnode> construct_def
 
 %type <astnode> parameter_list
 %type <astnode> function_parameters
@@ -1638,7 +1647,7 @@ variable_declaration
 																									var->m_ScopeHash = HashString(var->m_Scope.c_str());
 																									var->m_RootNode = $$;
 																									var->m_Dimension = 1;
-																									var->m_RefCount = 0;
+																									var->m_RefCount = g_ASC.m_IsConstruct ? 1 : 0;
 																									var->m_Value = "";
 																									var->m_TypeName = g_ASC.m_CurrentTypeName;
 
@@ -1741,7 +1750,7 @@ variable_declaration
 																									/*else
 																										var->m_InitialValues.push_back(0xCDCDCDCD);*/
 
-																									//g_ASC.PushNode($$); // Variable already added to var stack
+																									if (g_ASC.m_IsConstruct) g_ASC.PushNode($$); // Variable already added to var stack but for constructs we need it here
 																									g_ASC.m_Variables.push_back(var);
 																								}
 	| variable_declaration ',' variable_declaration_item										{
@@ -1758,7 +1767,7 @@ variable_declaration
 																									var->m_ScopeHash = HashString(var->m_Scope.c_str());
 																									var->m_RootNode = $$;
 																									var->m_Dimension = 1;
-																									var->m_RefCount = 0;
+																									var->m_RefCount = g_ASC.m_IsConstruct ? 1 : 0;
 																									var->m_Value = "";
 																									var->m_TypeName = g_ASC.m_CurrentTypeName;
 
@@ -1804,14 +1813,14 @@ variable_declaration
 																									//	var->m_InitialValues.push_back(0xCDCDCDCD);
 
 																									$$->m_Opcode = OP_DECL;
-																									//g_ASC.PushNode($$); // Variable already added to var stack
+																									if (g_ASC.m_IsConstruct) g_ASC.PushNode($$); // Variable already added to var stack but for constructs we need it here
 																									g_ASC.m_Variables.push_back(var);
 																								}
 	;
 
 variable_declaration_statement
 	: variable_declaration ';'																	{
-																									$$ = new SASTNode(EN_Default, "");
+																									$$ = new SASTNode(EN_VarDeclStatement, "");
 																									$$->m_LineNumber = yylineno;
 																									g_ASC.PushNode($$);
 																								}
@@ -2021,13 +2030,14 @@ function_header
 																									$$->PushNode(namenode);
 																									g_ASC.m_CurrentFunctionName = namenode->m_Value;
 																									g_ASC.m_CurrentFunctionTypeName = g_ASC.m_CurrentTypeName;
+																									g_ASC.m_IsConstruct = g_ASC.m_CurrentTypeName == TN_CONSTRUCT ? true : false;
 																									g_ASC.PushNode($$);
 																								}
 	;
 
-struct_def
+construct_def
 	: function_header code_block_start code_block_body code_block_end ';'						{
-																									SASTNode *declnode = new SASTNode(EN_StructDecl, "");
+																									SASTNode *declnode = new SASTNode(EN_ConstructDecl, "");
 																									declnode->m_LineNumber = yylineno;
 
 																									// Remove epilogue
@@ -2036,9 +2046,6 @@ struct_def
 																									// Create code block node
 																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
 																									//codeblocknode->m_Opcode = OP_PUSHCONTEXT;
-
-																									//SASTNode *endcodeblocknode = new SASTNode(EN_EndCodeBlock, "");
-																									//endcodeblocknode->m_Opcode = OP_POPCONTEXT;
 
 																									// Collect everything up till prologue
 																									bool done = false;
@@ -2076,6 +2083,7 @@ struct_def
 																									construct->m_RootNode = declnode;
 																									g_ASC.m_Constructs.push_back(construct);
 																									g_ASC.m_CurrentFunctionName = "";
+																									g_ASC.m_IsConstruct = false;
 																								}
 	;
 
@@ -2090,9 +2098,6 @@ function_def
 																									// Create code block node
 																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
 																									//codeblocknode->m_Opcode = OP_PUSHCONTEXT;
-
-																									//SASTNode *endcodeblocknode = new SASTNode(EN_EndCodeBlock, "");
-																									//endcodeblocknode->m_Opcode = OP_POPCONTEXT;
 
 																									// Collect everything up till prologue
 																									bool done = false;
@@ -2174,15 +2179,16 @@ function_def
 																									func->m_RootNode = declnode;
 																									g_ASC.m_Functions.push_back(func);
 																									g_ASC.m_CurrentFunctionName = "";
+																									g_ASC.m_IsConstruct = false;
 																								}
 	;
 
 translation_unit
 	: variable_declaration_statement
-	| struct_def
+	| construct_def
 	| function_def
 	| translation_unit variable_declaration_statement
-	| translation_unit struct_def
+	| translation_unit construct_def
 	| translation_unit function_def
 	;
 
@@ -2200,11 +2206,26 @@ void AssignScopeNode(FILE *_fp, int scopeDepth, SASTNode *node)
 		AssignScopeNode(_fp, scopeDepth+1, subnode);
 }
 
+void DumpConstruct(FILE *_fp, SConstruct *construct, SASTNode *node)
+{
+	//fprintf(_fp, "# depth:%d type: %s\n", node->m_ScopeDepth, NodeTypes[node->m_Type]);
+	if (node->m_Type == EN_DeclInitJunction)
+	{
+		construct->PushVariable(construct->m_Name + ":" + node->m_ASTNodes[0]->m_Value);
+		fprintf(_fp, "# construct var: %s:%s\n", construct->m_Name.c_str(), node->m_ASTNodes[0]->m_Value.c_str());
+	}
+	else
+	{
+		for (auto &subnode : node->m_ASTNodes)
+			DumpConstruct(_fp, construct, subnode);
+	}
+}
+
 void DumpCode(FILE *_fp, SASTNode *node)
 {
 	for (auto &subnode : node->m_ASTNodes)
 		DumpCode(_fp, subnode);
-
+	
 	if (node->m_Opcode != OP_PASSTHROUGH)
 	{
 		if (node->m_LineNumber!=0xFFFFFFFF && node->m_LineNumber!=s_prevLineNo)
@@ -2722,11 +2743,15 @@ bool CompileGrimR(const char *_filename)
 	// Dump functions
 	for (uint32_t i=0;i<g_ASC.m_Functions.size();++i)
 	{
-		//if (g_ASC.m_Functions[i]->m_RefCount != 0)
+		//if (g_ASC.m_Functions[i]->m_RefCount != 0)m
 		{
 			AssignRegistersAndGenerateCode(fp, g_ASC.m_Functions[i]->m_RootNode);
 		}
 	}
+
+	fprintf(fp, "\n# --------------------------------------\n");
+	fprintf(fp, "#                Bootstrap              \n");
+	fprintf(fp, "# --------------------------------------\n\n");
 
 	// Add boot code
 	fprintf(fp, "# Instruction count: %d\n\n", g_ASC.m_InstructionCount);
@@ -2739,11 +2764,19 @@ bool CompileGrimR(const char *_filename)
 	fprintf(fp, "inc r0\n");
 	fprintf(fp, "jmp infloop\n");
 	fprintf(fp, "# End boot\n\n");
-	
+
+	fprintf(fp, "\n# --------------------------------------\n");
+	fprintf(fp, "#              Global Code              \n");
+	fprintf(fp, "# --------------------------------------\n\n");
+
 	// Dump free-standing code
 	s_prevLineNo = 0xCCCCCCCC;
 	for (auto &node : g_ASC.m_ASTNodes)
 		DumpCode(fp, node);
+
+	fprintf(fp, "\n# --------------------------------------\n");
+	fprintf(fp, "#               Functions               \n");
+	fprintf(fp, "# --------------------------------------\n\n");
 
 	// Dump functions
 	for (uint32_t i=0;i<g_ASC.m_Functions.size();++i)
@@ -2758,12 +2791,24 @@ bool CompileGrimR(const char *_filename)
 		if (g_ASC.m_Functions[i]->m_RefCount == 0)
 			printf("WARNING: Function '%s %s' not referenced in code, removing code.\n", TypeNames[g_ASC.m_Functions[i]->m_ReturnType], g_ASC.m_Functions[i]->m_Name.c_str());
 
+	fprintf(fp, "\n# --------------------------------------\n");
+	fprintf(fp, "#               Constructs              \n");
+	fprintf(fp, "# --------------------------------------\n\n");
+
+	for (uint32_t i=0;i<g_ASC.m_Constructs.size();++i)
+	{
+		fprintf(fp, "# Construct: %s\n", g_ASC.m_Constructs[i]->m_Name.c_str());
+		DumpConstruct(fp, g_ASC.m_Constructs[i], g_ASC.m_Constructs[i]->m_RootNode);
+	}
+
 	/* uint32_t interruptservice = HashString("vblank");
 	if (interruptservice)
 		printf("Found a vblank interrupt service\n"); */
 
 	// Dump symbol table
-	fprintf(fp, "\n#-------------Symbol Table-------------\n\n");
+	fprintf(fp, "\n# --------------------------------------\n");
+	fprintf(fp, "#              Symbol Table             \n");
+	fprintf(fp, "# --------------------------------------\n\n");
 
 	for (auto &func : g_ASC.m_Functions)
 		fprintf(fp, "# function '%s', hash: %.8X, refcount: %d\n", func->m_Name.c_str(), func->m_Hash, func->m_RefCount);
