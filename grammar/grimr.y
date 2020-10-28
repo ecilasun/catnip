@@ -102,6 +102,8 @@ enum EASTNodeType
 	EN_SpriteOrigin,
 	EN_Vsync,
 	EN_AudioSelect,
+	EN_In,
+	EN_Out,
 	EN_EndCodeBlock,
 	EN_BeginCodeBlock,
 	EN_StackPush,
@@ -181,6 +183,8 @@ const char* NodeTypes[]=
 	"EN_SpriteOrigin              ",
 	"EN_Vsync                     ",
 	"EN_AudioSelect               ",
+	"EN_In                        ",
+	"EN_Out                       ",
 	"EN_EndCodeBlock              ",
 	"EN_BeginCodeBlock            ",
 	"EN_StackPush                 ",
@@ -232,6 +236,8 @@ enum EOpcode
 	OP_SPRITE,
 	OP_SPRITESHEET,
 	OP_SPRITEORIGIN,
+	OP_IN,
+	OP_OUT,
 	OP_VSYNC,
 	OP_PUSHCONTEXT,
 	OP_POPCONTEXT,
@@ -296,6 +302,8 @@ const std::string Opcodes[]={
 	"sprite",
 	"spritesheet",
 	"spriteorigin",
+	"in",
+	"out",
 	"vsync",
 	"pushcontext",
 	"popcontext",
@@ -672,7 +680,7 @@ SASTScanContext g_ASC;
 %token SHIFTLEFT_OP SHIFTRIGHT_OP
 %token STATIC
 %token CONSTRUCT VOID DWORD WORD BYTE WORDPTR DWORDPTR BYTEPTR FUNCTION IF ELSE WHILE DO FOR BEGINBLOCK ENDBLOCK RETURN BREAK GOTO
-%token ABS VSYNC FSEL ASEL CLF SPRITE SPRITESHEET SPRITEORIGIN
+%token ABS VSYNC FSEL ASEL CLF SPRITE SPRITESHEET SPRITEORIGIN IN OUT
 %token INC_OP DEC_OP
 
 //%glr-parser
@@ -1979,6 +1987,18 @@ builtin_statement
 																									$$->m_Opcode = OP_SPRITEORIGIN;
 																									g_ASC.PushNode($$);
 																								}
+	| IN '(' expression ',' expression ')' ';'													{
+																									$$ = new SASTNode(EN_In, "");
+																									$$->m_LineNumber = yylineno;
+																									$$->m_Opcode = OP_IN;
+																									g_ASC.PushNode($$);
+																								}
+	| OUT '(' expression ',' expression ')' ';'													{
+																									$$ = new SASTNode(EN_Out, "");
+																									$$->m_LineNumber = yylineno;
+																									$$->m_Opcode = OP_OUT;
+																									g_ASC.PushNode($$);
+																								}
 	| VSYNC '(' ')' ';'																			{
 																									$$ = new SASTNode(EN_Vsync, "");
 																									$$->m_LineNumber = yylineno;
@@ -2568,6 +2588,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_ASEL:
 		case OP_SPRITE:
 		case OP_SPRITEORIGIN:
+		case OP_IN:
+		case OP_OUT:
 		{
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();

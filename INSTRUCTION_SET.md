@@ -587,8 +587,8 @@ test r2, greater equal
 0000 0000 0000 1000
 |    |    |   IO
 rB   rA   0000:VSYNC
-E:B  A:7  0001:IN rA PORTADDRESS(next WORD in memory)
-          0010:OUT rA PORTADDRESS(next WORD in memory)
+E:B  A:7  0001:IN rA rB
+          0010:OUT rA rB
           0011:FSEL rA
           0100:CLF rA
           0101:SPRITE rA, rB
@@ -615,11 +615,11 @@ vsync
 fsel rA
 ```
 
-### IN rA PORTADDRESS
-Reads the input from device at port address and write the data into register rA.
+### IN rA rB
+Reads the input from device at rB port address and write the data into register rA.
 
-### OUT rA PORTADDRESS
-Reads the intput from register rA and write the data to device at port address.
+### OUT rA rB
+Reads the intput from register rB and write the data to rA.
 
 ### FSEL rA
 Selects the displayed framebuffer index as mentioned in register rA. Only the last bit of rA (0 or 1) is used as framebuffer index, therefore simply incrementing rA will flip between two available buffers. All writes are routed towards the 'other' framebuffer address in this state.

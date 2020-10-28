@@ -60,6 +60,8 @@ void stripquotes(char *string);
 "spritesheet"				{ count();  return(SPRITESHEET); }
 "sprite"					{ count();  return(SPRITE); }
 "spriteorigin"				{ count();  return(SPRITEORIGIN); }
+"in"						{ count();  return(IN); }
+"out"						{ count();  return(OUT); }
 
 "["							{ count();  return('['); }
 "]"							{ count();  return(']'); }

@@ -970,29 +970,25 @@ public:
 
 		if(strcmp(_parser_table[_current_parser_offset].m_Value, "in") == 0)
 		{
-			int portaddress=0, r1=0;
+			int r1=0, r2=0;
 			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
-			sscanf(_parser_table[_current_parser_offset+1].m_Value, "%x", &portaddress);
+			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r2);
 
-			unsigned short code = m_Opcode | 0x0010 | (r1<<8);
+			unsigned short code = m_Opcode | 0x0010 | (r1<<8) | (r2<<12);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;
-			_binary_output[_current_binary_offset++] = (portaddress&0xFF00)>>8;
-			_binary_output[_current_binary_offset++] = portaddress&0x00FF;
 			return 3;
 		}
 
 		if(strcmp(_parser_table[_current_parser_offset].m_Value, "out") == 0)
 		{
-			int portaddress=0, r1=0;
-			sscanf(_parser_table[_current_parser_offset+1].m_Value, "%x", &portaddress);
-			sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r1);
+			int r1=0, r2=0;
+			sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+			sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
 
-			unsigned short code = m_Opcode | 0x0020 | (r1<<8);
+			unsigned short code = m_Opcode | 0x0020 | (r1<<8) | (r2<<12);
 			_binary_output[_current_binary_offset++] = (code&0xFF00)>>8;
 			_binary_output[_current_binary_offset++] = code&0x00FF;
-			_binary_output[_current_binary_offset++] = (portaddress&0xFF00)>>8;
-			_binary_output[_current_binary_offset++] = portaddress&0x00FF;
 			return 3;
 		}
 

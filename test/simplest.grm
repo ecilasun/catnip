@@ -3,11 +3,6 @@
     which tries to show as many language features as possible
 */
 
-construct TestConstruct
-{
-    short spritePosX=0, spritePosY=0, spriteID=0;
-};
-
 char* VRAM = 0x80000000;
 short* ARAM = 0x40000000;
 char* BORDERCOLOR = 0x8000C000;
@@ -15,6 +10,11 @@ char* VBSENABLE = 0x8000C001;
 int* VBLANKSERVICE = 0x8000C004;
 short seed = 7;
 short ac = 0;
+
+construct TestConstruct
+{
+    short spritePosX=0, spritePosY=0, spriteID=0;
+};
 
 short sinewave[1024] = {
     0x4000,0x4065,0x40c9,0x412e,0x4192,0x41f7,0x425b,0x42c0,

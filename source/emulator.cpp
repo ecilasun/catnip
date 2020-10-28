@@ -93,6 +93,7 @@ uint32_t div_D;					// Abs B
 uint32_t div_A;					// Divident
 uint32_t div_B;					// Divisor
 uint32_t div_state;
+uint8_t gpio_ports[16];
 
 uint32_t sram_addr;
 uint16_t sram_read_req;
@@ -156,26 +157,7 @@ SDL_Surface *s_Surface;
 static const int FRAME_WIDTH = 256;
 static const int FRAME_HEIGHT = 192;
 static bool s_Done = false;
-
-const char *s_state_string[]={
-	"CPU_INIT",
-	"CPU_ROM_STEP",
-	"CPU_ROM_FETCH",
-	"CPU_WRITE_DATAH",
-	"CPU_CLEARVRAM",
-	"CPU_FETCH_INSTRUCTION",
-	"CPU_EXECUTE_INSTRUCTION",
-	"CPU_READ_DATAH",
-	"CPU_READ_DATAL",
-	"CPU_STATE_PRE_RUN",
-	"CPU_READ_DATA",
-	"CPU_WRITE_DATA",
-	"CPU_SPRITECOPY",
-	"CPU_FETCH_ADDRESS_AND_BRANCH",
-	"CPU_WAIT_VSYNC",
-	"CPU_READ_DATA_BYTE",
-	"CPU_SET_BRANCH_ADDRESSH"
-};
+static uint8_t GPIO_CPU[16];	// Actual 'device' reads happen to here
 
 void ClockMain()
 {
@@ -189,6 +171,34 @@ void ClockMain()
 
 	s_VGAClockRisingEdge = (!(oldvgaclock&0x80000000)) && ((s_VGAClock&0x80000000));
 	s_VGAClockFallingEdge = ((oldvgaclock&0x80000000)) && (!(s_VGAClock&0x80000000));
+}
+
+void GPIOMainInput()
+{
+	// Read from devices (to facilitate direct pin read in hardware in IO instruction IN)
+	GPIO_CPU[0] = rand()%2;
+	GPIO_CPU[1] = 0;
+	GPIO_CPU[2] = 0;
+	GPIO_CPU[3] = 0;
+	GPIO_CPU[4] = 0;
+	GPIO_CPU[5] = 0;
+	GPIO_CPU[6] = 0;
+	GPIO_CPU[7] = 0;
+	GPIO_CPU[8] = 0;
+	GPIO_CPU[9] = 0;
+	GPIO_CPU[10] = 0;
+	GPIO_CPU[11] = 0;
+	GPIO_CPU[12] = 0;
+	GPIO_CPU[13] = 0;
+	GPIO_CPU[14] = 0;
+	GPIO_CPU[15] = 0;
+}
+
+void GPIOMainOutput()
+{
+	// Write from CPU ('assign GPIO_CPU=gpio_ports' statement on hardware)
+	for (uint32_t i=0;i<16;++i)
+		GPIO_CPU[i] = gpio_ports[i];
 }
 
 void execute(uint16_t instr)
@@ -925,12 +935,9 @@ void execute(uint16_t instr)
 				case 0b0001: // IN
 				{
 					#if defined(DEBUG_EXECUTE)
-					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
-					printf("%.8X: in %.8X\n", *wordsram0, IP);
+					printf("%.8X: in r%d<-r%d\n", r1, r2);
 					#endif
-					// TODO: Read next word (PORT)
-					// TODO: Input from given port to register_file[instruction[9:7]]
-					// TODO: Isn't this a memory mapped device MOV?
+					register_file[r1] = GPIO_CPU[register_file[r2]];
 					sram_addr = IP + 2;
 					IP = IP + 2;
 					sram_enable_byteaddress = 0;
@@ -941,12 +948,9 @@ void execute(uint16_t instr)
 				case 0b0010: // OUT
 				{
 					#if defined(DEBUG_EXECUTE)
-					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
-					printf("%.8X: out %.8X\n", *wordsram0, IP);
+					printf("%.8X: out r%d<-r%d\n", r1, r2);
 					#endif
-					// TODO: Read next word (PORT)
-					// TODO: Output register_file[instr[9:7]] to given port
-					// TODO: Isn't this a memory mapped device MOV?
+					gpio_ports[register_file[r2]] = register_file[r1];
 					sram_addr = IP + 2;
 					IP = IP + 2;
 					sram_enable_byteaddress = 0;
@@ -1103,6 +1107,9 @@ void CPUMain()
 			div_R = 0;
 			div_D = 0;
 			div_state = 0;
+
+			for (int i=0;i<16;++i)
+				gpio_ports[i] = 0;
 
 			sprite_list_addr = 0;
 			sprite_list_count = 0;
@@ -1666,10 +1673,12 @@ int RunDevice(void *data)
 {
 	while(!s_Done)
 	{
-		ClockMain();	// Clock ticks first (rising/falling edge)
-		CPUMain();		// CPU state machine
-		VideoMain();	// Video scan out (to tie it with 'read old data' in dualport VRAM in hardware, memory writes come after)
-		MemoryMain();	// Update all memory (SRAM/VRAM/ARAM) after video data is processed
+		ClockMain();		// Clock ticks first (rising/falling edge)
+		GPIOMainInput();	// Update inputs on pins
+		CPUMain();			// CPU state machine
+		VideoMain();		// Video scan out (to tie it with 'read old data' in dualport VRAM in hardware, memory writes come after)
+		MemoryMain();		// Update all memory (SRAM/VRAM/ARAM) after video data is processed
+		GPIOMainOutput();	// Update outputs on pins
 	}
 	return 0;
 }

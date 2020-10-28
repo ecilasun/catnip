@@ -928,15 +928,6 @@ ret
 # function 'cos', hash: 4097AD32, refcount: 1
 # function 'squareWaveHarmonics', hash: EB86A1A1, refcount: 2
 # function 'main', hash: BC76E6BA, refcount: 1
-# variable 'spritePosX', dim:1 typename:word refcount:1
-@LABEL TestConstruct:spritePosX
-@DW 0x0000 
-# variable 'spritePosY', dim:1 typename:word refcount:1
-@LABEL TestConstruct:spritePosY
-@DW 0x0000 
-# variable 'spriteID', dim:1 typename:word refcount:1
-@LABEL TestConstruct:spriteID
-@DW 0x0000 
 # variable 'VRAM', dim:1 typename:byteptr refcount:4
 @LABEL :VRAM
 @DW 0x8000 0x0000
@@ -957,6 +948,15 @@ ret
 @DW 0x0007 
 # variable 'ac', dim:1 typename:word refcount:5
 @LABEL :ac
+@DW 0x0000 
+# variable 'spritePosX', dim:1 typename:word refcount:1
+@LABEL TestConstruct:spritePosX
+@DW 0x0000 
+# variable 'spritePosY', dim:1 typename:word refcount:1
+@LABEL TestConstruct:spritePosY
+@DW 0x0000 
+# variable 'spriteID', dim:1 typename:word refcount:1
+@LABEL TestConstruct:spriteID
 @DW 0x0000 
 # variable 'sinewave', dim:1024 typename:word refcount:2
 @LABEL :sinewave
