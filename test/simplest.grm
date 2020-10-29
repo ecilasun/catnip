@@ -1695,6 +1695,7 @@ void main()
     short scrolldirx = 1, scrolldiry = 1;
     short flipx = 0, flipy = 0;
     short roll = 0;
+    short portcheck = 0;
 
     // Set up vblank service function address
     VBLANKSERVICE[0] = &vblankhandler;
@@ -1807,7 +1808,9 @@ void main()
 
         // Swap frames to reveal what we've drawn so far
         // while simultaneously selecting the other frame for write
-        BORDERCOLOR[0] = roll>>3;
+        in(&portcheck, 0);
+        if (portcheck)
+            BORDERCOLOR[0] = roll>>3;
         fsel(frame);
     }
 

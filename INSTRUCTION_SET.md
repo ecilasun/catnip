@@ -616,10 +616,18 @@ fsel rA
 ```
 
 ### IN rA rB
-Reads the input from device at rB port address and write the data into register rA.
+Reads the input from device at port address rB and write the data into the address pointed at by register rA.
+
+A typical usage case might be as follows:
+```c
+// Write the value at IO port #0 to address of variable portcheck in function main()
+lea r1, main:portcheck
+ld.w r2, 0x0
+in r1, r2
+```
 
 ### OUT rA rB
-Reads the intput from register rB and write the data to rA.
+Writes the contents of register rB to device at port address rA.
 
 ### FSEL rA
 Selects the displayed framebuffer index as mentioned in register rA. Only the last bit of rA (0 or 1) is used as framebuffer index, therefore simply incrementing rA will flip between two available buffers. All writes are routed towards the 'other' framebuffer address in this state.

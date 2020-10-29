@@ -114,7 +114,7 @@ def build(bld):
                          '/Qfast_transcendentals', '/Zi', '/EHsc',
                          '/FS', '/D_SECURE_SCL 0',
                          '/D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS']
-        linker_flags = [ '/DEBUG']
+        linker_flags = [ '/LTCG', '/RELEASE']
 
         # DEBUG - vcc
         #compile_flags = ['/permissive-', '/std:c++17', '/arch:AVX',

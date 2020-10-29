@@ -3,7 +3,7 @@
 #                Bootstrap              
 # --------------------------------------
 
-# Instruction count: 918
+# Instruction count: 928
 
 @ORG 0x00000000
 
@@ -260,7 +260,7 @@ ret
 # End of function squareWaveHarmonics
 
 @LABEL main
-# line 1700
+# line 1701
 lea r0, vblankhandler
 ld.w r1, 0x0
 lea r2, :VBLANKSERVICE
@@ -269,69 +269,69 @@ ld.w r3, 0x2
 bsl r1, r3
 iadd r1, r2
 st.d [r1], r0
-# line 1702
+# line 1703
 ld.w r0, 0x1
 ld.w r1, 0x0
 lea r2, :VBSENABLE
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-# line 1705
+# line 1706
 ld.w r0, 0x1
 ld.w r1, 0x1
 asel r0, r1
 call squareWaveHarmonics
-# line 1706
+# line 1707
 pop r0
 lea r1, main:samples
 st.w [r1], r0
-# line 1707
+# line 1708
 ld.w r0, 0x0
 ld.w r1, 0x1
 asel r0, r1
 call squareWaveHarmonics
-# line 1708
+# line 1709
 pop r0
 lea r1, main:samples
 st.w [r1], r0
-# line 1712
+# line 1713
 lea r0, :mysprites
 spritesheet r0
-# line 1715
+# line 1716
 ld.w r0, 0x1
 fsel r0
-# line 1716
-ld.w r0, 0x5b
-ld.w r1, 0x0
-lea r2, :BORDERCOLOR
-ld.d r2, [r2]
-iadd r1, r2
-st.b [r1], r0
 # line 1717
 ld.w r0, 0x5b
-clf r0
+ld.w r1, 0x0
+lea r2, :BORDERCOLOR
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0
 # line 1718
+ld.w r0, 0x5b
+clf r0
+# line 1719
 ld.w r0, 0x0
 fsel r0
-# line 1719
+# line 1720
 ld.w r0, 0x5b
 ld.w r1, 0x0
 lea r2, :BORDERCOLOR
 ld.d r2, [r2]
 iadd r1, r2
 st.b [r1], r0
-# line 1720
+# line 1721
 ld.w r0, 0x5b
 clf r0
-# line 1723
+# line 1724
 ld.w r0, 0x0
 lea r1, main:samples
 st.w [r1], r0
-@LABEL beginwhile0000000a
-# line 1724
+@LABEL beginwhile0000000b
+# line 1725
 ld.w r0, 0x1
-jmpifnot endwhile0000000b, r0
-# line 1729
+jmpifnot endwhile0000000c, r0
+# line 1730
 ld.w r0, 0x0
 lea r1, main:i
 st.w [r1], r0
@@ -342,11 +342,11 @@ ld.w r1, 0x8
 cmp r0, r1
 test r0, less
 jmpifnot endfor00000009, r0
-# line 1731
+# line 1732
 ld.w r0, 0x0
 lea r1, main:hit
 st.w [r1], r0
-# line 1733
+# line 1734
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -369,7 +369,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1734
+# line 1735
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -392,7 +392,7 @@ cmp r1, r2
 test r1, less
 or r0, r1
 jmpifnot endif00000004, r0
-# line 1736
+# line 1737
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirY
@@ -408,16 +408,16 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1737
+# line 1738
 ld.w r0, 0x1
 lea r1, main:hit
 st.w [r1], r0
-# line 1738
+# line 1739
 ld.w r0, 0x0
 ld.w r1, 0x1
 asel r0, r1
 @LABEL endif00000004
-# line 1741
+# line 1742
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -440,7 +440,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1742
+# line 1743
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -463,7 +463,7 @@ cmp r1, r2
 test r1, less
 or r0, r1
 jmpifnot endif00000005, r0
-# line 1744
+# line 1745
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirX
@@ -479,16 +479,16 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1745
+# line 1746
 ld.w r0, 0x1
 lea r1, main:hit
 st.w [r1], r0
-# line 1746
+# line 1747
 ld.w r0, 0x0
 ld.w r1, 0x1
 asel r0, r1
 @LABEL endif00000005
-# line 1750
+# line 1751
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -509,7 +509,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1751
+# line 1752
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -530,7 +530,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1752
+# line 1753
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posY
@@ -553,7 +553,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1753
+# line 1754
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:posX
@@ -574,7 +574,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1755
+# line 1756
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirX
@@ -586,7 +586,7 @@ ld.w r1, 0x8000
 and r0, r1
 lea r1, main:flipx
 st.w [r1], r0
-# line 1756
+# line 1757
 lea r0, main:i
 ld.w r0, [r0]
 lea r1, main:dirY
@@ -600,14 +600,14 @@ ld.w r1, 0x1
 bsr r0, r1
 lea r1, main:flipy
 st.w [r1], r0
-# line 1758
+# line 1759
 lea r0, main:flipy
 ld.w r0, [r0]
 ld.w r1, 0x0
 cmp r0, r1
 test r0, notequal
 jmpifnot endif00000006, r0
-# line 1760
+# line 1761
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -640,7 +640,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1761
+# line 1762
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -675,7 +675,7 @@ iadd r1, r2
 st.w [r1], r0
 jmp exitif00000007
 @LABEL endif00000006
-# line 1765
+# line 1766
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -708,7 +708,7 @@ ld.w r3, 0x1
 bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
-# line 1766
+# line 1767
 lea r0, main:flipy
 ld.w r0, [r0]
 lea r1, main:flipx
@@ -742,7 +742,7 @@ bsl r1, r3
 iadd r1, r2
 st.w [r1], r0
 @LABEL exitif00000007
-# line 1729
+# line 1730
 lea r0, main:i
 ld.w r0, [r0]
 inc r0
@@ -750,7 +750,7 @@ lea r1, main:i
 st.w [r1], r0
 jmp beginfor00000008
 @LABEL endfor00000009
-# line 1771
+# line 1772
 lea r1, main:roll
 ld.w r1, [r1]
 ld.w r2, 0x4
@@ -773,7 +773,7 @@ ld.w r4, 0x1
 bsl r2, r4
 iadd r2, r3
 st.w [r2], r1
-# line 1772
+# line 1773
 lea r1, main:roll
 ld.w r1, [r1]
 ld.w r2, 0x4
@@ -796,16 +796,16 @@ ld.w r4, 0x1
 bsl r2, r4
 iadd r2, r3
 st.w [r2], r1
-# line 1785
+# line 1786
 ld.w r1, 0xe0
 clf r1
-# line 1788
+# line 1789
 lea r1, main:scrollx
 ld.w r1, [r1]
 lea r2, main:scrolly
 ld.w r2, [r2]
 spriteorigin r1, r2
-# line 1789
+# line 1790
 ld.w r1, 0x80
 ld.w r2, 0x0
 lea r3, main:posX
@@ -817,7 +817,7 @@ ineg r2
 iadd r1, r2
 lea r2, main:scrollx
 st.w [r2], r1
-# line 1790
+# line 1791
 ld.w r1, 0x20
 ld.w r2, 0x0
 lea r3, main:posY
@@ -829,39 +829,39 @@ ineg r2
 iadd r1, r2
 lea r2, main:scrolly
 st.w [r2], r1
-# line 1793
+# line 1794
 lea r1, :spritelist
 ld.w r2, 0xd6
 sprite r1, r2
-# line 1795
+# line 1796
 ld.w r1, 0xf
 ld.w r2, 0x0
 lea r3, :VRAM
 ld.d r3, [r3]
 iadd r2, r3
 st.b [r2], r1
-# line 1796
+# line 1797
 ld.w r1, 0xf0
 ld.w r2, 0x1
 lea r3, :VRAM
 ld.d r3, [r3]
 iadd r2, r3
 st.b [r2], r1
-# line 1797
+# line 1798
 ld.w r1, 0x8
 ld.w r2, 0x2
 lea r3, :VRAM
 ld.d r3, [r3]
 iadd r2, r3
 st.b [r2], r1
-# line 1798
+# line 1799
 ld.w r1, 0xff
 ld.w r2, 0xff
 lea r3, :VRAM
 ld.d r3, [r3]
 iadd r2, r3
 st.b [r2], r1
-# line 1803
+# line 1804
 lea r1, main:frame
 ld.w r1, [r1]
 ld.w r2, 0x1
@@ -870,7 +870,7 @@ ld.w r2, 0x100
 imod r1, r2
 lea r2, main:frame
 st.w [r2], r1
-# line 1804
+# line 1805
 lea r1, main:roll
 ld.w r1, [r1]
 inc r1
@@ -880,13 +880,21 @@ ld.w r2, 0x800
 imod r1, r2
 lea r2, main:roll
 st.w [r2], r1
-# line 1805
-vsync 
 # line 1806
+vsync 
+# line 1807
 ld.w r1, 0x0
 ld.w r2, 0x0
 asel r1, r2
-# line 1810
+# line 1811
+lea r1, main:portcheck
+ld.w r2, 0x0
+in r1, r2
+# line 1812
+lea r1, main:portcheck
+ld.w r1, [r1]
+jmpifnot endif0000000a, r1
+# line 1813
 lea r1, main:roll
 ld.w r1, [r1]
 ld.w r2, 0x3
@@ -896,15 +904,16 @@ lea r3, :BORDERCOLOR
 ld.d r3, [r3]
 iadd r2, r3
 st.b [r2], r1
-# line 1811
+@LABEL endif0000000a
+# line 1814
 lea r1, main:frame
 ld.w r1, [r1]
 fsel r1
-jmp beginwhile0000000a
-@LABEL endwhile0000000b
-# line 1815
+jmp beginwhile0000000b
+@LABEL endwhile0000000c
+# line 1818
 ret 
-# line 1816
+# line 1819
 # End of function main
 
 
@@ -2492,6 +2501,9 @@ ret
 @DW 0x0000 
 # variable 'roll', dim:1 typename:word refcount:5
 @LABEL main:roll
+@DW 0x0000 
+# variable 'portcheck', dim:1 typename:word refcount:3
+@LABEL main:portcheck
 @DW 0x0000 
 # variable 'hit', dim:1 typename:word refcount:3
 @LABEL main:hit

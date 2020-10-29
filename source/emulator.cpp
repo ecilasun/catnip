@@ -93,7 +93,7 @@ uint32_t div_D;					// Abs B
 uint32_t div_A;					// Divident
 uint32_t div_B;					// Divisor
 uint32_t div_state;
-uint8_t gpio_ports[16];
+uint32_t gpio_ports[16];
 
 uint32_t sram_addr;
 uint16_t sram_read_req;
@@ -157,7 +157,7 @@ SDL_Surface *s_Surface;
 static const int FRAME_WIDTH = 256;
 static const int FRAME_HEIGHT = 192;
 static bool s_Done = false;
-static uint8_t GPIO_CPU[16];	// Actual 'device' reads happen to here
+static uint32_t GPIO_CPU[16];	// Actual 'device' reads happen to here
 
 void ClockMain()
 {
@@ -176,7 +176,7 @@ void ClockMain()
 void GPIOMainInput()
 {
 	// Read from devices (to facilitate direct pin read in hardware in IO instruction IN)
-	GPIO_CPU[0] = rand()%2;
+	/*GPIO_CPU[0] = 0;
 	GPIO_CPU[1] = 0;
 	GPIO_CPU[2] = 0;
 	GPIO_CPU[3] = 0;
@@ -191,14 +191,14 @@ void GPIOMainInput()
 	GPIO_CPU[12] = 0;
 	GPIO_CPU[13] = 0;
 	GPIO_CPU[14] = 0;
-	GPIO_CPU[15] = 0;
+	GPIO_CPU[15] = 0;*/
 }
 
 void GPIOMainOutput()
 {
 	// Write from CPU ('assign GPIO_CPU=gpio_ports' statement on hardware)
-	for (uint32_t i=0;i<16;++i)
-		GPIO_CPU[i] = gpio_ports[i];
+	/*for (uint32_t i=0;i<16;++i)
+		GPIO_CPU[i] = gpio_ports[i];*/
 }
 
 void execute(uint16_t instr)
@@ -937,12 +937,12 @@ void execute(uint16_t instr)
 					#if defined(DEBUG_EXECUTE)
 					printf("%.8X: in r%d<-r%d\n", r1, r2);
 					#endif
-					register_file[r1] = GPIO_CPU[register_file[r2]];
-					sram_addr = IP + 2;
-					IP = IP + 2;
 					sram_enable_byteaddress = 0;
-					sram_read_req = 1;
-					cpu_state = CPU_FETCH_INSTRUCTION;
+					sram_addr = register_file[r1];
+					sram_wdata = uint16_t(GPIO_CPU[register_file[r2]]);
+					sram_write_req = 1;
+					IP = IP + 2;
+					cpu_state = CPU_WRITE_DATA;
 				}
 				break;
 				case 0b0010: // OUT
@@ -1678,7 +1678,8 @@ int RunDevice(void *data)
 		CPUMain();			// CPU state machine
 		VideoMain();		// Video scan out (to tie it with 'read old data' in dualport VRAM in hardware, memory writes come after)
 		MemoryMain();		// Update all memory (SRAM/VRAM/ARAM) after video data is processed
-		GPIOMainOutput();	// Update outputs on pins
+		//GPIOMainOutput();	// Update outputs on pins
+		//_mm_pause();
 	}
 	return 0;
 }
