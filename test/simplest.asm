@@ -3,7 +3,7 @@
 #                Bootstrap              
 # --------------------------------------
 
-# Instruction count: 1021
+# Instruction count: 1042
 
 @ORG 0x00000000
 
@@ -334,10 +334,10 @@ clf r0
 ld.w r0, 0x0
 lea r1, main:samples
 st.w [r1], r0
-@LABEL beginwhile00000013
+@LABEL beginwhile00000014
 # line 1908
 ld.w r0, 0x1
-jmpifnot endwhile00000014, r0
+jmpifnot endwhile00000015, r0
 # line 1913
 ld.w r0, 0x0
 lea r1, main:i
@@ -840,95 +840,31 @@ st.w [r2], r1
 lea r1, :spritelist
 ld.w r2, 0xd6
 sprite r1, r2
-# line 1977
-lea r1, main:frame
-ld.w r1, [r1]
-ld.w r2, 0x1
-iadd r1, r2
-ld.w r2, 0x100
-imod r1, r2
-lea r2, main:frame
-st.w [r2], r1
-# line 1978
-lea r1, main:roll
-ld.w r1, [r1]
-inc r1
-lea r2, main:roll
-st.w [r2], r1
-ld.w r2, 0x800
-imod r1, r2
-lea r2, main:roll
-st.w [r2], r1
-# line 1979
-vsync 
-# line 1980
-ld.w r1, 0x0
-ld.w r2, 0x0
-asel r1, r2
-# line 1984
-lea r1, main:portcheck
-ld.w r2, 0x0
-in r1, r2
-# line 1985
-lea r1, main:portcheck
-ld.w r1, [r1]
-jmpifnot endif0000000a, r1
-# line 1986
-lea r1, main:roll
-ld.w r1, [r1]
-ld.w r2, 0x3
-bsr r1, r2
-ld.w r2, 0x0
-lea r3, :BORDERCOLOR
-ld.d r3, [r3]
-iadd r2, r3
-st.b [r2], r1
-@LABEL endif0000000a
-@LABEL begindowhile0000000b
-# line 1989
-lea r1, main:portcheck
-ld.w r2, 0x1
-in r1, r2
-# line 1990
-lea r1, main:portcheck
-ld.w r1, [r1]
-jmpifnot enddowhile0000000c, r1
-jmp begindowhile0000000b
-@LABEL enddowhile0000000c
-# line 1992
+# line 1970
 ld.w r1, 0x0
 lea r2, main:i
 st.w [r2], r1
-@LABEL beginfor00000011
+@LABEL beginfor0000000f
 lea r1, main:i
 ld.w r1, [r1]
 ld.w r2, 0xc
 cmp r1, r2
 test r1, less
-jmpifnot endfor00000012, r1
-# line 1994
-ld.w r1, 0x0
-lea r2, main:y
-st.w [r2], r1
-@LABEL beginfor0000000f
-lea r1, main:y
-ld.w r1, [r1]
-ld.w r2, 0xa
-cmp r1, r2
-test r1, less
 jmpifnot endfor00000010, r1
-# line 1996
-ld.w r1, 0x0
-lea r2, main:x
-st.w [r2], r1
-@LABEL beginfor0000000d
-lea r1, main:x
+# line 1972
+lea r1, main:i
 ld.w r1, [r1]
+lea r2, :testmessage
+ld.d r2, [r2]
+iadd r1, r2
+ld.b r1, [r1] # RHS array access, valueof: .b
+ld.w r2, 0x4
+bsr r1, r2
 ld.w r2, 0xa
-cmp r1, r2
-test r1, less
-jmpifnot endfor0000000e, r1
-# line 1998
+imul r1, r2
+lea r2, main:charrow
+st.w [r2], r1
+# line 1973
 lea r1, main:i
 ld.w r1, [r1]
 lea r2, :testmessage
@@ -939,33 +875,61 @@ ld.w r2, 0x10
 imod r1, r2
 ld.w r2, 0xa
 imul r1, r2
+lea r2, main:charcol
+st.w [r2], r1
+# line 1974
+ld.w r1, 0x0
+lea r2, main:y
+st.w [r2], r1
+@LABEL beginfor0000000d
+lea r1, main:y
+ld.w r1, [r1]
+ld.w r2, 0xa
+cmp r1, r2
+test r1, less
+jmpifnot endfor0000000e, r1
+# line 1976
+ld.w r1, 0x0
+lea r2, main:x
+st.w [r2], r1
+@LABEL beginfor0000000b
+lea r1, main:x
+ld.w r1, [r1]
+ld.w r2, 0xa
+cmp r1, r2
+test r1, less
+jmpifnot endfor0000000c, r1
+# line 1978
+lea r1, main:charcol
+ld.w r1, [r1]
 lea r2, main:x
 ld.w r2, [r2]
 iadd r1, r2
 lea r2, main:y
 ld.w r2, [r2]
-ld.w r3, 0xa
-lea r4, main:i
-ld.w r4, [r4]
-lea r5, :testmessage
-ld.d r5, [r5]
-iadd r4, r5
-ld.b r4, [r4] # RHS array access, valueof: .b
-ld.w r5, 0x10
-idiv r4, r5
-imul r3, r4
+lea r3, main:charrow
+ld.w r3, [r3]
 iadd r2, r3
 ld.w r3, 0xa0
 imul r2, r3
 iadd r1, r2
-lea r2, main:characterbyte
-st.w [r2], r1
-# line 1999
-lea r1, main:characterbyte
-ld.w r1, [r1]
 lea r2, :font
 iadd r1, r2
 ld.b r1, [r1] # RHS array access, valueof: .b
+lea r2, main:characterbyte
+st.w [r2], r1
+# line 1979
+lea r1, main:characterbyte
+ld.w r1, [r1]
+ld.w r2, 0x0
+cmp r1, r2
+test r1, notequal
+jmpifnot endif0000000a, r1
+# line 1980
+lea r1, main:frame
+ld.w r1, [r1]
+ld.w r2, 0xff
+imod r1, r2
 lea r2, main:i
 ld.w r2, [r2]
 ld.w r3, 0xa
@@ -982,39 +946,95 @@ lea r3, :VRAM
 ld.d r3, [r3]
 iadd r2, r3
 st.b [r2], r1
-# line 1996
+@LABEL endif0000000a
+# line 1976
 lea r1, main:x
 ld.w r1, [r1]
 inc r1
 lea r2, main:x
 st.w [r2], r1
-jmp beginfor0000000d
-@LABEL endfor0000000e
-# line 1994
+jmp beginfor0000000b
+@LABEL endfor0000000c
+# line 1974
 lea r2, main:y
 ld.w r2, [r2]
 inc r2
 lea r3, main:y
 st.w [r3], r2
-jmp beginfor0000000f
-@LABEL endfor00000010
-# line 1992
+jmp beginfor0000000d
+@LABEL endfor0000000e
+# line 1970
 lea r3, main:i
 ld.w r3, [r3]
 inc r3
 lea r4, main:i
 st.w [r4], r3
-jmp beginfor00000011
-@LABEL endfor00000012
-# line 2004
+jmp beginfor0000000f
+@LABEL endfor00000010
+# line 1988
+lea r4, main:frame
+ld.w r4, [r4]
+ld.w r5, 0x1
+iadd r4, r5
+ld.w r5, 0x100
+imod r4, r5
+lea r5, main:frame
+st.w [r5], r4
+# line 1989
+lea r4, main:roll
+ld.w r4, [r4]
+inc r4
+lea r5, main:roll
+st.w [r5], r4
+ld.w r5, 0x800
+imod r4, r5
+lea r5, main:roll
+st.w [r5], r4
+# line 1990
+vsync 
+# line 1991
+ld.w r4, 0x0
+ld.w r5, 0x0
+asel r4, r5
+# line 1995
+lea r4, main:portcheck
+ld.w r5, 0x0
+in r4, r5
+# line 1996
+lea r4, main:portcheck
+ld.w r4, [r4]
+jmpifnot endif00000011, r4
+# line 1997
+lea r4, main:roll
+ld.w r4, [r4]
+ld.w r5, 0x3
+bsr r4, r5
+ld.w r5, 0x0
+lea r6, :BORDERCOLOR
+ld.d r6, [r6]
+iadd r5, r6
+st.b [r5], r4
+@LABEL endif00000011
+@LABEL begindowhile00000012
+# line 2000
+lea r4, main:portcheck
+ld.w r5, 0x1
+in r4, r5
+# line 2001
+lea r4, main:portcheck
+ld.w r4, [r4]
+jmpifnot enddowhile00000013, r4
+jmp begindowhile00000012
+@LABEL enddowhile00000013
+# line 2003
 lea r4, main:frame
 ld.w r4, [r4]
 fsel r4
-jmp beginwhile00000013
-@LABEL endwhile00000014
-# line 2008
+jmp beginwhile00000014
+@LABEL endwhile00000015
+# line 2007
 ret 
-# line 2009
+# line 2008
 # End of function main
 
 
@@ -4178,7 +4198,7 @@ ret
 # variable 'f', dim:1 typename:word refcount:2
 @LABEL squareWaveHarmonics:f
 @DW 0x0000 
-# variable 'frame', dim:1 typename:word refcount:7
+# variable 'frame', dim:1 typename:word refcount:8
 @LABEL main:frame
 @DW 0x0000 
 # variable 'characterbyte', dim:1 typename:word refcount:2
@@ -4230,4 +4250,10 @@ ret
 @DW 0x0000 
 # variable 'hit', dim:1 typename:word refcount:3
 @LABEL main:hit
+@DW 0x0000 
+# variable 'charrow', dim:1 typename:word refcount:2
+@LABEL main:charrow
+@DW 0x0000 
+# variable 'charcol', dim:1 typename:word refcount:2
+@LABEL main:charcol
 @DW 0x0000 

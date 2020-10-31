@@ -1966,10 +1966,21 @@ void main()
         // Draw all sprites in the list
         sprite(&spritelist, 0xD6);
 
-        /*VRAM[0] = 0x0F;
-        VRAM[1] = 0xF0;
-        VRAM[2] = 0x08;
-        VRAM[255] = 0xFF;*/
+        short charrow, charcol;
+        for (i=0;i<12;++i)
+        {
+            charrow = (testmessage[i]>>4)*10;
+            charcol = (testmessage[i]%16)*10;
+            for (y=0;y<10;++y)
+            {
+                for (x=0;x<10;++x)
+                {
+                    characterbyte = font[charcol + x + (y+charrow)*160];
+                    if (characterbyte!=0)
+                        VRAM[i*10+x+y*256] = frame%255;
+                }
+            }
+        }
 
         // Advance frame and wait for vsync
         // Make sure to use even/odd because if this wraps around
@@ -1988,18 +1999,6 @@ void main()
         do{
             in(&portcheck, 1);
         } while(portcheck);
-
-        for (i=0;i<12;++i)
-        {
-            for (y=0;y<10;++y)
-            {
-                for (x=0;x<10;++x)
-                {
-                    characterbyte = (testmessage[i]%16)*10 + x + (y+10*(testmessage[i]/16))*160;
-                    VRAM[i*10+x+y*256] = font[characterbyte];
-                }
-            }
-        }
 
         fsel(frame);
     }
