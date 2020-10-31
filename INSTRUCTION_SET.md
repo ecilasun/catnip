@@ -414,7 +414,7 @@ E:B  A:7  0001:MEM2REG rA, [rB] - ld.w
           0110:MEM2REG rA, [rB] - ld.b
           0111:BYTE2REG rA, [IP+2] (low 8 bit constant starting at IP+2) - ld.b
           1000:DWMEM2REG rA, [rB] - ld.d
-          1001: RESERVED
+          1001:REG2MEM [rA], rB - st.d
           1010: RESERVED
           1011: RESERVED
           1100: RESERVED
@@ -424,11 +424,11 @@ E:B  A:7  0001:MEM2REG rA, [rB] - ld.w
 ```
 
 
-### ST.W [rA], rB / ST.B [rA], rB
-Stores the 16 bit value in register rB at memory pointed by rA register. For `ST.B` instrucion, the byte value at the memory address is copied to the lower 8 bits of the register rA.
+### ST.D [rA], rB / ST.W [rA], rB / ST.B [rA], rB
+Stores the 32/16 or 8 bit value in register rB at memory pointed by rA register.
 
 ### LD.W rA, [rB] / LD.B rA, [rB]
-Stores the 16 bit value at memory pointed by rB to register rA. For `LD.B` instruction, based on the last bit of the address in rB, it loads the 8 bits at the address in rB to the register rA.
+Stores the 16 bit value at memory pointed by rB to register rA.
 
 ### CP.W rA, rB / CP.B rA, rB
 Stores the 16 bit value of register rB in register rA. For `CP.B`, only the lower 8 bits are copied across registers. For example:

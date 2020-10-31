@@ -201,14 +201,12 @@ void GPIOMainOutput()
 		GPIO_CPU[i] = gpio_ports[i];*/
 }
 
+//int breakpoint = 0xBE;
+//volatile bool break_loop = true;//IP != breakpoint ? true : false;
+
 void execute(uint16_t instr)
 {
 	uint16_t baseopcode = instr&0x000F;
-
-#if defined(DEBUG_EXECUTE)
-	//int breakpoint = 0xBE;
-	bool break_loop = false;//IP != breakpoint ? true : false;
-#endif
 
 	switch(baseopcode)
 	{
@@ -795,6 +793,22 @@ void execute(uint16_t instr)
 				}
 				break;
 
+				case 9: // [r1] <- (dword)r2
+				{
+					// SRAM only
+					#if defined(DEBUG_EXECUTE)
+					printf("%.8X: st.d(sram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
+					#endif
+					sram_enable_byteaddress = 0;
+					sram_addr = register_file[r1]; // SRAM write
+					target_register = r2;
+					sram_wdata = (register_file[r2]&0xFFFF0000)>>16;
+					sram_write_req = 1;
+					IP = IP + 2;
+					cpu_state = CPU_WRITE_DATAH;
+				}
+				break;
+
 				default:
 				{
 					IP = IP + 2;
@@ -935,7 +949,7 @@ void execute(uint16_t instr)
 				case 0b0001: // IN
 				{
 					#if defined(DEBUG_EXECUTE)
-					printf("%.8X: in r%d<-r%d\n", r1, r2);
+					printf("%.8X: in r%d<-r%d\n", IP, r1, r2);
 					#endif
 					sram_enable_byteaddress = 0;
 					sram_addr = register_file[r1];
@@ -948,7 +962,7 @@ void execute(uint16_t instr)
 				case 0b0010: // OUT
 				{
 					#if defined(DEBUG_EXECUTE)
-					printf("%.8X: out r%d<-r%d\n", r1, r2);
+					printf("%.8X: out r%d<-r%d\n", IP, r1, r2);
 					#endif
 					gpio_ports[register_file[r2]] = register_file[r1];
 					sram_addr = IP + 2;
@@ -1070,21 +1084,6 @@ void execute(uint16_t instr)
 		}
 		break;
 	}
-
-#if defined(DEBUG_EXECUTE)
-	/*while(!break_loop)
-	{
-		SDL_Event event;
-		while(SDL_PollEvent(&event))
-		{
-			if(event.type == SDL_KEYUP)
-			{
-				if(event.key.keysym.sym == SDLK_SPACE)
-					break_loop = 1;
-			}
-		}
-	}*/
-#endif
 }
 
 void CPUMain()
@@ -1218,7 +1217,7 @@ void CPUMain()
 		case CPU_ROM_FETCH:
 		{
 			sram_write_req = 0;
-			if (rom_addrs == 0x3FFF)
+			if (rom_addrs == 0xFFFF)
 			{
 				rom_read_enable = 0;
 				sram_addr = 0; // Reset read address (not really required)
@@ -1674,12 +1673,16 @@ int RunDevice(void *data)
 	while(!s_Done)
 	{
 		ClockMain();		// Clock ticks first (rising/falling edge)
-		GPIOMainInput();	// Update inputs on pins
-		CPUMain();			// CPU state machine
-		VideoMain();		// Video scan out (to tie it with 'read old data' in dualport VRAM in hardware, memory writes come after)
-		MemoryMain();		// Update all memory (SRAM/VRAM/ARAM) after video data is processed
-		//GPIOMainOutput();	// Update outputs on pins
-		//_mm_pause();
+		//if (break_loop)
+		{
+   			GPIOMainInput();	// Update inputs on pins
+			CPUMain();			// CPU state machine
+			VideoMain();		// Video scan out (to tie it with 'read old data' in dualport VRAM in hardware, memory writes come after)
+			MemoryMain();		// Update all memory (SRAM/VRAM/ARAM) after video data is processed
+			//GPIOMainOutput();	// Update outputs on pins
+			//_mm_pause();
+		}
+		//break_loop = cpu_state>=CPU_FETCH_INSTRUCTION ? false : true;
 	}
 	return 0;
 }
@@ -1694,7 +1697,6 @@ bool StepEmulator()
 		K -= 0x623E0;
 		SDL_UpdateWindowSurface(s_Window);
 
-#if !defined(DEBUG_EXECUTE)
 		SDL_Event event;
 		while(SDL_PollEvent(&event))
 		{
@@ -1702,13 +1704,14 @@ bool StepEmulator()
 				s_Done = true;
 			if(event.type == SDL_KEYUP)
 			{
-				if(event.key.keysym.sym == SDLK_SPACE)
+				/*if(event.key.keysym.sym == SDLK_SPACE)
+ 					break_loop = true;*/
+				if(event.key.keysym.sym == SDLK_r)
 					cpu_state = CPU_INIT;
 				if(event.key.keysym.sym == SDLK_ESCAPE)
 					s_Done = true;
 			}
 		}
-#endif
 	}
 	K += s_VGAClockRisingEdge ? 1:0;
 
@@ -1752,9 +1755,9 @@ bool InitEmulator(uint16_t *_rom_binary)
 		SRAM[i] = 0x00;
 
 	// Init ROM to binary from file
-	ROM = new uint16_t[0x7FFFF];
+	ROM = new uint16_t[0x20000];
 	uint16_t *romdata = (uint16_t*)_rom_binary;
-	for (uint32_t i=0;i<0x7FFFF;++i)
+	for (uint32_t i=0;i<0x20000;++i)
 		ROM[i] = romdata[i];
 	
 	// Emulator specific:
@@ -1848,10 +1851,10 @@ int EmulateROMImage(const char *_romname)
 #else
 	filebytesize = (unsigned int)endpos;
 #endif
-	filebytesize = filebytesize<0x7FFFF ? filebytesize : 0x7FFFF;
+	filebytesize = filebytesize<0x20000 ? filebytesize : 0x20000;
 
 	// Allocate memory and read file contents, then close the file
-	uint16_t *rom_binary = new uint16_t[0x7FFFF];
+	uint16_t *rom_binary = new uint16_t[0x20000];
 	fread(rom_binary, 1, filebytesize, inputfile);
 	fclose(inputfile);
 
@@ -1865,6 +1868,8 @@ int EmulateROMImage(const char *_romname)
 			running = StepEmulator();
 		} while (running);
 	}
+
+	delete [] rom_binary;
 	
 	// Clean up, report errors etc
 	TerminateEmulator();

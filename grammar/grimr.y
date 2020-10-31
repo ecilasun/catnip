@@ -206,6 +206,7 @@ enum EOpcode
 {
 	OP_PASSTHROUGH,
 	OP_PULLINITEXPRESSION,
+	OP_PULLINITSTRING,
 	OP_NOOP,
 	OP_INC,
 	OP_DEC,
@@ -223,7 +224,9 @@ enum EOpcode
 	OP_ARRAYINDEX,
 	OP_LEA,
 	OP_LOAD,
+	OP_DEFSTRING,
 	OP_STORE,
+	OP_COPY,
 	OP_BULKASSIGN,
 	OP_DATAARRAY,
 	OP_RETURN,
@@ -271,7 +274,8 @@ enum EOpcode
 
 const std::string Opcodes[]={
 	"",
-	"",
+	"st",
+	"st", // OP_PULLINITSTRING
 	"nop",
 	"inc",
 	"dec",
@@ -289,7 +293,9 @@ const std::string Opcodes[]={
 	"arrayindex",
 	"lea",
 	"ld",
+	"defstring",
 	"st",
+	"cp",
 	"bulkassign",
 	"dataarray",
 	"ret",
@@ -345,8 +351,8 @@ enum ENodeSide
 struct SString
 {
 	std::string m_String;
+	std::string m_StringTempName;
 	uint32_t m_Hash{0};
-	uint32_t m_Address{0xFFFFFFFF};
 };
 
 enum EAllocationModifier
@@ -541,14 +547,13 @@ struct SASTScanContext
 			return found->second;
 
 		SString *str = new SString();
-		uint32_t allocaddress = m_StringAddress;
-		str->m_Address = allocaddress;
 		str->m_Hash = hash;
 		str->m_String = string;
-
-		printf("Allocated string at %d\n", allocaddress);
-
-		m_StringAddress += strlen(string);
+		if (str->m_String.length()%2!=0) // Make sure the string is a multiple of WORD size
+			str->m_String += " ";
+		std::stringstream stream;
+		stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << str->m_Hash;
+		str->m_StringTempName = "string_" + stream.str();
 
 		m_StringTable[hash] = str;
 
@@ -624,7 +629,6 @@ struct SASTScanContext
 	std::vector<SConstruct*> m_Constructs;
 	std::map<uint32_t, SSymbol> m_SymbolTable;
 	std::map<uint32_t, SString*> m_StringTable;
-	uint32_t m_StringAddress{0};
 	int m_CurrentRegister{0};
 	int m_CurrentAutoLabel{0};
 	int m_InstructionCount{0};
@@ -773,7 +777,7 @@ simple_string
 																									$$ = new SASTNode(EN_String, yytext); // $1 is just a single word, yytext includes spaces
 																									$$->m_LineNumber = yylineno;
 																									$$->m_String = g_ASC.AllocateOrRetreiveString(yytext);
-																									$$->m_Opcode = OP_LOAD;
+																									$$->m_Opcode = OP_DEFSTRING;
 																									g_ASC.PushNode($$);
 																								}
 	;
@@ -1526,9 +1530,9 @@ variable_declaration_item
 																									$$->m_AllocationModifier = AM_DYNAMIC;
 																									g_ASC.PushNode($$);																								}
 	| simple_identifier '=' expression 															{
+																									SASTNode *valnode=g_ASC.PopNode();
 																									$$ = new SASTNode(EN_DeclInitJunction, "");
 																									$$->m_LineNumber = yylineno;
-																									SASTNode *valnode=g_ASC.PopNode();
 																									SASTNode *namenode=g_ASC.PopNode();
 																									$$->PushNode(namenode);
 																									$$->PushNode(valnode);
@@ -1690,7 +1694,7 @@ variable_declaration
 																														//$$->PopNode();
 																														g_ASC.PushNode(val);
 																														SASTNode *popnode = new SASTNode(EN_Default, "");
-																														popnode->m_Opcode = OP_PULLINITEXPRESSION;
+																														popnode->m_Opcode = val->m_Type == EN_String ? OP_PULLINITSTRING : OP_PULLINITEXPRESSION;
 																														popnode->m_Value = var->m_Scope + ":" + var->m_Name;
 																														popnode->m_Offset = offset*TypeNameToStride[var->m_TypeName];
 																														popnode->m_TypeName = var->m_TypeName;
@@ -1716,7 +1720,8 @@ variable_declaration
 																													//$$->PopNode();
 																													g_ASC.PushNode(declnode->m_ASTNodes[1]);
 																													SASTNode *popnode = new SASTNode(EN_Default, "");
-																													popnode->m_Opcode = OP_PULLINITEXPRESSION;
+																													//var->m_Dimension = declnode->m_ASTNodes[1]->m_Type == EN_String ? 2 : 1; // Fake a dimension to prevent pointer-like access
+																													popnode->m_Opcode = declnode->m_ASTNodes[1]->m_Type == EN_String ? OP_PULLINITSTRING : OP_PULLINITEXPRESSION;
 																													popnode->m_Value = var->m_Scope + ":" + var->m_Name;
 																													popnode->m_Offset = 0;
 																													popnode->m_TypeName = var->m_TypeName;
@@ -1743,7 +1748,8 @@ variable_declaration
 																													//$$->PopNode();
 																													g_ASC.PushNode(val);
 																													SASTNode *popnode = new SASTNode(EN_Default, "");
-																													popnode->m_Opcode = OP_PULLINITEXPRESSION;
+																													//var->m_Dimension = val->m_Type == EN_String ? 2 : 1; // Fake a dimension to prevent pointer-like access
+																													popnode->m_Opcode = val->m_Type == EN_String ? OP_PULLINITSTRING : OP_PULLINITEXPRESSION;
 																													popnode->m_Value = var->m_Scope + ":" + var->m_Name;
 																													popnode->m_Offset = offset*TypeNameToStride[var->m_TypeName];
 																													popnode->m_TypeName = var->m_TypeName;
@@ -2448,7 +2454,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				//printf("arrayindex identifier type: %s[%d]\n", NodeTypes[node->m_Type], var->m_Dimension);
 				node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + ", " + var->m_Scope + ":" + var->m_Name;
 				g_ASC.m_InstructionCount+=1;
-				// This is not a 'real' array, fetch data at address to treat as array base address
+				// This is not a 'real' array, fetch data at address to treat as array base address (Except for strings)
 				if (var->m_Dimension <= 1)
 				{
 					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + TypeNameToInstructionSize[var->m_TypeName] + " " + tgt + ", [" + tgt + "]";
@@ -2490,7 +2496,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			// Need to make sure [] on LHS doesn't run this code path but only RHS does
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
-				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + TypeNameToInstructionSize[var->m_TypeName] + " " + srcA + ", [" + srcA + "] # RHS array access, valueof: " + TypeNameToInstructionSize[var->m_TypeName];
+				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + TypeNameToInstructionSizeNotPointer[var->m_TypeName] + " " + srcA + ", [" + srcA + "] # RHS array access, valueof: " + TypeNameToInstructionSizeNotPointer[var->m_TypeName];
 				g_ASC.m_InstructionCount+=1;
 			}
 		}
@@ -2527,6 +2533,15 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				var->m_RefCount++;
 				g_ASC.m_InstructionCount+=1;
 			}
+		}
+		break;
+
+		case OP_DEFSTRING:
+		{
+			// Load the address of the string we just generated
+			std::string trg = g_ASC.PushRegister();
+			node->m_Instructions = Opcodes[OP_LEA] + " " + trg + ", " + node->m_String->m_StringTempName;
+			g_ASC.m_InstructionCount+=1;
 		}
 		break;
 
@@ -2683,6 +2698,16 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		}
 		break;
 
+		case OP_COPY:
+		{
+			// NOTE: target and source are swapped due to evaluation order
+			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
+			std::string srcA = g_ASC.PopRegister();
+			node->m_Instructions = Opcodes[node->m_Opcode] + TypeNameToInstructionSizeNotPointer[g_ASC.m_CurrentTypeName] + " [" + trg + "], " + srcA;
+			g_ASC.m_InstructionCount+=1;
+		}
+		break;
+
 		case OP_STORE:
 		{
 			// NOTE: target and source are swapped due to evaluation order
@@ -2690,6 +2715,25 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string srcA = g_ASC.PopRegister();
 			node->m_Instructions = Opcodes[node->m_Opcode] + TypeNameToInstructionSizeNotPointer[g_ASC.m_CurrentTypeName] + " [" + trg + "], " + srcA;
 			g_ASC.m_InstructionCount+=1;
+		}
+		break;
+
+		case OP_PULLINITSTRING:
+		{
+			std::string trg = g_ASC.PushRegister();
+			g_ASC.PopRegister();
+			std::string src = g_ASC.PopRegister();
+			node->m_Instructions = "lea " + trg + ", " + node->m_Value;
+			if (node->m_Offset != 0)
+			{
+				std::stringstream stream;
+				stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << node->m_Offset;
+				node->m_Instructions += std::string("\n") + "ld.d r15, 0x" + stream.str();
+				node->m_Instructions += std::string("\n") + "iadd " + trg + ", r15";
+				g_ASC.m_InstructionCount+=2;
+			}
+			node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode] + TypeNameToInstructionSize[node->m_TypeName] + " [" + trg + "], " + src;
+			g_ASC.m_InstructionCount+=2;
 		}
 		break;
 
@@ -2707,7 +2751,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				node->m_Instructions += std::string("\n") + "iadd " + trg + ", r15";
 				g_ASC.m_InstructionCount+=2;
 			}
-			node->m_Instructions += std::string("\n") + "st" + TypeNameToInstructionSize[node->m_TypeName] + " [" + trg + "], " + src;
+			node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode] + TypeNameToInstructionSize[node->m_TypeName] + " [" + trg + "], " + src;
 			g_ASC.m_InstructionCount+=2;
 		}
 		break;
@@ -2778,6 +2822,7 @@ bool CompileGrimR(const char *_filename)
 	// Add boot code
 	fprintf(fp, "# Instruction count: %d\n\n", g_ASC.m_InstructionCount);
 	fprintf(fp, "@ORG 0x00000000\n\n");
+	fprintf(fp, "call _builtin_global_init\n");
 	fprintf(fp, "call main\n\n");
 	fprintf(fp, "ld.w r0, 0x0\n");
 	fprintf(fp, "@LABEL infloop\n");
@@ -2790,11 +2835,14 @@ bool CompileGrimR(const char *_filename)
 	fprintf(fp, "\n# --------------------------------------\n");
 	fprintf(fp, "#              Global Code              \n");
 	fprintf(fp, "# --------------------------------------\n\n");
+	fprintf(fp, "@LABEL _builtin_global_init\n");
 
 	// Dump free-standing code
 	s_prevLineNo = 0xCCCCCCCC;
 	for (auto &node : g_ASC.m_ASTNodes)
 		DumpCode(fp, node);
+	
+	fprintf(fp, "ret\n");
 
 	fprintf(fp, "\n# --------------------------------------\n");
 	fprintf(fp, "#               Functions               \n");
@@ -2821,6 +2869,28 @@ bool CompileGrimR(const char *_filename)
 	{
 		fprintf(fp, "# Construct: %s\n", g_ASC.m_Constructs[i]->m_Name.c_str());
 		DumpConstruct(fp, g_ASC.m_Constructs[i], g_ASC.m_Constructs[i]->m_RootNode);
+	}
+
+	fprintf(fp, "\n# --------------------------------------\n");
+	fprintf(fp, "#               String Table             \n");
+	fprintf(fp, "# --------------------------------------\n\n");
+
+	auto beg = g_ASC.m_StringTable.begin();
+	auto end = g_ASC.m_StringTable.end();
+	while(beg!=end)
+	{
+		fprintf(fp, "@LABEL %s\n", beg->second->m_StringTempName.c_str());
+		fprintf(fp, "# '%s'\n", beg->second->m_String.c_str());
+		fprintf(fp, "@DW ");
+		for (uint32_t i=0;i<beg->second->m_String.length()/2;++i)
+		{
+			uint32_t A = beg->second->m_String[i*2+0];
+			uint32_t B = beg->second->m_String[i*2+1];
+			uint32_t AB = (A<<8) | (B);
+			fprintf(fp, "0x%.4X ", AB);
+		}
+		fprintf(fp, "\n");
+		++beg;
 	}
 
 	/* uint32_t interruptservice = HashString("vblank");
