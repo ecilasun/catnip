@@ -2931,11 +2931,11 @@ bool CompileGrimR(const char *_filename)
 	for (auto &var : g_ASC.m_Variables)
 	{
 		fprintf(fp, "# variable '%s', dim:%d typename:%s refcount:%d\n", var->m_Name.c_str(), var->m_Dimension, TypeNames[var->m_TypeName], var->m_RefCount);
-		/*if (var->m_RefCount == 0)
+		if (var->m_RefCount == 0)
 		{
 			printf("WARNING: Variable '%s %s' not referenced in code, removing initializer and allocated space.\n", TypeNames[var->m_TypeName], var->m_Name.c_str());
 			continue;
-		}*/
+		}
 		fprintf(fp, "@LABEL %s:%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
 		{
 			if (var->m_TypeName == TN_CONSTRUCT)

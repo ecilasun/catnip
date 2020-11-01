@@ -1723,9 +1723,9 @@ void print(char* message)
     i=0;
     do
     {
-        if (testmessage[i] == 0)
+        if (message[i] == 0)
             return;
-        charbyte = testmessage[i]-32;
+        charbyte = message[i]-32;
         charrow = (charbyte>>5)*8;
         charcol = (charbyte%32)*8;
         for (y=0;y<8;++y)

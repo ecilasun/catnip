@@ -278,7 +278,7 @@ st.w [r1], r0
 # line 1726
 lea r0, print:i
 ld.w r0, [r0]
-lea r1, :testmessage
+lea r1, print:message
 ld.d r1, [r1]
 iadd r0, r1
 ld.b r0, [r0] # RHS array access, valueof: .b
@@ -292,7 +292,7 @@ ret
 # line 1728
 lea r0, print:i
 ld.w r0, [r0]
-lea r1, :testmessage
+lea r1, print:message
 ld.d r1, [r1]
 iadd r0, r1
 ld.b r0, [r0] # RHS array access, valueof: .b
@@ -1118,18 +1118,10 @@ ret
 # variable 'spriteID', dim:1 typename:word refcount:1
 @LABEL TestConstruct:spriteID
 @DW 0x0000 
-# variable 'testmessage', dim:1 typename:byteptr refcount:3
+# variable 'testmessage', dim:1 typename:byteptr refcount:1
 @LABEL :testmessage
 @DW 0x0000 0x0000
 # variable 'someSprites', dim:8 typename:construct refcount:0
-@LABEL :someSprites
-# TestConstruct
-# spritePosX
-# 0x0
-# spritePosY
-# 0x0
-# spriteID
-# 0x0
 # variable 'sinewave', dim:1024 typename:word refcount:2
 @LABEL :sinewave
 @DW 0x4000 0x4065 0x40C9 0x412E 0x4192 0x41F7 0x425B 0x42C0 
@@ -3007,8 +2999,6 @@ ret
 @LABEL squareWaveHarmonics:p
 @DW 0x0000 
 # variable 't', dim:1 typename:word refcount:0
-@LABEL squareWaveHarmonics:t
-@DW 0x0000 
 # variable 'dutycycle', dim:1 typename:word refcount:2
 @LABEL squareWaveHarmonics:dutycycle
 @DW 0x0000 
@@ -3036,7 +3026,7 @@ ret
 # variable 'y', dim:1 typename:word refcount:5
 @LABEL print:y
 @DW 0x0000 
-# variable 'message', dim:1 typename:byteptr refcount:0
+# variable 'message', dim:1 typename:byteptr refcount:2
 @LABEL print:message
 @DW 0xCDCD 0xCDCD 
 # variable 'frame', dim:1 typename:word refcount:7
@@ -3067,11 +3057,7 @@ ret
 @LABEL main:scrolly
 @DW 0xFFFFFFE2 
 # variable 'scrolldirx', dim:1 typename:word refcount:0
-@LABEL main:scrolldirx
-@DW 0x0001 
 # variable 'scrolldiry', dim:1 typename:word refcount:0
-@LABEL main:scrolldiry
-@DW 0x0001 
 # variable 'flipx', dim:1 typename:word refcount:5
 @LABEL main:flipx
 @DW 0x0000 
