@@ -605,7 +605,6 @@ void execute(uint16_t instr)
 				case 0: // [r1] <- (word)r2
 				{
 					bool is_aram_address = (register_file[r1]&0x40000000)>>30 ? true:false;
-					bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
 					if (is_aram_address) // ARAM write (0x40000000)
 					{
 						#if defined(DEBUG_EXECUTE)
@@ -702,7 +701,7 @@ void execute(uint16_t instr)
 					bool is_vram_address = (register_file[r1]&0x80000000)>>31 ? true:false;
 					if (is_vram_address) // VRAM write (0x80000000)
 					{
-						if ((register_file[r1]&0x0000FFFF) < 0xD000) // Only if within VRAM region
+						//if ((register_file[r1]&0x0000FFFF) < 0xD000) // Only if within VRAM region
 						{
 							#if defined(DEBUG_EXECUTE)
 							printf("%.8X: st.b(vram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
@@ -713,25 +712,12 @@ void execute(uint16_t instr)
 							framebuffer_writeena = 1;
 							// TODO: Somehow need to implement a WORD mov to VRAM
 							framebuffer_data = uint8_t(register_file[r2]&0x00FF);
-							sram_addr = IP + 2;
-							IP = IP + 2;
-							sram_enable_byteaddress = 0;
-							sram_read_req = 1;
-							cpu_state = CPU_FETCH_INSTRUCTION;
 						}
-						else // Otherwise noop
-						{
-							#if defined(DEBUG_EXECUTE)
-							uint16_t *wordsram0 = (uint16_t *)&SRAM[register_file[IP+2]];
-							uint16_t *wordsram1 = (uint16_t *)&SRAM[register_file[IP+4]];
-							printf("%.8X: st.b(sram) r%d (%.8X), r%d (%.8X)\n", IP, r1, register_file[r1], r2, register_file[r2]);
-							#endif
-							sram_addr = IP + 2;
-							IP = IP + 2;
-							sram_enable_byteaddress = 0;
-							sram_read_req = 1;
-							cpu_state = CPU_FETCH_INSTRUCTION;
-						}
+						sram_addr = IP + 2;
+						IP = IP + 2;
+						sram_enable_byteaddress = 0;
+						sram_read_req = 1;
+						cpu_state = CPU_FETCH_INSTRUCTION;
 					}
 					else
 					{

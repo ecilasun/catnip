@@ -352,6 +352,7 @@ struct SString
 {
 	std::string m_String;
 	std::string m_StringTempName;
+	uint32_t m_EndMarker{0};
 	uint32_t m_Hash{0};
 };
 
@@ -444,6 +445,7 @@ struct SVariable
 	uint32_t m_DynamicAllocation{0};
 	uint32_t m_Dimension{1};
 	ETypeName m_TypeName{TN_WORD};
+	std::string m_ConstructName;
 	int m_RefCount{0};
 	std::string m_Value;
 	class SASTNode *m_RootNode{nullptr};
@@ -549,8 +551,11 @@ struct SASTScanContext
 		SString *str = new SString();
 		str->m_Hash = hash;
 		str->m_String = string;
+		str->m_EndMarker = str->m_String.length();
 		if (str->m_String.length()%2!=0) // Make sure the string is a multiple of WORD size
 			str->m_String += " ";
+		else
+			str->m_String += "  ";
 		std::stringstream stream;
 		stream << std::setfill ('0') << std::setw(sizeof(uint32_t)*2) << std::hex << str->m_Hash;
 		str->m_StringTempName = "string_" + stream.str();
@@ -624,6 +629,7 @@ struct SASTScanContext
 	std::string m_CurrentFunctionName;
 	ETypeName m_CurrentFunctionTypeName{TN_VOID};
 	ETypeName m_CurrentTypeName{TN_WORD};
+	std::string m_CurrentConstruct;
 	std::vector<SVariable*> m_Variables;
 	std::vector<SFunction*> m_Functions;
 	std::vector<SConstruct*> m_Constructs;
@@ -1641,6 +1647,7 @@ type_name
 	| DWORD '*'																					{ g_ASC.m_CurrentTypeName = TN_DWORDPTR; }
 	| WORD '*'																					{ g_ASC.m_CurrentTypeName = TN_WORDPTR; }
 	| BYTE '*'																					{ g_ASC.m_CurrentTypeName = TN_BYTEPTR; }
+	| IDENTIFIER																				{ g_ASC.m_CurrentTypeName = TN_CONSTRUCT; g_ASC.m_CurrentConstruct = $1; }
 	;
 
 variable_declaration
@@ -1662,6 +1669,8 @@ variable_declaration
 																									var->m_RefCount = g_ASC.m_IsConstruct ? 1 : 0;
 																									var->m_Value = "";
 																									var->m_TypeName = g_ASC.m_CurrentTypeName;
+																									if (g_ASC.m_CurrentTypeName == TN_CONSTRUCT)
+																										var->m_ConstructName = g_ASC.m_CurrentConstruct;
 
 																									if (var->m_Scope.length()>0)
 																										var->m_DynamicAllocation = 1;
@@ -1784,6 +1793,8 @@ variable_declaration
 																									var->m_RefCount = g_ASC.m_IsConstruct ? 1 : 0;
 																									var->m_Value = "";
 																									var->m_TypeName = g_ASC.m_CurrentTypeName;
+																									if (g_ASC.m_CurrentTypeName == TN_CONSTRUCT)
+																										var->m_ConstructName = g_ASC.m_CurrentConstruct;
 
 																									if (var->m_Scope.length()>0)
 																										var->m_DynamicAllocation = 1;
@@ -1837,6 +1848,7 @@ variable_declaration_statement
 																									$$ = new SASTNode(EN_VarDeclStatement, "");
 																									$$->m_LineNumber = yylineno;
 																									g_ASC.PushNode($$);
+																									g_ASC.m_CurrentConstruct = "";
 																								}
 	;
 
@@ -2238,13 +2250,24 @@ void DumpConstruct(FILE *_fp, SConstruct *construct, SASTNode *node)
 	if (node->m_Type == EN_DeclInitJunction)
 	{
 		construct->PushVariable(construct->m_Name + ":" + node->m_ASTNodes[0]->m_Value);
-		fprintf(_fp, "# construct var: %s:%s\n", construct->m_Name.c_str(), node->m_ASTNodes[0]->m_Value.c_str());
+		//fprintf(_fp, "# construct var: %s:%s\n", construct->m_Name.c_str(), node->m_ASTNodes[0]->m_Value.c_str());
+		fprintf(_fp, "@LABEL %s:%s\n", construct->m_Name.c_str(), node->m_ASTNodes[0]->m_Value.c_str());
+		fprintf(_fp, "@DW %s\n", node->m_ASTNodes[1]->m_Value.c_str());
 	}
 	else
 	{
 		for (auto &subnode : node->m_ASTNodes)
 			DumpConstruct(_fp, construct, subnode);
 	}
+}
+
+void DumpNodes(FILE *_fp, SASTNode *node)
+{
+	for (auto &subnode : node->m_ASTNodes)
+		DumpNodes(_fp, subnode);
+
+	if (node->m_Value.length()>0)
+		fprintf(_fp, "# %s\n", node->m_Value.c_str());
 }
 
 void DumpCode(FILE *_fp, SASTNode *node)
@@ -2869,7 +2892,8 @@ bool CompileGrimR(const char *_filename)
 
 	for (uint32_t i=0;i<g_ASC.m_Constructs.size();++i)
 	{
-		fprintf(fp, "# Construct: %s\n", g_ASC.m_Constructs[i]->m_Name.c_str());
+		//fprintf(fp, "# Construct: %s\n", g_ASC.m_Constructs[i]->m_Name.c_str());
+		fprintf(fp, "@LABEL %s\n", g_ASC.m_Constructs[i]->m_Name.c_str());
 		DumpConstruct(fp, g_ASC.m_Constructs[i], g_ASC.m_Constructs[i]->m_RootNode);
 	}
 
@@ -2886,8 +2910,8 @@ bool CompileGrimR(const char *_filename)
 		fprintf(fp, "@DW ");
 		for (uint32_t i=0;i<beg->second->m_String.length()/2;++i)
 		{
-			uint32_t A = beg->second->m_String[i*2+0];
-			uint32_t B = beg->second->m_String[i*2+1];
+			uint32_t A = (i*2+0==beg->second->m_EndMarker) ? 0 : beg->second->m_String[i*2+0];
+			uint32_t B = (i*2+1==beg->second->m_EndMarker) ? 0 : beg->second->m_String[i*2+1];
 			uint32_t AB = (A<<8) | (B);
 			fprintf(fp, "0x%.4X ", AB);
 		}
@@ -2904,19 +2928,28 @@ bool CompileGrimR(const char *_filename)
 	fprintf(fp, "#              Symbol Table             \n");
 	fprintf(fp, "# --------------------------------------\n\n");
 
-	for (auto &func : g_ASC.m_Functions)
-		fprintf(fp, "# function '%s', hash: %.8X, refcount: %d\n", func->m_Name.c_str(), func->m_Hash, func->m_RefCount);
-
 	for (auto &var : g_ASC.m_Variables)
 	{
 		fprintf(fp, "# variable '%s', dim:%d typename:%s refcount:%d\n", var->m_Name.c_str(), var->m_Dimension, TypeNames[var->m_TypeName], var->m_RefCount);
-		if (var->m_RefCount == 0)
+		/*if (var->m_RefCount == 0)
 		{
 			printf("WARNING: Variable '%s %s' not referenced in code, removing initializer and allocated space.\n", TypeNames[var->m_TypeName], var->m_Name.c_str());
 			continue;
-		}
+		}*/
 		fprintf(fp, "@LABEL %s:%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
 		{
+			if (var->m_TypeName == TN_CONSTRUCT)
+			{
+				uint32_t chash = HashString(var->m_ConstructName.c_str());
+				SConstruct *construct = g_ASC.FindConstruct(chash);
+				if (construct)
+				{
+					//for (uint32_t c=0;c<var->m_Dimension;++c)
+					{
+						DumpNodes(fp, construct->m_RootNode);
+					}
+				}
+			}
 			if (var->m_TypeName == TN_WORD)
 			{
 				fprintf(fp, "@DW ");

@@ -18,6 +18,8 @@ construct TestConstruct
 
 char* testmessage = "Hello, world!";
 
+TestConstruct someSprites[8];
+
 short sinewave[1024] = {
     0x4000,0x4065,0x40c9,0x412e,0x4192,0x41f7,0x425b,0x42c0,
     0x4324,0x4388,0x43ed,0x4451,0x44b5,0x451a,0x457e,0x45e2,
@@ -1715,27 +1717,35 @@ short squareWaveHarmonics()
     return(cnt);
 }
 
-/*void print(char* message)
+void print(char* message)
 {
-    short i,x,y;
-    for (i=0;i<14;++i)
+    short fontbyte, charbyte, charrow, charcol, i, x, y;
+    i=0;
+    do
     {
-        for(y=0;y<8;++y)
+        if (testmessage[i] == 0)
+            return;
+        charbyte = testmessage[i]-32;
+        charrow = (charbyte>>5)*8;
+        charcol = (charbyte%32)*8;
+        for (y=0;y<8;++y)
         {
-            for(x=0;x<8;++x)
+            for (x=0;x<8;++x)
             {
-                VRAM[i*8+x+y*256] = font[message[i]*64 + x+y*8];
+                fontbyte = font[charcol + x + ((y+charrow)<<8)];
+                if (fontbyte==0)
+                    VRAM[i*8+x+(y<<8)] = 0x0;
             }
         }
-    }
+        ++i;
+    } while (1);
     return;
-}*/
+}
 
 void main()
 {
     short frame = 0;
-    short characterbyte;
-    short i, samples, x, y;
+    short i, samples;
     short posX[8] = {0,92,63,18,108,12,43,31}, dirX[8] = {1,2,1,2,2,4,3,3};
     short posY[8] = {16,44,32,24,51,76,94,41}, dirY[8] = {0,1,1,3,2,2,3,4};
     short scrollx = 50, scrolly = -30;
@@ -1830,22 +1840,7 @@ void main()
         // Draw all sprites in the list
         sprite(&spritelist, 0xD6);
 
-        short charbyte, charrow, charcol;
-        for (i=0;i<14;++i)
-        {
-            charbyte = testmessage[i]-32;
-            charrow = (charbyte>>5)*8;
-            charcol = (charbyte%32)*8;
-            for (y=0;y<8;++y)
-            {
-                for (x=0;x<8;++x)
-                {
-                    characterbyte = font[charcol + x + ((y+charrow)<<8)];
-                    if (characterbyte==0)
-                        VRAM[i*8+x+(y<<8)] = frame;
-                }
-            }
-        }
+        print(testmessage);
 
         // Advance frame and wait for vsync
         // Make sure to use even/odd because if this wraps around
