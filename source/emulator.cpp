@@ -51,6 +51,8 @@
 #define CPU_WAIT_VSYNC					0b01110
 #define CPU_SPRITECOPY					0b01111
 #define CPU_DIV							0b10000
+#define CPU_READ_DATAH_OFFSET			0b10001
+#define CPU_READ_DATAL_OFFSET			0b10010
 
 // Sprite state machine
 #define SPRITE_IDLE						0b00
@@ -84,6 +86,7 @@ uint16_t instruction;			// Current instruction
 uint32_t register_file[16];		// Array of 16 x 32bit registers
 uint16_t flags_register;	   	// Flag registers [ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL]
 uint16_t target_register;		// Target for some memory read operations
+uint16_t offset_register;		// Used in relative addressing modes
 uint16_t cpu_state = CPU_INIT;	// Default state to boot from
 uint16_t CALLSP;				// Branch stack pointer
 uint32_t CALLSTACK[16];			// Branch stack
@@ -795,6 +798,23 @@ void execute(uint16_t instr)
 				}
 				break;
 
+				case 10: // r1 <- (dword)([IP+2],[IP+4] + r2)
+				{
+					#if defined(DEBUG_EXECUTE)
+					uint16_t *wordsram0 = (uint16_t *)&SRAM[IP+2];
+					uint16_t *wordsram1 = (uint16_t *)&SRAM[IP+4];
+					printf("%.8X: ldidx.d/leaidx r%d, %.4X%.4X + r%d (%.8x)\n", IP, r1, *wordsram0, *wordsram1, r2, register_file[r2]);
+					#endif
+					target_register = r1;
+					offset_register = r2;
+					sram_enable_byteaddress = 0;
+					sram_addr = IP + 2;
+					sram_read_req = 1;
+					IP = IP + 6; // Skip the DWORD read read plus the instruction
+					cpu_state = CPU_READ_DATAH_OFFSET;
+				}
+				break;
+
 				default:
 				{
 					IP = IP + 2;
@@ -1261,6 +1281,24 @@ void CPUMain()
 		case CPU_EXECUTE_INSTRUCTION:
 		{
 			execute(instruction);
+		}
+		break;
+
+		case CPU_READ_DATAH_OFFSET:
+		{
+			register_file[target_register] = (sram_rdata<<16) | (register_file[target_register]&0x0000FFFF);
+			sram_addr = sram_addr + 2;
+			cpu_state = CPU_READ_DATAL_OFFSET;
+		}
+		break;
+
+		case CPU_READ_DATAL_OFFSET:
+		{
+			register_file[target_register] = ((register_file[target_register]&0xFFFF0000) | sram_rdata) + register_file[offset_register];
+			sram_enable_byteaddress = 0;
+			sram_addr = IP;
+			sram_read_req = 1;
+			cpu_state = CPU_FETCH_INSTRUCTION;
 		}
 		break;
 

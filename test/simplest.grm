@@ -1721,9 +1721,11 @@ void print(char* message)
 {
     short fontbyte, charbyte, charrow, charcol, i, x, y;
     i=0;
+
+    // Loop until we encounter a zero terminator
     do
     {
-        if (message[i] == 0)
+        if (message[i] == 0) // Zero terminator, bail out
             return;
         charbyte = message[i]-32;
         charrow = (charbyte>>5)*8;

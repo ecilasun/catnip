@@ -471,7 +471,7 @@ public:
 	// Decodes into two individual LD.W instuctions
 	int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
 	{
-		int r1=0;
+		int r1=0,r2=0;
 		sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
 		uint32_t extra_dword = 0;
 		if (strstr(_parser_table[_current_parser_offset+2].m_Value, "0x"))
@@ -502,7 +502,7 @@ public:
 
 		unsigned int code = 0x04; // DW2R
 		unsigned short gencode;
-		gencode = m_Opcode | (code<<4) | (r1<<8);
+		gencode = m_Opcode | (code<<4) | (r1<<8) | (r2<<12);
 		_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
 		_binary_output[_current_binary_offset++] = gencode&0x00FF;
 		_binary_output[_current_binary_offset++] = (extra_dword&0xFF000000)>>24;
@@ -511,6 +511,59 @@ public:
 		_binary_output[_current_binary_offset++] = (extra_dword&0x000000FF);
 
 		return 3;
+	}
+};
+
+class CLeaRelOp : public CAssemblerTokenCompiler
+{
+public:
+	CLeaRelOp(const unsigned short _opcode) { m_Opcode = _opcode; }
+
+	// Not a real instruction
+	// Decodes into two individual LD.W instuctions
+	int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
+	{
+		int r1=0,r2=0;
+		sscanf(_parser_table[_current_parser_offset+1].m_Value, "r%d", &r1);
+		sscanf(_parser_table[_current_parser_offset+2].m_Value, "r%d", &r2);
+		uint32_t extra_dword = 0;
+		if (strstr(_parser_table[_current_parser_offset+3].m_Value, "0x"))
+			sscanf(_parser_table[_current_parser_offset+3].m_Value, "%x", &extra_dword);
+		else
+		{
+			extra_dword = 0xFFFFFFFF; // To be patched later.
+			const char *labelname = _parser_table[_current_parser_offset+3].m_Value;
+
+			bool labelfound = false;
+			for (unsigned int i=0; i<s_num_parser_entries; ++i)
+			{
+				if (strcmp(_parser_table[i].m_Value, "@LABEL") == 0 && i!=_current_parser_offset)
+				{
+					if (strcmp(_parser_table[i+1].m_Value, labelname)==0)
+					{
+						labelfound = true;
+						SLEAResolvePair postResolve;
+						postResolve.m_PatchAddressPointer = _current_binary_offset+2;
+						postResolve.m_LabelToResolve = &_parser_table[i];
+						m_LEAResolves.emplace_back(postResolve);
+					}
+				}
+			}
+			if (labelfound == false)
+				printf("ERROR: label %s not found for LEA intrinsic.\n", _parser_table[_current_parser_offset+3].m_Value);
+		}
+
+		unsigned int code = 0x0A; // DWREL2R
+		unsigned short gencode;
+		gencode = m_Opcode | (code<<4) | (r1<<8) | (r2<<12);
+		_binary_output[_current_binary_offset++] = (gencode&0xFF00)>>8;
+		_binary_output[_current_binary_offset++] = gencode&0x00FF;
+		_binary_output[_current_binary_offset++] = (extra_dword&0xFF000000)>>24;
+		_binary_output[_current_binary_offset++] = (extra_dword&0x00FF0000)>>16;
+		_binary_output[_current_binary_offset++] = (extra_dword&0x0000FF00)>>8;
+		_binary_output[_current_binary_offset++] = (extra_dword&0x000000FF);
+
+		return 4;
 	}
 };
 
@@ -1051,6 +1104,7 @@ CLogicOpNoop s_logicop_noop(0x0000);
 CCallOp s_callop(0x0001);
 CMathOp s_mathop(0x0002);
 CLeaOp s_leaop(0x0003); // Not a real instruction!
+CLeaRelOp s_learelop(0x0003); // Not a real instruction!
 CLDBOp s_ldbop(0x0003);
 CSTBOp s_stbop(0x0003);
 CLDDOp s_lddop(0x0003);
@@ -1112,6 +1166,7 @@ const SAssemblerPair keywords[] =
 
 	{{"cp"}, &s_cpregop},
 
+	{{"leaidx"}, &s_learelop},
 	{{"lea"}, &s_leaop},
 
 	{{"ret"}, &s_rethaltop},

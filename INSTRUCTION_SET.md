@@ -415,7 +415,7 @@ E:B  A:7  0001:MEM2REG rA, [rB] - ld.w
           0111:BYTE2REG rA, [IP+2] (low 8 bit constant starting at IP+2) - ld.b
           1000:DWMEM2REG rA, [rB] - ld.d
           1001:REG2MEM [rA], rB - st.d
-          1010: RESERVED
+          1010:DWORDREL2REG rA, [IP+2:IP+4 + rB] (32 bit constant address starting at IP+2 plus offset) - ldidx.d
           1011: RESERVED
           1100: RESERVED
           1101: RESERVED
@@ -457,6 +457,7 @@ would set the register r1 to the VRAM start address, 0x80000000, and r2 to 0x00F
 NOTE: The byte access form only works on the lower 8 bits of registers.
 
 ### LD.D rA, {dword_mem_address}
+### Also aliased as: LEA rA, {dword_mem_address}
 Stores the contents of the DWORD address following this instruction in register rA.
 
 Example:
@@ -470,24 +471,24 @@ ld.d r1, VRAMSTART
 @DW 0x8000 0x0000
 ```
 
-### LD.REL.D rA, rB, rC / LD.REL.W rA, rB, rC / LD.REL.B rA, rB, rC (NOT IMPLEMENTED YET)
-Stores the contents of address pointed by rB plus offset in register rC in register rA.
+### LDIDX.D rA, rB, {dword_mem_address}
+### Also aliased as: LEAIDX rA, rB, {dword_mem_address}
+Stores the contents of given dword address plus offset in register rB in register rA.
 
 Example:
 ```c
 // Copies contents at [SPRITEMEMORY(r1)+r2] to  register r0
 // Effectively equal to:
-// r1 = SRAM[SPRITEMEMORY+r2];
-lea r1, SPRITEMEMORY
+// r1 = SRAM[SPRITEMEMORY+256];
 st.w r2, 0x0100
-ld.rel.w r0, r1, r2
+ldidx.d r0, r2, SPRITEMEMORY
 
 @ORG SPRITEMEMORY
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF ...
 ```
 
-### ST.REL.W rA, rB, rC / ST.REL.B rA, rB, rC (NOT IMPLEMENTED YET)
-Stores the contents of register rB address pointed by rA plus offset in register rC.
+### STIDX.D rA, rB, {dword_mem_address} (NOT IMPLEMENTED YET)
+N/A
 
 ---
 ## Return / Halt

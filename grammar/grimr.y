@@ -43,6 +43,7 @@ uint32_t HashString(const char *_str)
 enum EASTNodeType
 {
 	EN_Default,
+	EN_CompoundStatement,
 	EN_VarDeclStatement,
 	EN_ConstructDecl,
 	EN_Identifier,
@@ -104,8 +105,7 @@ enum EASTNodeType
 	EN_AudioSelect,
 	EN_In,
 	EN_Out,
-	EN_EndCodeBlock,
-	EN_BeginCodeBlock,
+	EN_CodeBlock,
 	EN_StackPush,
 	EN_StackPop,
 	EN_Decl,
@@ -113,7 +113,7 @@ enum EASTNodeType
 	EN_DeclArray,
 	EN_ArrayJunction,
 	EN_ArrayWithDataJunction,
-	EN_FuncHeader,
+	EN_TypedIdentifier,
 	EN_FuncDecl,
 	EN_Prologue,
 	EN_Epilogue,
@@ -124,6 +124,7 @@ enum EASTNodeType
 const char* NodeTypes[]=
 {
 	"EN_Default                   ",
+	"EN_CompoundStatement         ",
 	"EN_VarDeclStatement          ",
 	"EN_ConstructDecl             ",
 	"EN_Identifier                ",
@@ -185,8 +186,7 @@ const char* NodeTypes[]=
 	"EN_AudioSelect               ",
 	"EN_In                        ",
 	"EN_Out                       ",
-	"EN_EndCodeBlock              ",
-	"EN_BeginCodeBlock            ",
+	"EN_CodeBlock                 ",
 	"EN_StackPush                 ",
 	"EN_StackPop                  ",
 	"EN_Decl                      ",
@@ -194,7 +194,7 @@ const char* NodeTypes[]=
 	"EN_DeclArray                 ",
 	"EN_ArrayJunction             ",
 	"EN_ArrayWithDataJunction     ",
-	"EN_FuncHeader                ",
+	"EN_TypedIdentifier           ",
 	"EN_FuncDecl                  ",
 	"EN_Prologue                  ",
 	"EN_Epilogue                  ",
@@ -223,6 +223,7 @@ enum EOpcode
 	OP_BSR,
 	OP_ARRAYINDEX,
 	OP_LEA,
+	OP_LEA_RELATIVE,
 	OP_LOAD,
 	OP_DEFSTRING,
 	OP_STORE,
@@ -292,6 +293,7 @@ const std::string Opcodes[]={
 	"bsr",
 	"arrayindex",
 	"lea",
+	"leaidx",
 	"ld",
 	"defstring",
 	"st",
@@ -576,6 +578,11 @@ struct SASTScanContext
 		return std::string("r"+std::to_string(m_CurrentRegister));
 	}
 
+	std::string PreviousRegister()
+	{
+		return std::string("r"+std::to_string(m_CurrentRegister-1));
+	}
+
 	std::string PopRegister()
 	{
 		uint32_t r = --m_CurrentRegister;
@@ -693,12 +700,10 @@ SASTScanContext g_ASC;
 %token ABS VSYNC FSEL ASEL CLF SPRITE SPRITESHEET SPRITEORIGIN IN OUT
 %token INC_OP DEC_OP
 
-//%glr-parser
-//%expect-rr 1
-
-%precedence '='
 %left '-' '+'
 %left '*' '/'
+
+// %precedence '='
 // %precedence NEG
 // %right '^'
 //%nonassoc '('
@@ -718,7 +723,8 @@ SASTScanContext g_ASC;
 
 %type <astnode> code_block_start
 %type <astnode> code_block_end
-%type <astnode> code_block_body
+
+%type <astnode> compound_statement
 
 %type <astnode> primary_expression
 %type <astnode> unary_expression
@@ -726,7 +732,7 @@ SASTScanContext g_ASC;
 
 %type <astnode> variable_declaration_item
 %type <astnode> variable_declaration
-%type <astnode> function_header
+%type <astnode> typed_identifier
 %type <astnode> function_def
 %type <astnode> construct_def
 
@@ -1230,120 +1236,31 @@ expression_statement
 	;
 
 if_statement
-	: IF '(' expression ')' any_statement														{
+	: IF '(' expression ')' compound_statement													{
 																									$$ = new SASTNode(EN_If, "");
 																									$$->m_LineNumber = yylineno;
 
-																									// Create code block node
-																									SASTNode *ifblocknode = new SASTNode(EN_BeginCodeBlock, "");
-																									//ifblocknode->m_Opcode = OP_PUSHCONTEXT;
-
-																									// Grab the anystatement and insert it
-																									SASTNode *anystatement = g_ASC.PopNode();
-																									ifblocknode->m_ASTNodes.emplace(ifblocknode->m_ASTNodes.begin(), anystatement);
+																									SASTNode *ifblocknode = g_ASC.PopNode();
 
 																									std::string label = g_ASC.PushLabel("endif");
 																									SASTNode *callcode = new SASTNode(EN_JumpNZ, label);
 																									callcode->m_Opcode = OP_JUMPIFNOT;
 																									SASTNode *endlabel = new SASTNode(EN_Label, label);
 																									endlabel->m_Opcode = OP_LABEL;
-																									//g_ASC.PopLabel("endif");
-
 																									SASTNode *exprnode=g_ASC.PopNode();
+
 																									$$->PushNode(exprnode);
 																									$$->PushNode(callcode);
 																									$$->PushNode(ifblocknode);
 																									$$->PushNode(endlabel);
-																									//$$->m_Opcode = OP_IF;
 																									g_ASC.PushNode($$);
 																								}
-	| IF '(' expression ')' code_block_start code_block_body code_block_end						{
+	| IF '(' expression ')' compound_statement ELSE compound_statement							{
 																									$$ = new SASTNode(EN_If, "");
 																									$$->m_LineNumber = yylineno;
 
-																									// Remove epilogue
-																									g_ASC.PopNode();
-
-																									// Create code block node
-																									SASTNode *ifblocknode = new SASTNode(EN_BeginCodeBlock, "");
-																									//ifblocknode->m_Opcode = OP_PUSHCONTEXT;
-
-																									// Collect everything up till prologue
-																									bool done = false;
-																									do
-																									{
-																										SASTNode *n0 = g_ASC.PeekNode();
-																										done = n0->m_Type == EN_Prologue ? true:false;
-																										if (done)
-																											break;
-																										g_ASC.PopNode();
-																										ifblocknode->m_ASTNodes.emplace(ifblocknode->m_ASTNodes.begin(),n0);
-																									} while (1);
-
-																									// Remove prologue
-																									g_ASC.PopNode();
-
-																									std::string label = g_ASC.PushLabel("endif");
-																									SASTNode *callcode = new SASTNode(EN_JumpNZ, label);
-																									callcode->m_Opcode = OP_JUMPIFNOT;
-																									SASTNode *endlabel = new SASTNode(EN_Label, label);
-																									endlabel->m_Opcode = OP_LABEL;
-																									//g_ASC.PopLabel("endif");
-
-																									SASTNode *exprnode=g_ASC.PopNode();
-																									$$->PushNode(exprnode);
-																									$$->PushNode(callcode);
-																									$$->PushNode(ifblocknode);
-																									$$->PushNode(endlabel);
-																									//$$->m_Opcode = OP_IF;
-																									g_ASC.PushNode($$);
-																								}
-	| IF '(' expression ')' code_block_start code_block_body code_block_end ELSE code_block_start code_block_body code_block_end	{
-																									$$ = new SASTNode(EN_If, "");
-																									$$->m_LineNumber = yylineno;
-
-																									// Remove epilogue
-																									g_ASC.PopNode();
-
-																									// Create code block node
-																									SASTNode *elseblocknode = new SASTNode(EN_BeginCodeBlock, "");
-																									//elseblocknode->m_Opcode = OP_PUSHCONTEXT;
-
-																									SASTNode *ifblocknode = new SASTNode(EN_BeginCodeBlock, "");
-																									//ifblocknode->m_Opcode = OP_PUSHCONTEXT;
-
-																									// Collect everything up till prologue
-																									bool done = false;
-																									do
-																									{
-																										SASTNode *n0 = g_ASC.PeekNode();
-																										done = n0->m_Type == EN_Prologue ? true:false;
-																										if (done)
-																											break;
-																										g_ASC.PopNode();
-																										elseblocknode->m_ASTNodes.emplace(elseblocknode->m_ASTNodes.begin(),n0);
-																									} while (1);
-
-																									// Remove prologue
-																									g_ASC.PopNode();
-
-																									// Remove epilogue
-																									g_ASC.PopNode();
-
-																									// Collect everything up till prologue
-																									done = false;
-																									do
-																									{
-																										SASTNode *n0 = g_ASC.PeekNode();
-																										done = n0->m_Type == EN_Prologue ? true:false;
-																										if (done)
-																											break;
-																										g_ASC.PopNode();
-																										ifblocknode->m_ASTNodes.emplace(ifblocknode->m_ASTNodes.begin(),n0);
-																									} while (1);
-
-																									// Remove prologue
-																									g_ASC.PopNode();
+																									SASTNode *elseblocknode = g_ASC.PopNode();
+																									SASTNode *ifblocknode = g_ASC.PopNode();
 
 																									std::string label = g_ASC.PushLabel("endif");
 																									std::string finallabel = g_ASC.PushLabel("exitif");
@@ -1353,12 +1270,10 @@ if_statement
 																									endlabel->m_Opcode = OP_LABEL;
 																									SASTNode *exitlabel = new SASTNode(EN_Label, finallabel);
 																									exitlabel->m_Opcode = OP_LABEL;
-																									//g_ASC.PopLabel("endif");
-
 																									SASTNode *jumpnode = new SASTNode(EN_Jump, finallabel);
 																									jumpnode->m_Opcode = OP_JUMP;
-
 																									SASTNode *exprnode=g_ASC.PopNode();
+
 																									$$->PushNode(exprnode);
 																									$$->PushNode(callcode);
 																									$$->PushNode(ifblocknode);
@@ -1366,37 +1281,16 @@ if_statement
 																									$$->PushNode(endlabel);
 																									$$->PushNode(elseblocknode);
 																									$$->PushNode(exitlabel);
-																									//$$->m_Opcode = OP_IF;
 																									g_ASC.PushNode($$);
 																								}
 	;
 
 for_statement
-	: FOR '(' expression ';' expression ';' expression ')' code_block_start code_block_body code_block_end
-																								{
+	: FOR '(' expression ';' expression ';' expression ')' compound_statement					{
 																									$$ = new SASTNode(EN_For, "");
 																									$$->m_LineNumber = yylineno;
 
-																									// Remove epilogue
-																									g_ASC.PopNode();
-
-																									// Create code block node
-																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
-
-																									// Collect everything up till prologue
-																									bool done = false;
-																									do
-																									{
-																										SASTNode *n0 = g_ASC.PeekNode();
-																										done = n0->m_Type == EN_Prologue ? true:false;
-																										if (done)
-																											break;
-																										g_ASC.PopNode();
-																										codeblocknode->m_ASTNodes.emplace(codeblocknode->m_ASTNodes.begin(),n0);
-																									} while (1);
-
-																									// Remove prologue
-																									g_ASC.PopNode();
+																									SASTNode *codeblocknode = g_ASC.PopNode();
 
 																									std::string startlabel = g_ASC.PushLabel("beginfor");
 																									std::string label = g_ASC.PushLabel("endfor");
@@ -1426,30 +1320,11 @@ for_statement
 ;
 
 while_statement
-	: WHILE '(' expression ')' code_block_start code_block_body code_block_end					{
+	: WHILE '(' expression ')' compound_statement												{
 																									$$ = new SASTNode(EN_While, "");
 																									$$->m_LineNumber = yylineno;
 
-																									// Remove epilogue
-																									g_ASC.PopNode();
-
-																									// Create code block node
-																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
-
-																									// Collect everything up till prologue
-																									bool done = false;
-																									do
-																									{
-																										SASTNode *n0 = g_ASC.PeekNode();
-																										done = n0->m_Type == EN_Prologue ? true:false;
-																										if (done)
-																											break;
-																										g_ASC.PopNode();
-																										codeblocknode->m_ASTNodes.emplace(codeblocknode->m_ASTNodes.begin(),n0);
-																									} while (1);
-
-																									// Remove prologue
-																									g_ASC.PopNode();
+																									SASTNode *codeblocknode = g_ASC.PopNode();
 
 																									std::string startlabel = g_ASC.PushLabel("beginwhile");
 																									std::string label = g_ASC.PushLabel("endwhile");
@@ -1473,32 +1348,14 @@ while_statement
 																									//$$->m_Opcode = OP_WHILE;
 																									g_ASC.PushNode($$);
 																								}
-	| DO code_block_start code_block_body code_block_end WHILE '(' expression ')' ';'			{
+	| DO compound_statement WHILE '(' expression ')' ';'										{
 																									$$ = new SASTNode(EN_Do, "");
 																									$$->m_LineNumber = yylineno;
 
 																									SASTNode *exprnode=g_ASC.PopNode();
 
-																									// Remove epilogue
-																									g_ASC.PopNode();
-
 																									// Create code block node
-																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
-
-																									// Collect everything up till prologue
-																									bool done = false;
-																									do
-																									{
-																										SASTNode *n0 = g_ASC.PeekNode();
-																										done = n0->m_Type == EN_Prologue ? true:false;
-																										if (done)
-																											break;
-																										g_ASC.PopNode();
-																										codeblocknode->m_ASTNodes.emplace(codeblocknode->m_ASTNodes.begin(),n0);
-																									} while (1);
-
-																									// Remove prologue
-																									g_ASC.PopNode();
+																									SASTNode *codeblocknode = g_ASC.PopNode();
 
 																									std::string startlabel = g_ASC.PushLabel("begindowhile");
 																									std::string label = g_ASC.PushLabel("enddowhile");
@@ -1870,8 +1727,14 @@ expression_list
 	;
 
 parameter_list
-	: '(' ')'																					{}
-	| '(' expression_list ')'																	{}
+	: '(' ')'																					{
+																								}
+	| '(' expression_list ')'																	{
+																									/*$$ = g_ASC.PopNode();
+																									$$->m_Type = EN_StackPush;
+																									$$->m_Opcode = OP_PUSH;
+																									g_ASC.PushNode($$);*/
+																								}
 	;
 
 input_param_list
@@ -1902,6 +1765,7 @@ functioncall_statement
 	: simple_identifier parameter_list ';'														{
 																									$$ = new SASTNode(EN_Call, "");
 																									$$->m_LineNumber = yylineno;
+
 																									bool done = false;
 																									int paramcount = 0;
 																									do
@@ -1917,6 +1781,7 @@ functioncall_statement
 																										$$->m_ASTNodes.emplace($$->m_ASTNodes.begin(),paramnode);
 																										++paramcount;
 																									} while (1);
+
 																									SASTNode *namenode = g_ASC.PopNode();
 																									uint32_t hash = HashString(namenode->m_Value.c_str());
 																									SFunction *func = g_ASC.FindFunction(hash);
@@ -1927,6 +1792,7 @@ functioncall_statement
 																										printf("ERROR: Function %s not declared before use\n", namenode->m_Value.c_str());
 																										g_ASC.m_CompileFailed = true;
 																									}
+
 																									//$$->PushNode(namenode); // No need to push name node, this is part of the 'call' opcode (as a target label)
 																									$$->m_Opcode = OP_CALL;
 																									$$->m_Value = namenode->m_Value;
@@ -2055,35 +1921,32 @@ any_statement
 																								}
 	;
 
-code_block_body
-	: any_statement
-	| code_block_body any_statement
-	;
-
-function_header
-	: type_name simple_identifier																{
-																									SASTNode *namenode = g_ASC.PopNode();
-																									$$ = new SASTNode(EN_FuncHeader, "");
+compound_statement
+	: any_statement																				{
+																									$$ = new SASTNode(EN_CompoundStatement, "");
 																									$$->m_LineNumber = yylineno;
-																									$$->PushNode(namenode);
-																									g_ASC.m_CurrentFunctionName = namenode->m_Value;
-																									g_ASC.m_CurrentFunctionTypeName = g_ASC.m_CurrentTypeName;
-																									g_ASC.m_IsConstruct = g_ASC.m_CurrentTypeName == TN_CONSTRUCT ? true : false;
+																									SASTNode *singlestatement = g_ASC.PopNode();
+																									$$->PushNode(singlestatement);
 																									g_ASC.PushNode($$);
 																								}
-	;
-
-construct_def
-	: function_header code_block_start code_block_body code_block_end ';'						{
-																									SASTNode *declnode = new SASTNode(EN_ConstructDecl, "");
-																									declnode->m_LineNumber = yylineno;
+	| code_block_start code_block_end															{	// Empty compound statement
+																									$$ = new SASTNode(EN_CompoundStatement, "");
+																									$$->m_LineNumber = yylineno;
+																									// Remove epilogue
+																									g_ASC.PopNode();
+																									// Remove prologue
+																									g_ASC.PopNode();
+																									g_ASC.PushNode($$);
+																								}
+	| code_block_start block_item_list code_block_end											{
+																									$$ = new SASTNode(EN_CompoundStatement, "");
+																									$$->m_LineNumber = yylineno;
 
 																									// Remove epilogue
 																									g_ASC.PopNode();
 
 																									// Create code block node
-																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
-																									//codeblocknode->m_Opcode = OP_PUSHCONTEXT;
+																									SASTNode *codeblocknode = new SASTNode(EN_CodeBlock, "");
 
 																									// Collect everything up till prologue
 																									bool done = false;
@@ -2099,6 +1962,37 @@ construct_def
 
 																									// Remove prologue
 																									g_ASC.PopNode();
+
+																									$$->m_ASTNodes.push_back(codeblocknode);
+																									g_ASC.PushNode($$);
+																								}
+	;
+
+block_item_list
+	: any_statement
+	| block_item_list any_statement
+	;
+
+typed_identifier
+	: type_name simple_identifier																{
+																									SASTNode *namenode = g_ASC.PopNode();
+																									$$ = new SASTNode(EN_TypedIdentifier, "");
+																									$$->m_LineNumber = yylineno;
+																									$$->PushNode(namenode);
+																									g_ASC.m_CurrentFunctionName = namenode->m_Value;
+																									g_ASC.m_CurrentFunctionTypeName = g_ASC.m_CurrentTypeName;
+																									g_ASC.m_IsConstruct = g_ASC.m_CurrentTypeName == TN_CONSTRUCT ? true : false;
+																									g_ASC.PushNode($$);
+																								}
+	;
+
+construct_def
+	: typed_identifier compound_statement ';'													{
+																									SASTNode *declnode = new SASTNode(EN_ConstructDecl, "");
+																									declnode->m_LineNumber = yylineno;
+
+																									// Remove compound statemebt
+																									SASTNode *codeblocknode = g_ASC.PopNode();
 
 																									// Remove header (contains name as subnode)
 																									g_ASC.PopNode();
@@ -2126,34 +2020,15 @@ construct_def
 	;
 
 function_def
-	: function_header function_parameters code_block_start code_block_body code_block_end		{
+	: typed_identifier function_parameters compound_statement									{
 																									SASTNode *declnode = new SASTNode(EN_FuncDecl, "");
 																									declnode->m_LineNumber = yylineno;
 
-																									// Remove epilogue
-																									g_ASC.PopNode();
-
-																									// Create code block node
-																									SASTNode *codeblocknode = new SASTNode(EN_BeginCodeBlock, "");
-																									//codeblocknode->m_Opcode = OP_PUSHCONTEXT;
-
-																									// Collect everything up till prologue
-																									bool done = false;
-																									do
-																									{
-																										SASTNode *n0 = g_ASC.PeekNode();
-																										done = n0->m_Type == EN_Prologue ? true:false;
-																										if (done)
-																											break;
-																										g_ASC.PopNode();
-																										codeblocknode->m_ASTNodes.emplace(codeblocknode->m_ASTNodes.begin(),n0);
-																									} while (1);
-
-																									// Remove prologue
-																									g_ASC.PopNode();
+																									// Remove code block
+																									SASTNode *codeblocknode = g_ASC.PopNode();
 
 																									// Collect call parameter nodes
-																									done = false;
+																									bool done = false;
 																									SASTNode *tmp = new SASTNode(EN_Default, "");
 																									do
 																									{
@@ -2693,8 +2568,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			{
 				g_ASC.PushRegister(); // Have to skip over the one we already read as srcA
 				std::string trg = g_ASC.PushRegister();
-				node->m_Instructions += std::string("\n") + "lea " + trg + ", " + var->m_Scope + ":" + var->m_Name;
-				node->m_Instructions += std::string("\n") + "st"+TypeNameToInstructionSize[var->m_TypeName]+" [" + trg + "], " + srcA;
+				node->m_Instructions += std::string("\n") + Opcodes[OP_LEA] + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
+				node->m_Instructions += std::string("\n") + Opcodes[OP_STORE] + TypeNameToInstructionSize[var->m_TypeName]+" [" + trg + "], " + srcA;
 				g_ASC.PopRegister(); // Discard trg
 				g_ASC.PopRegister(); // Discard second copy of srcA
 				g_ASC.m_InstructionCount+=2;
@@ -2746,7 +2621,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string trg = g_ASC.PushRegister();
 			g_ASC.PopRegister();
 			std::string src = g_ASC.PopRegister();
-			node->m_Instructions = "lea " + trg + ", " + node->m_Value;
+			node->m_Instructions = Opcodes[OP_LEA] + " " + trg + ", " + node->m_Value;
 			if (node->m_Offset != 0)
 			{
 				std::stringstream stream;
@@ -2765,7 +2640,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string trg = g_ASC.PushRegister();
 			g_ASC.PopRegister();
 			std::string src = g_ASC.PopRegister();
-			node->m_Instructions = "lea " + trg + ", " + node->m_Value;
+			node->m_Instructions = Opcodes[OP_LEA] + " " + trg + ", " + node->m_Value;
 			if (node->m_Offset != 0)
 			{
 				std::stringstream stream;
@@ -2851,7 +2726,7 @@ bool CompileGrimR(const char *_filename)
 	fprintf(fp, "call main\n");
 	fprintf(fp, "ld.w r0, 0x0\n");
 	fprintf(fp, "@LABEL infloop\n");
-	fprintf(fp, "vsync\n");
+	//fprintf(fp, "vsync\n");
 	fprintf(fp, "fsel r0\n");
 	fprintf(fp, "inc r0\n");
 	fprintf(fp, "jmp infloop\n");
