@@ -102,6 +102,48 @@ public:
 	}
 };
 
+// Code segment marker
+class CCodeOp : public CAssemblerTokenCompiler
+{
+public:
+	CCodeOp(const unsigned short _opcode) { m_Opcode = _opcode; }
+
+	// INSTRUCTION: NONE - @CODE
+	int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
+	{
+		// TODO
+		return 1;
+	}
+};
+
+// Data segment marker
+class CDataOp : public CAssemblerTokenCompiler
+{
+public:
+	CDataOp(const unsigned short _opcode) { m_Opcode = _opcode; }
+
+	// INSTRUCTION: NONE - @DATA
+	int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
+	{
+		// TODO
+		return 1;
+	}
+};
+
+// External dependency
+class CExternOp : public CAssemblerTokenCompiler
+{
+public:
+	CExternOp(const unsigned short _opcode) { m_Opcode = _opcode; }
+
+	// INSTRUCTION: NONE - @EXTERN labelname
+	int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
+	{
+		_parser_table[_current_parser_offset].m_LabelMemoryOffset = _current_binary_offset;
+		return 2;
+	}
+};
+
 // Call target or address marker
 class CLabelOp : public CAssemblerTokenCompiler
 {
@@ -112,7 +154,7 @@ public:
 	int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
 	{
 		//printf("Code label %s\n", _parser_table[_current_parser_offset+1].m_Value);
-		// Stash the current binray offset so that we can fetch it later on
+		// Stash the current binary offset so that we can fetch it later on
 		_parser_table[_current_parser_offset].m_LabelMemoryOffset = _current_binary_offset;
 		return 2;
 	}
@@ -336,7 +378,7 @@ public:
 			unsigned int targetfound = 0;
 			for (unsigned int i=0; i<s_num_parser_entries; ++i)
 			{
-				if (strcmp(_parser_table[i].m_Value, "@LABEL") == 0 && i!=_current_parser_offset)
+				if ((strcmp(_parser_table[i].m_Value, "@LABEL") == 0 || strcmp(_parser_table[i].m_Value, "@EXTERN") == 0) && i!=_current_parser_offset)
 				{
 					if (strcmp(_parser_table[i+1].m_Value, _parser_table[_current_parser_offset+1].m_Value)==0)
 					{
@@ -468,7 +510,7 @@ public:
 	CLeaOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
 	// Not a real instruction
-	// Decodes into two individual LD.W instuctions
+	// Decodes into two individual LD.D instuctions
 	int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
 	{
 		int r1=0,r2=0;
@@ -520,7 +562,7 @@ public:
 	CLeaRelOp(const unsigned short _opcode) { m_Opcode = _opcode; }
 
 	// Not a real instruction
-	// Decodes into two individual LD.W instuctions
+	// Decodes into two individual LDREL.D instuctions
 	int InterpretKeyword(SParserItem *_parser_table, unsigned int _current_parser_offset, unsigned char *_binary_output, unsigned int &_current_binary_offset) override
 	{
 		int r1=0,r2=0;
@@ -1093,6 +1135,9 @@ public:
 COriginOp s_originop(0x0);
 CDataWordOp s_datawordop(0x0);
 CLabelOp s_labelop(0x0);
+CExternOp s_externlop(0x0);
+CCodeOp s_codeop(0x0);
+CDataOp s_dataop(0x0);
 CLogicOpOr s_logicop_or(0x0000);
 CLogicOpAnd s_logicop_and(0x0000);
 CLogicOpXor s_logicop_xor(0x0000);
@@ -1130,6 +1175,9 @@ const SAssemblerPair keywords[] =
 	{{"@ORG"}, &s_originop},
 	{{"@DW"}, &s_datawordop},
 	{{"@LABEL"}, &s_labelop},
+	{{"@EXTERN"}, &s_externlop},
+	{{"@CODE"}, &s_codeop},
+	{{"@DATA"}, &s_dataop},
 
 	{{"or"}, &s_logicop_or},
 	{{"and"}, &s_logicop_and},
@@ -1208,7 +1256,7 @@ int find_token(const char *token)
 	return -1;
 }
 
-int parse_nip(const char *_inputtext)
+int compile_asm(const char *_inputtext)
 {
 	char *parsedat = const_cast<char*>(_inputtext);
 
@@ -1388,8 +1436,8 @@ int AssembleBinary(const char *_inputname, const char *_outputname)
 	}
 
 	// Generate binary blob
-	if (parse_nip(filedata)!=0)
-		printf("ERROR: Could not parse input file\n");
+	if (compile_asm(filedata)!=0)
+		printf("ERROR: Could not assemble input file\n");
 	
 	// Dump binary blob
 	if (strstr(_outputname,".mif"))

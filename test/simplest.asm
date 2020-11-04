@@ -8,6 +8,8 @@
 # --------------------------------------
 
 @ORG 0x00000000
+@CODE
+
 call _builtin_global_init
 call main
 ld.w r0, 0x0
@@ -1062,6 +1064,7 @@ ret
 # line 1870
 # End of function main
 
+@DATA
 
 # --------------------------------------
 #               Constructs              

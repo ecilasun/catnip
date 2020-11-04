@@ -2722,6 +2722,7 @@ bool CompileGrimR(const char *_filename)
 
 	// Add boot code
 	fprintf(fp, "@ORG 0x00000000\n");
+	fprintf(fp, "@CODE\n\n");
 	fprintf(fp, "call _builtin_global_init\n");
 	fprintf(fp, "call main\n");
 	fprintf(fp, "ld.w r0, 0x0\n");
@@ -2761,7 +2762,9 @@ bool CompileGrimR(const char *_filename)
 		if (g_ASC.m_Functions[i]->m_RefCount == 0)
 			printf("WARNING: Function '%s %s' not referenced in code, removing code.\n", TypeNames[g_ASC.m_Functions[i]->m_ReturnType], g_ASC.m_Functions[i]->m_Name.c_str());
 
-	fprintf(fp, "\n# --------------------------------------\n");
+	fprintf(fp, "@DATA\n\n");
+
+	fprintf(fp, "# --------------------------------------\n");
 	fprintf(fp, "#               Constructs              \n");
 	fprintf(fp, "# --------------------------------------\n\n");
 
