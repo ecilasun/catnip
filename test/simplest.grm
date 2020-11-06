@@ -10,6 +10,7 @@ char* VBSENABLE = 0x8000C001;
 int* VBLANKSERVICE = 0x8000C004;
 short seed = 7;
 short ac = 0;
+short frame = 0;
 
 construct TestConstruct
 {
@@ -1736,7 +1737,7 @@ void print(char* message)
             {
                 fontbyte = font[charcol + x + ((y+charrow)<<8)];
                 if (fontbyte==0)
-                    VRAM[i*8+x+(y<<8)] = 0x0;
+                    VRAM[i*8+x+(y<<8)] = y+frame;
             }
         }
         ++i;
@@ -1746,7 +1747,6 @@ void print(char* message)
 
 void main()
 {
-    short frame = 0;
     short i, samples;
     short posX[8] = {0,92,63,18,108,12,43,31}, dirX[8] = {1,2,1,2,2,4,3,3};
     short posY[8] = {16,44,32,24,51,76,94,41}, dirY[8] = {0,1,1,3,2,2,3,4};
@@ -1854,10 +1854,12 @@ void main()
 
         // Swap frames to reveal what we've drawn so far
         // while simultaneously selecting the other frame for write
+        // If key 0 is held, roll border color
         in(&portcheck, 0);
         if (portcheck)
             BORDERCOLOR[0] = roll>>3;
 
+        // If key 1 is held, pause here
         do{
             in(&portcheck, 1);
         } while(portcheck);

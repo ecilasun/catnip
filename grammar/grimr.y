@@ -2734,7 +2734,7 @@ bool CompileGrimR(const char *_filename)
 	fprintf(fp, "# End boot\n");
 
 	fprintf(fp, "\n# --------------------------------------\n");
-	fprintf(fp, "#              Global Code              \n");
+	fprintf(fp, "#               Global Init               \n");
 	fprintf(fp, "# --------------------------------------\n\n");
 	fprintf(fp, "@LABEL _builtin_global_init\n");
 
