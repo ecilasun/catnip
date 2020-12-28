@@ -2,9 +2,9 @@
 
 // GrimR : Person Wearing A Mask / Helmet / The Fierce One
 #include "../grammar/grimr.y.hpp"
-extern bool CompileGrimR(const char *_filename);
+extern bool GenerateASM(const char *_filename, bool _forX64);
 
-int CompileGrimR(char *_inputname, const char *_outputname)
+int CompileGrimR(char *_inputname, const char *_outputname, bool _forX64)
 {
 	// Test Flex/Bison code
 	extern FILE *yyin;
@@ -14,7 +14,7 @@ int CompileGrimR(char *_inputname, const char *_outputname)
 	fclose(yyin);
 
 	printf("Compiling: %s\n", _inputname);
-	bool failed = CompileGrimR(_outputname);
+	bool failed = GenerateASM(_outputname, _forX64);
 
 	return failed ? -1 : 0;
 }

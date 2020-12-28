@@ -1398,6 +1398,11 @@ int compile_asm(const char *_inputtext)
 	return 0;
 }
 
+int AssembleBinaryX64(const char *_inputname, const char *_outputname)
+{
+	return 0;
+}
+
 int AssembleBinary(const char *_inputname, const char *_outputname)
 {
 	printf("Parsing: %s\n", _inputname);

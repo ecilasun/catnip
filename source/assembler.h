@@ -6,3 +6,4 @@
 #endif
 #include "inttypes.h"
 int AssembleBinary(const char *_inputname, const char *_outputname);
+int AssembleBinaryX64(const char *_inputname, const char *_outputname);

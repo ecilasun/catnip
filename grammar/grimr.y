@@ -273,7 +273,77 @@ enum EOpcode
 	OP_BITOR,
 };
 
-const std::string Opcodes[]={
+const std::string OpcodesNeko[]={
+	"",
+	"st",
+	"st", // OP_PULLINITSTRING
+	"nop",
+	"inc",
+	"dec",
+	"lea",
+	"valof",
+	"not",
+	"ineg",
+	"imul",
+	"idiv",
+	"imod",
+	"iadd",
+	"iabs",
+	"bsl",
+	"bsr",
+	"arrayindex",
+	"lea",
+	"leaidx",
+	"ld",
+	"defstring",
+	"st",
+	"cp",
+	"bulkassign",
+	"dataarray",
+	"ret",
+	"ret",
+	"brk",
+	"resetregisters",
+	"fsel",
+	"asel",
+	"clf",
+	"sprite",
+	"spritesheet",
+	"spriteorigin",
+	"in",
+	"out",
+	"vsync",
+	"pushcontext",
+	"popcontext",
+	"pushregs",
+	"popregs",
+	"if",
+	"while",
+	"do",
+	"for",
+	"call",
+	"push",
+	"pop",
+	"pop",
+	"jmp",
+	"jmpif",
+	"jmpifnot",
+	"@LABEL",
+	"decl",
+	"dim",
+	"cmp",
+	"cmp",
+	"cmp",
+	"cmp",
+	"cmp",
+	"cmp",
+	"test",
+	"and",
+	"xor",
+	"or",
+};
+
+const std::string OpcodesX64[]={
 	"",
 	"st",
 	"st", // OP_PULLINITSTRING
@@ -483,6 +553,26 @@ struct SSymbol
 	uint32_t m_Address{0xFFFFFFFF};
 };
 
+std::string RegisterPool[]=
+{
+	"eax",
+	"ebx",
+	"ecx",
+	"edx",
+	"r10",
+	"r11",
+	"r12",
+	"r13",
+	"r14",
+	"r15",
+	"REGERR0",
+	"REGERR1",
+	"REGERR2",
+	"REGERR3",
+	"REGERR4",
+	"REGERR5",
+};
+
 class SASTNode
 {
 public:
@@ -570,23 +660,35 @@ struct SASTScanContext
 	std::string PushRegister()
 	{
 		uint32_t r = m_CurrentRegister++;
-		return std::string("r"+std::to_string(r));
+		if (m_X64Mode)
+			return std::string(RegisterPool[r]);
+		else
+			return std::string("r"+std::to_string(r));
 	}
 
 	std::string CurrentRegister()
 	{
-		return std::string("r"+std::to_string(m_CurrentRegister));
+		if (m_X64Mode)
+			return std::string(RegisterPool[m_CurrentRegister]);
+		else
+			return std::string("r"+std::to_string(m_CurrentRegister));
 	}
 
 	std::string PreviousRegister()
 	{
-		return std::string("r"+std::to_string(m_CurrentRegister-1));
+		if (m_X64Mode)
+			return std::string(RegisterPool[m_CurrentRegister-1]);
+		else
+			return std::string("r"+std::to_string(m_CurrentRegister-1));
 	}
 
 	std::string PopRegister()
 	{
 		uint32_t r = --m_CurrentRegister;
-		return std::string("r"+std::to_string(r));
+		if (m_X64Mode)
+			return std::string(RegisterPool[r]);
+		else
+			return std::string("r"+std::to_string(r));
 	}
 
 	void ResetRegister()
@@ -647,6 +749,7 @@ struct SASTScanContext
 	int m_InstructionCount{0};
 	bool m_IsConstruct{false};
 	bool m_CompileFailed{false};
+	bool m_X64Mode{false};
 };
 
 typedef void (*FVisitCallback)(SASTNode *node);
@@ -678,6 +781,11 @@ void SetAsLeftHandSideCallback(SASTNode *node)
 }
 
 SASTScanContext g_ASC;
+
+std::string GetOpcode(const int _idx)
+{
+	return g_ASC.m_X64Mode ? OpcodesX64[_idx] : OpcodesNeko[_idx];
+}
 
 %}
 
@@ -2145,16 +2253,17 @@ void DumpNodes(FILE *_fp, SASTNode *node)
 		fprintf(_fp, "# %s\n", node->m_Value.c_str());
 }
 
-void DumpCode(FILE *_fp, SASTNode *node)
+void DumpCode(FILE *_fp, SASTNode *node, bool _forX64)
 {
 	for (auto &subnode : node->m_ASTNodes)
-		DumpCode(_fp, subnode);
+		DumpCode(_fp, subnode, _forX64);
 	
 	if (node->m_Opcode != OP_PASSTHROUGH)
 	{
 		if (node->m_LineNumber!=0xFFFFFFFF && node->m_LineNumber!=s_prevLineNo)
 		{
-			fprintf(_fp, "# line %d\n", node->m_LineNumber);
+			if (!_forX64)
+				fprintf(_fp, "# line %d\n", node->m_LineNumber);
 			s_prevLineNo = node->m_LineNumber;
 		}
 		fprintf(_fp, "%s\n", node->m_Instructions.c_str());
@@ -2214,7 +2323,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string src = g_ASC.PushRegister();
 			//std::string src = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + src;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + src;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
@@ -2233,9 +2342,9 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				//var->m_RefCount++;
 				std::string val = g_ASC.PushRegister();
 				std::string trg = g_ASC.PushRegister();
-				node->m_Instructions = Opcodes[OP_LEA] + " " + val + ", " + var->m_Scope + ":" + var->m_Name;
-				node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode] + " " + trg;
-				node->m_Instructions += std::string("\n") + Opcodes[OP_STORE] + TypeNameToInstructionSize[var->m_TypeName] + " [" + val + "], " + trg;
+				node->m_Instructions = GetOpcode(OP_LEA) + " " + val + ", " + var->m_Scope + ":" + var->m_Name;
+				node->m_Instructions += std::string("\n") + GetOpcode(node->m_Opcode) + " " + trg;
+				node->m_Instructions += std::string("\n") + GetOpcode(OP_STORE) + TypeNameToInstructionSize[var->m_TypeName] + " [" + val + "], " + trg;
 				g_ASC.PopRegister(); // Forget trg and val
 				g_ASC.PopRegister();
 				g_ASC.m_InstructionCount+=3;
@@ -2251,14 +2360,14 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_PUSH:
 		{
 			std::string src = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + src;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + src;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
 
 		case OP_JUMP:
 		{
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + node->m_Value;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
@@ -2267,7 +2376,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_JUMPIFNOT:
 		{
 			std::string src = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value + ", " + src;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + node->m_Value + ", " + src;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
@@ -2282,7 +2391,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();
 			std::string trg = g_ASC.PushRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcB;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + srcA + ", " + srcB;
 			std::string test = "notequal";
 			// Hardware has: ZERO:NOTEQUAL:NOTZERO:LESS:GREATER:EQUAL
 			//if (node->m_Opcode == OP_CMPZ) test = "zero";
@@ -2294,7 +2403,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			if (node->m_Opcode == OP_CMPLE) test = "lessequal";
 			if (node->m_Opcode == OP_CMPGE) test = "greaterequal";
 
-			node->m_Instructions += std::string("\n") + Opcodes[OP_TEST] + " " + trg + ", " + test;
+			node->m_Instructions += std::string("\n") + GetOpcode(OP_TEST) + " " + trg + ", " + test;
 			g_ASC.m_InstructionCount+=2;
 		}
 		break;
@@ -2302,7 +2411,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_ABS:
 		{
 			std::string srcA = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcA;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + srcA + ", " + srcA;
 			g_ASC.PushRegister(); // Result goes back into srcA
 			g_ASC.m_InstructionCount+=1;
 		}
@@ -2317,7 +2426,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcB;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + srcA + ", " + srcB;
 			g_ASC.PushRegister(); // Result goes back into srcA
 			g_ASC.m_InstructionCount+=1;
 		}
@@ -2329,7 +2438,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcB;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + srcA + ", " + srcB;
 			g_ASC.PushRegister(); // Result goes back into srcA
 			g_ASC.m_InstructionCount+=1;
 		}
@@ -2350,12 +2459,12 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			{
 				//var->m_RefCount++;
 				//printf("arrayindex identifier type: %s[%d]\n", NodeTypes[node->m_Type], var->m_Dimension);
-				node->m_Instructions = Opcodes[OP_LEA] + " " + tgt + ", " + var->m_Scope + ":" + var->m_Name;
+				node->m_Instructions = GetOpcode(OP_LEA) + " " + tgt + ", " + var->m_Scope + ":" + var->m_Name;
 				g_ASC.m_InstructionCount+=1;
 				// This is not a 'real' array, fetch data at address to treat as array base address (Except for strings)
 				if (var->m_Dimension <= 1)
 				{
-					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + TypeNameToInstructionSize[var->m_TypeName] + " " + tgt + ", [" + tgt + "]";
+					node->m_Instructions += std::string("\n") + GetOpcode(OP_LOAD) + TypeNameToInstructionSize[var->m_TypeName] + " " + tgt + ", [" + tgt + "]";
 					g_ASC.m_InstructionCount+=1;
 				}
 			}
@@ -2380,21 +2489,21 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			{
 				// Need to multiply address by two for WORD or four for DWORD
 				if (var->m_TypeName == TN_WORD || var->m_TypeName == TN_WORDPTR)
-					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + ".w " + trg + ", 0x1";
+					node->m_Instructions += std::string("\n") + GetOpcode(OP_LOAD) + ".w " + trg + ", 0x1";
 				else
-					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + ".w " + trg + ", 0x2";
-				node->m_Instructions += std::string("\n") + Opcodes[OP_BSL] + " " + srcA + ", " + trg;
+					node->m_Instructions += std::string("\n") + GetOpcode(OP_LOAD) + ".w " + trg + ", 0x2";
+				node->m_Instructions += std::string("\n") + GetOpcode(OP_BSL) + " " + srcA + ", " + trg;
 				g_ASC.m_InstructionCount+=1;
 			}
 
-			node->m_Instructions += std::string("\n") + Opcodes[OP_ADD] + " " + srcA + ", " + srcB;
+			node->m_Instructions += std::string("\n") + GetOpcode(OP_ADD) + " " + srcA + ", " + srcB;
 			g_ASC.m_InstructionCount+=1;
 			g_ASC.PushRegister(); // re-use srcA as target
 
 			// Need to make sure [] on LHS doesn't run this code path but only RHS does
 			if (node->m_Side == RIGHT_HAND_SIDE)
 			{
-				node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + TypeNameToInstructionSizeNotPointer[var->m_TypeName] + " " + srcA + ", [" + srcA + "] # RHS array access, valueof: " + TypeNameToInstructionSizeNotPointer[var->m_TypeName];
+				node->m_Instructions += std::string("\n") + GetOpcode(OP_LOAD) + TypeNameToInstructionSizeNotPointer[var->m_TypeName] + " " + srcA + ", [" + srcA + "] # RHS array access, valueof: " + TypeNameToInstructionSizeNotPointer[var->m_TypeName];
 				g_ASC.m_InstructionCount+=1;
 			}
 		}
@@ -2421,13 +2530,13 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				else
 				{
 					func->m_RefCount++;
-					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + func->m_Name;
+					node->m_Instructions = GetOpcode(node->m_Opcode) + " " + trg + ", " + func->m_Name;
 					g_ASC.m_InstructionCount+=1;
 				}
 			}
 			else
 			{
-				node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
+				node->m_Instructions = GetOpcode(node->m_Opcode) + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
 				var->m_RefCount++;
 				g_ASC.m_InstructionCount+=1;
 			}
@@ -2438,7 +2547,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			// Load the address of the string we just generated
 			std::string trg = g_ASC.PushRegister();
-			node->m_Instructions = Opcodes[OP_LEA] + " " + trg + ", " + node->m_String->m_StringTempName;
+			node->m_Instructions = GetOpcode(OP_LEA) + " " + trg + ", " + node->m_String->m_StringTempName;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
@@ -2461,8 +2570,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			{
 				if (var)
 				{
-					node->m_Instructions = Opcodes[OP_LEA] + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
-					node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + TypeNameToInstructionSize[var->m_TypeName] + " " + trg + ", [" + trg + "]";
+					node->m_Instructions = GetOpcode(OP_LEA) + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
+					node->m_Instructions += std::string("\n") + GetOpcode(OP_LOAD) + TypeNameToInstructionSize[var->m_TypeName] + " " + trg + ", [" + trg + "]";
 					g_ASC.m_InstructionCount+=2;
 				}
 				else
@@ -2475,13 +2584,13 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			{
 				if (var)
 				{
-					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
+					node->m_Instructions = GetOpcode(node->m_Opcode) + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
 					g_ASC.m_InstructionCount+=1;
-					//node->m_Instructions += std::string("\n") + Opcodes[OP_LOAD] + TypeNameToInstructionSize[var->m_TypeName] + " " + trg + ", [" + trg + "]";
+					//node->m_Instructions += std::string("\n") + GetOpcode(OP_LOAD) + TypeNameToInstructionSize[var->m_TypeName] + " " + trg + ", [" + trg + "]";
 				}
 				else
 				{
-					node->m_Instructions = Opcodes[node->m_Opcode] + " " + trg + ", " + node->m_Value;
+					node->m_Instructions = GetOpcode(node->m_Opcode) + " " + trg + ", " + node->m_Value;
 					g_ASC.m_InstructionCount+=1;
 				}
 			}
@@ -2493,7 +2602,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_SPRITESHEET:
 		{
 			std::string srcA = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + srcA;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
@@ -2506,7 +2615,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		{
 			std::string srcB = g_ASC.PopRegister();
 			std::string srcA = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcB;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + srcA + ", " + srcB;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
@@ -2514,7 +2623,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_NOT:
 		{
 			std::string srcA = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA + ", " + srcA;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + srcA + ", " + srcA;
 			g_ASC.m_InstructionCount+=1;
 			g_ASC.PushRegister(); // Keep output in same register
 		}
@@ -2533,8 +2642,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				g_ASC.m_CompileFailed = true;
 			}
 			std::string srcA = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[OP_PUSH] + " " + srcA;
-			node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode];
+			node->m_Instructions = GetOpcode(OP_PUSH) + " " + srcA;
+			node->m_Instructions += std::string("\n") + GetOpcode(node->m_Opcode);
 			g_ASC.m_InstructionCount+=2;
 			g_ASC.PushRegister(); // Keep output in same register
 		}
@@ -2543,7 +2652,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_NEG:
 		{
 			std::string srcA = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + srcA;
 			g_ASC.m_InstructionCount+=1;
 			g_ASC.PushRegister(); // Keep output in same register
 		}
@@ -2553,7 +2662,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_DEC:
 		{
 			std::string srcA = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + srcA;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + srcA;
 			g_ASC.m_InstructionCount+=1;
 
 			// Assign back to self if this is a variable
@@ -2568,8 +2677,8 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			{
 				g_ASC.PushRegister(); // Have to skip over the one we already read as srcA
 				std::string trg = g_ASC.PushRegister();
-				node->m_Instructions += std::string("\n") + Opcodes[OP_LEA] + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
-				node->m_Instructions += std::string("\n") + Opcodes[OP_STORE] + TypeNameToInstructionSize[var->m_TypeName]+" [" + trg + "], " + srcA;
+				node->m_Instructions += std::string("\n") + GetOpcode(OP_LEA) + " " + trg + ", " + var->m_Scope + ":" + var->m_Name;
+				node->m_Instructions += std::string("\n") + GetOpcode(OP_STORE) + TypeNameToInstructionSize[var->m_TypeName]+" [" + trg + "], " + srcA;
 				g_ASC.PopRegister(); // Discard trg
 				g_ASC.PopRegister(); // Discard second copy of srcA
 				g_ASC.m_InstructionCount+=2;
@@ -2589,9 +2698,9 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string trg = g_ASC.PushRegister();
 			int value = strtol(node->m_Value.c_str(), nullptr, 16);
 			if (value <=65535 && value >=-65535)
-				node->m_Instructions = Opcodes[node->m_Opcode] + ".w" + " " + trg + ", " + node->m_Value;
+				node->m_Instructions = GetOpcode(node->m_Opcode) + ".w" + " " + trg + ", " + node->m_Value;
 			else
-				node->m_Instructions = Opcodes[node->m_Opcode] + ".d" + " " + trg + ", " + node->m_Value;
+				node->m_Instructions = GetOpcode(node->m_Opcode) + ".d" + " " + trg + ", " + node->m_Value;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
@@ -2601,7 +2710,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			// NOTE: target and source are swapped due to evaluation order
 			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
 			std::string srcA = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + TypeNameToInstructionSizeNotPointer[g_ASC.m_CurrentTypeName] + " [" + trg + "], " + srcA;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + TypeNameToInstructionSizeNotPointer[g_ASC.m_CurrentTypeName] + " [" + trg + "], " + srcA;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
@@ -2611,7 +2720,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			// NOTE: target and source are swapped due to evaluation order
 			std::string trg = g_ASC.PopRegister(); // We have no further use of the target register
 			std::string srcA = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[node->m_Opcode] + TypeNameToInstructionSizeNotPointer[g_ASC.m_CurrentTypeName] + " [" + trg + "], " + srcA;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + TypeNameToInstructionSizeNotPointer[g_ASC.m_CurrentTypeName] + " [" + trg + "], " + srcA;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
@@ -2621,7 +2730,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string trg = g_ASC.PushRegister();
 			g_ASC.PopRegister();
 			std::string src = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[OP_LEA] + " " + trg + ", " + node->m_Value;
+			node->m_Instructions = GetOpcode(OP_LEA) + " " + trg + ", " + node->m_Value;
 			if (node->m_Offset != 0)
 			{
 				std::stringstream stream;
@@ -2630,7 +2739,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				node->m_Instructions += std::string("\n") + "iadd " + trg + ", r15";
 				g_ASC.m_InstructionCount+=2;
 			}
-			node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode] + TypeNameToInstructionSize[node->m_TypeName] + " [" + trg + "], " + src;
+			node->m_Instructions += std::string("\n") + GetOpcode(node->m_Opcode) + TypeNameToInstructionSize[node->m_TypeName] + " [" + trg + "], " + src;
 			g_ASC.m_InstructionCount+=2;
 		}
 		break;
@@ -2640,7 +2749,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 			std::string trg = g_ASC.PushRegister();
 			g_ASC.PopRegister();
 			std::string src = g_ASC.PopRegister();
-			node->m_Instructions = Opcodes[OP_LEA] + " " + trg + ", " + node->m_Value;
+			node->m_Instructions = GetOpcode(OP_LEA) + " " + trg + ", " + node->m_Value;
 			if (node->m_Offset != 0)
 			{
 				std::stringstream stream;
@@ -2649,14 +2758,14 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 				node->m_Instructions += std::string("\n") + "iadd " + trg + ", r15";
 				g_ASC.m_InstructionCount+=2;
 			}
-			node->m_Instructions += std::string("\n") + Opcodes[node->m_Opcode] + TypeNameToInstructionSize[node->m_TypeName] + " [" + trg + "], " + src;
+			node->m_Instructions += std::string("\n") + GetOpcode(node->m_Opcode) + TypeNameToInstructionSize[node->m_TypeName] + " [" + trg + "], " + src;
 			g_ASC.m_InstructionCount+=2;
 		}
 		break;
 
 		case OP_CALL:
 		{
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + node->m_Value;
 			g_ASC.m_InstructionCount+=1;
 		}
 		break;
@@ -2669,7 +2778,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		break;
 
 		default:
-			node->m_Instructions = Opcodes[node->m_Opcode] + " " + node->m_Value;
+			node->m_Instructions = GetOpcode(node->m_Opcode) + " " + node->m_Value;
 			if (node->m_Opcode != OP_LABEL)
 				g_ASC.m_InstructionCount+=1;
 		break;
@@ -2682,9 +2791,11 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		node->m_Instructions.c_str());*/
 }
 
-bool CompileGrimR(const char *_filename)
+bool GenerateASM(const char *_filename, bool _forX64)
 {
 	FILE *fp = fopen(_filename, "w");
+
+	g_ASC.m_X64Mode = _forX64;
 
 	// Set up scope depth
 	int scopeDepth = 0;
@@ -2721,40 +2832,66 @@ bool CompileGrimR(const char *_filename)
 	fprintf(fp, "# --------------------------------------\n\n");
 
 	// Add boot code
-	fprintf(fp, "@ORG 0x00000000\n");
-	fprintf(fp, "@CODE\n\n");
-	fprintf(fp, "call _builtin_global_init\n");
-	fprintf(fp, "call main\n");
-	fprintf(fp, "ld.w r0, 0x0\n");
-	fprintf(fp, "@LABEL infloop\n");
-	//fprintf(fp, "vsync\n");
-	fprintf(fp, "fsel r0\n");
-	fprintf(fp, "inc r0\n");
-	fprintf(fp, "jmp infloop\n");
-	fprintf(fp, "# End boot\n");
+	if (_forX64)
+	{
+		fprintf(fp, "option casemap:none\n");
+		fprintf(fp, "includelib libucrt.lib\n");
+		fprintf(fp, "includelib libvcruntime.lib\n");
+		fprintf(fp, "includelib libcmt.lib\n");
+		fprintf(fp, "includelib kernel32.lib\n");
+	}
+	else
+	{
+		fprintf(fp, "@ORG 0x00000000\n");
+		fprintf(fp, "@CODE\n\n");
+		fprintf(fp, "call _builtin_global_init\n");
+		fprintf(fp, "call main\n");
+		fprintf(fp, "ld.w r0, 0x0\n");
+		fprintf(fp, "@LABEL infloop\n");
+		//fprintf(fp, "vsync\n");
+		fprintf(fp, "fsel r0\n");
+		fprintf(fp, "inc r0\n");
+		fprintf(fp, "jmp infloop\n");
+		fprintf(fp, "# End boot\n");
+	}
 
-	fprintf(fp, "\n# --------------------------------------\n");
-	fprintf(fp, "#               Global Init               \n");
-	fprintf(fp, "# --------------------------------------\n\n");
-	fprintf(fp, "@LABEL _builtin_global_init\n");
+	if (!_forX64)
+	{
+		fprintf(fp, "\n# --------------------------------------\n");
+		fprintf(fp, "#               Global Init               \n");
+		fprintf(fp, "# --------------------------------------\n\n");
+	}
+	if (_forX64)
+		fprintf(fp, "\n_builtin_global_init:\n");
+	else
+		fprintf(fp, "@LABEL _builtin_global_init\n");
 
 	// Dump free-standing code
 	s_prevLineNo = 0xCCCCCCCC;
 	for (auto &node : g_ASC.m_ASTNodes)
-		DumpCode(fp, node);
+		DumpCode(fp, node, _forX64);
 	
-	fprintf(fp, "ret\n");
+	if (_forX64)
+		fprintf(fp, "%s\n", GetOpcode(OP_RETURN).c_str());
+	else
+		fprintf(fp, "%s\n", GetOpcode(OP_RETURN).c_str());
 
-	fprintf(fp, "\n# --------------------------------------\n");
-	fprintf(fp, "#               Functions               \n");
-	fprintf(fp, "# --------------------------------------\n\n");
+	if (!_forX64)
+	{
+		fprintf(fp, "\n# --------------------------------------\n");
+		fprintf(fp, "#               Functions               \n");
+		fprintf(fp, "# --------------------------------------\n\n");
+	}
+
+	if (_forX64)
+		fprintf(fp, "\n.code\n\n");
 
 	// Dump functions
 	for (uint32_t i=0;i<g_ASC.m_Functions.size();++i)
 	{
 		if (g_ASC.m_Functions[i]->m_RefCount != 0)
 		{
-			DumpCode(fp, g_ASC.m_Functions[i]->m_RootNode);
+			DumpCode(fp, g_ASC.m_Functions[i]->m_RootNode, _forX64);
 		}
 	}
 
@@ -2762,11 +2899,17 @@ bool CompileGrimR(const char *_filename)
 		if (g_ASC.m_Functions[i]->m_RefCount == 0)
 			printf("WARNING: Function '%s %s' not referenced in code, removing code.\n", TypeNames[g_ASC.m_Functions[i]->m_ReturnType], g_ASC.m_Functions[i]->m_Name.c_str());
 
-	fprintf(fp, "@DATA\n\n");
+	if (_forX64)
+		fprintf(fp, ".data\n\n");
+	else
+		fprintf(fp, "@DATA\n\n");
 
-	fprintf(fp, "# --------------------------------------\n");
-	fprintf(fp, "#               Constructs              \n");
-	fprintf(fp, "# --------------------------------------\n\n");
+	if (!_forX64)
+	{
+		fprintf(fp, "# --------------------------------------\n");
+		fprintf(fp, "#               Constructs              \n");
+		fprintf(fp, "# --------------------------------------\n\n");
+	}
 
 	for (uint32_t i=0;i<g_ASC.m_Constructs.size();++i)
 	{
@@ -2775,9 +2918,12 @@ bool CompileGrimR(const char *_filename)
 		DumpConstruct(fp, g_ASC.m_Constructs[i], g_ASC.m_Constructs[i]->m_RootNode);
 	}
 
-	fprintf(fp, "\n# --------------------------------------\n");
-	fprintf(fp, "#               String Table             \n");
-	fprintf(fp, "# --------------------------------------\n\n");
+	if (!_forX64)
+	{
+		fprintf(fp, "\n# --------------------------------------\n");
+		fprintf(fp, "#               String Table             \n");
+		fprintf(fp, "# --------------------------------------\n\n");
+	}
 
 	auto beg = g_ASC.m_StringTable.begin();
 	auto end = g_ASC.m_StringTable.end();
@@ -2802,9 +2948,12 @@ bool CompileGrimR(const char *_filename)
 		printf("Found a vblank interrupt service\n"); */
 
 	// Dump symbol table
-	fprintf(fp, "\n# --------------------------------------\n");
-	fprintf(fp, "#              Symbol Table             \n");
-	fprintf(fp, "# --------------------------------------\n\n");
+	if (!_forX64)
+	{
+		fprintf(fp, "\n# --------------------------------------\n");
+		fprintf(fp, "#              Symbol Table             \n");
+		fprintf(fp, "# --------------------------------------\n\n");
+	}
 
 	for (auto &var : g_ASC.m_Variables)
 	{
@@ -2814,7 +2963,10 @@ bool CompileGrimR(const char *_filename)
 			printf("WARNING: Variable '%s %s' not referenced in code, removing initializer and allocated space.\n", TypeNames[var->m_TypeName], var->m_Name.c_str());
 			continue;
 		}
-		fprintf(fp, "@LABEL %s:%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
+		if (_forX64)
+			fprintf(fp, "%s:%s:\n", var->m_Scope.c_str(), var->m_Name.c_str());
+		else
+			fprintf(fp, "@LABEL %s:%s\n", var->m_Scope.c_str(), var->m_Name.c_str());
 		{
 			if (var->m_TypeName == TN_CONSTRUCT)
 			{
