@@ -7,950 +7,1072 @@
 #                Bootstrap              
 # --------------------------------------
 
-option casemap:none
-includelib libucrt.lib
-includelib libvcruntime.lib
-includelib libcmt.lib
-includelib kernel32.lib
+@ORG 0x00000000
+@CODE
 
-_builtin_global_init:
-lea eax, string_e84ead66
-lea ebx, :testmessage
-st.d [ebx], eax
+call _builtin_global_init
+call main
+ld.w r0, 0x0
+@LABEL infloop
+fsel r0
+inc r0
+jmp infloop
+# End boot
+
+# --------------------------------------
+#               Global Init               
+# --------------------------------------
+
+@LABEL _builtin_global_init
+# line 20
+lea r0, string_e84ead66
+lea r1, :testmessage
+st.d [r1], r0
 ret
 
-.code
+# --------------------------------------
+#               Functions               
+# --------------------------------------
 
 @LABEL vblankhandler
+# line 1667
 ret 
+# line 1668
 # End of function vblankhandler
 
 @LABEL sin
-lea eax, sin:s
-pop ebx
-st.w [eax], ebx
-lea eax, sin:s
-ld.w eax, [eax]
-ld.w ebx, 0x400
-imod eax, ebx
-lea ebx, :sinewave
-ld.w ecx, 0x1
-bsl eax, ecx
-iadd eax, ebx
-ld.w eax, [eax] # RHS array access, valueof: .w
-ld.w ebx, 0x4000
-ineg ebx
-iadd eax, ebx
-push eax
+# line 1683
+lea r0, sin:s
+pop r1
+st.w [r0], r1
+# line 1685
+lea r0, sin:s
+ld.w r0, [r0]
+ld.w r1, 0x400
+imod r0, r1
+lea r1, :sinewave
+ld.w r2, 0x1
+bsl r0, r2
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0x4000
+ineg r1
+iadd r0, r1
+push r0
 ret
+# line 1686
 # End of function sin
 
 @LABEL cos
-lea eax, cos:c
-pop ebx
-st.w [eax], ebx
-lea eax, cos:c
-ld.w eax, [eax]
-ld.w ebx, 0x100
-iadd eax, ebx
-ld.w ebx, 0x400
-imod eax, ebx
-lea ebx, :sinewave
-ld.w ecx, 0x1
-bsl eax, ecx
-iadd eax, ebx
-ld.w eax, [eax] # RHS array access, valueof: .w
-ld.w ebx, 0x4000
-ineg ebx
-iadd eax, ebx
-push eax
+# line 1688
+lea r0, cos:c
+pop r1
+st.w [r0], r1
+# line 1690
+lea r0, cos:c
+ld.w r0, [r0]
+ld.w r1, 0x100
+iadd r0, r1
+ld.w r1, 0x400
+imod r0, r1
+lea r1, :sinewave
+ld.w r2, 0x1
+bsl r0, r2
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0x4000
+ineg r1
+iadd r0, r1
+push r0
 ret
+# line 1691
 # End of function cos
 
 @LABEL squareWaveHarmonics
-ld.w eax, 0x0
-lea ebx, squareWaveHarmonics:cnt
-st.w [ebx], eax
-ld.w eax, 0x32
-lea ebx, squareWaveHarmonics:dutycycle
-st.w [ebx], eax
-ld.w eax, 0x10
-lea ebx, squareWaveHarmonics:f
-st.w [ebx], eax
+# line 1697
+ld.w r0, 0x0
+lea r1, squareWaveHarmonics:cnt
+st.w [r1], r0
+# line 1698
+ld.w r0, 0x32
+lea r1, squareWaveHarmonics:dutycycle
+st.w [r1], r0
+# line 1699
+ld.w r0, 0x10
+lea r1, squareWaveHarmonics:f
+st.w [r1], r0
 @LABEL begindowhile00000002
-ld.w eax, 0x0
-lea ebx, squareWaveHarmonics:harmonics
-st.w [ebx], eax
-ld.w eax, 0x0
-lea ebx, squareWaveHarmonics:a
-st.w [ebx], eax
-ld.w eax, 0x0
-lea ebx, squareWaveHarmonics:b
-st.w [ebx], eax
-lea eax, squareWaveHarmonics:dutycycle
-ld.w eax, [eax]
-ld.w ebx, 0x2
-imul eax, ebx
-ld.d ebx, 0x4cb2f
-imul eax, ebx
-ld.d ebx, 0x989680
-idiv eax, ebx
-lea ebx, squareWaveHarmonics:p
-st.w [ebx], eax
-ld.w eax, 0x0
-lea ebx, squareWaveHarmonics:harmonics
-st.w [ebx], eax
+# line 1702
+ld.w r0, 0x0
+lea r1, squareWaveHarmonics:harmonics
+st.w [r1], r0
+# line 1703
+ld.w r0, 0x0
+lea r1, squareWaveHarmonics:a
+st.w [r1], r0
+# line 1704
+ld.w r0, 0x0
+lea r1, squareWaveHarmonics:b
+st.w [r1], r0
+# line 1705
+lea r0, squareWaveHarmonics:dutycycle
+ld.w r0, [r0]
+ld.w r1, 0x2
+imul r0, r1
+ld.d r1, 0x4cb2f
+imul r0, r1
+ld.d r1, 0x989680
+idiv r0, r1
+lea r1, squareWaveHarmonics:p
+st.w [r1], r0
+# line 1706
+ld.w r0, 0x0
+lea r1, squareWaveHarmonics:harmonics
+st.w [r1], r0
 @LABEL beginfor00000000
-lea eax, squareWaveHarmonics:harmonics
-ld.w eax, [eax]
-ld.w ebx, 0xa
-cmp eax, ebx
-test eax, less
-jmpifnot endfor00000001, eax
-ld.w eax, 0xa
-lea ebx, squareWaveHarmonics:f
-ld.w ebx, [ebx]
-imul eax, ebx
-ld.w ebx, 0x2
-imul eax, ebx
-ld.d ebx, 0x4cb2f
-imul eax, ebx
-ld.d ebx, 0x989680
-idiv eax, ebx
-lea ebx, squareWaveHarmonics:cnt
-ld.w ebx, [ebx]
-imul eax, ebx
-lea ebx, squareWaveHarmonics:c
-st.w [ebx], eax
-lea eax, squareWaveHarmonics:a
-ld.w eax, [eax]
-lea ebx, squareWaveHarmonics:c
-ld.w ebx, [ebx]
-push ebx
+lea r0, squareWaveHarmonics:harmonics
+ld.w r0, [r0]
+ld.w r1, 0xa
+cmp r0, r1
+test r0, less
+jmpifnot endfor00000001, r0
+# line 1708
+ld.w r0, 0xa
+lea r1, squareWaveHarmonics:f
+ld.w r1, [r1]
+imul r0, r1
+ld.w r1, 0x2
+imul r0, r1
+ld.d r1, 0x4cb2f
+imul r0, r1
+ld.d r1, 0x989680
+idiv r0, r1
+lea r1, squareWaveHarmonics:cnt
+ld.w r1, [r1]
+imul r0, r1
+lea r1, squareWaveHarmonics:c
+st.w [r1], r0
+# line 1709
+lea r0, squareWaveHarmonics:a
+ld.w r0, [r0]
+lea r1, squareWaveHarmonics:c
+ld.w r1, [r1]
+push r1
 call sin
-pop ebx
-ld.w ecx, 0xa
-idiv ebx, ecx
-iadd eax, ebx
-lea ebx, squareWaveHarmonics:a
-st.w [ebx], eax
-lea eax, squareWaveHarmonics:b
-ld.w eax, [eax]
-lea ebx, squareWaveHarmonics:c
-ld.w ebx, [ebx]
-lea ecx, squareWaveHarmonics:p
-ld.w ecx, [ecx]
-ld.w edx, 0xa
-imul ecx, edx
-ineg ecx
-iadd ebx, ecx
-push ebx
+pop r1
+ld.w r2, 0xa
+idiv r1, r2
+iadd r0, r1
+lea r1, squareWaveHarmonics:a
+st.w [r1], r0
+# line 1710
+lea r0, squareWaveHarmonics:b
+ld.w r0, [r0]
+lea r1, squareWaveHarmonics:c
+ld.w r1, [r1]
+lea r2, squareWaveHarmonics:p
+ld.w r2, [r2]
+ld.w r3, 0xa
+imul r2, r3
+ineg r2
+iadd r1, r2
+push r1
 call sin
-pop ebx
-ld.w ecx, 0xa
-idiv ebx, ecx
-iadd eax, ebx
-lea ebx, squareWaveHarmonics:b
-st.w [ebx], eax
-lea eax, squareWaveHarmonics:harmonics
-ld.w eax, [eax]
-inc eax
-lea ebx, squareWaveHarmonics:harmonics
-st.w [ebx], eax
+pop r1
+ld.w r2, 0xa
+idiv r1, r2
+iadd r0, r1
+lea r1, squareWaveHarmonics:b
+st.w [r1], r0
+# line 1706
+lea r0, squareWaveHarmonics:harmonics
+ld.w r0, [r0]
+inc r0
+lea r1, squareWaveHarmonics:harmonics
+st.w [r1], r0
 jmp beginfor00000000
 @LABEL endfor00000001
-lea ebx, squareWaveHarmonics:a
-ld.w ebx, [ebx]
-lea ecx, squareWaveHarmonics:b
-ld.w ecx, [ecx]
-ineg ecx
-iadd ebx, ecx
-lea ecx, :ac
-ld.w ecx, [ecx]
-ld.w edx, 0x2
-imul ecx, edx
-ld.w edx, 0x0
-iadd ecx, edx
-lea edx, :ARAM
-ld.d edx, [edx]
-ld.w r10, 0x1
-bsl ecx, r10
-iadd ecx, edx
-st.w [ecx], ebx
-lea ebx, squareWaveHarmonics:a
-ld.w ebx, [ebx]
-lea ecx, squareWaveHarmonics:b
-ld.w ecx, [ecx]
-ineg ecx
-iadd ebx, ecx
-lea ecx, :ac
-ld.w ecx, [ecx]
-ld.w edx, 0x2
-imul ecx, edx
-ld.w edx, 0x1
-iadd ecx, edx
-lea edx, :ARAM
-ld.d edx, [edx]
-ld.w r10, 0x1
-bsl ecx, r10
-iadd ecx, edx
-st.w [ecx], ebx
-lea ebx, :ac
-ld.w ebx, [ebx]
-inc ebx
-lea ecx, :ac
-st.w [ecx], ebx
-lea ecx, :ac
-ld.w ecx, [ecx]
-ld.w edx, 0x200
-imod ecx, edx
-lea edx, :ac
-st.w [edx], ecx
-lea ecx, squareWaveHarmonics:cnt
-ld.w ecx, [ecx]
-inc ecx
-lea edx, squareWaveHarmonics:cnt
-st.w [edx], ecx
-lea edx, squareWaveHarmonics:cnt
-ld.w edx, [edx]
-ld.w r10, 0x200
-cmp edx, r10
-test edx, less
-jmpifnot enddowhile00000003, edx
+# line 1712
+lea r1, squareWaveHarmonics:a
+ld.w r1, [r1]
+lea r2, squareWaveHarmonics:b
+ld.w r2, [r2]
+ineg r2
+iadd r1, r2
+lea r2, :ac
+ld.w r2, [r2]
+ld.w r3, 0x2
+imul r2, r3
+ld.w r3, 0x0
+iadd r2, r3
+lea r3, :ARAM
+ld.d r3, [r3]
+ld.w r4, 0x1
+bsl r2, r4
+iadd r2, r3
+st.w [r2], r1
+# line 1713
+lea r1, squareWaveHarmonics:a
+ld.w r1, [r1]
+lea r2, squareWaveHarmonics:b
+ld.w r2, [r2]
+ineg r2
+iadd r1, r2
+lea r2, :ac
+ld.w r2, [r2]
+ld.w r3, 0x2
+imul r2, r3
+ld.w r3, 0x1
+iadd r2, r3
+lea r3, :ARAM
+ld.d r3, [r3]
+ld.w r4, 0x1
+bsl r2, r4
+iadd r2, r3
+st.w [r2], r1
+# line 1714
+lea r1, :ac
+ld.w r1, [r1]
+inc r1
+lea r2, :ac
+st.w [r2], r1
+# line 1715
+lea r2, :ac
+ld.w r2, [r2]
+ld.w r3, 0x200
+imod r2, r3
+lea r3, :ac
+st.w [r3], r2
+# line 1716
+lea r2, squareWaveHarmonics:cnt
+ld.w r2, [r2]
+inc r2
+lea r3, squareWaveHarmonics:cnt
+st.w [r3], r2
+# line 1717
+lea r3, squareWaveHarmonics:cnt
+ld.w r3, [r3]
+ld.w r4, 0x200
+cmp r3, r4
+test r3, less
+jmpifnot enddowhile00000003, r3
 jmp begindowhile00000002
 @LABEL enddowhile00000003
-lea edx, squareWaveHarmonics:cnt
-ld.w edx, [edx]
-push edx
+# line 1718
+lea r3, squareWaveHarmonics:cnt
+ld.w r3, [r3]
+push r3
 ret
+# line 1719
 # End of function squareWaveHarmonics
 
 @LABEL print
-lea eax, print:message
-pop ebx
-st.d [eax], ebx
-ld.w eax, 0x0
-lea ebx, print:i
-st.w [ebx], eax
+# line 1721
+lea r0, print:message
+pop r1
+st.d [r0], r1
+# line 1724
+ld.w r0, 0x0
+lea r1, print:i
+st.w [r1], r0
 @LABEL begindowhile0000000a
-lea eax, print:i
-ld.w eax, [eax]
-lea ebx, print:message
-ld.d ebx, [ebx]
-iadd eax, ebx
-ld.b eax, [eax] # RHS array access, valueof: .b
-ld.w ebx, 0x0
-cmp eax, ebx
-test eax, equal
-jmpifnot endif00000004, eax
+# line 1729
+lea r0, print:i
+ld.w r0, [r0]
+lea r1, print:message
+ld.d r1, [r1]
+iadd r0, r1
+ld.b r0, [r0] # RHS array access, valueof: .b
+ld.w r1, 0x0
+cmp r0, r1
+test r0, equal
+jmpifnot endif00000004, r0
+# line 1730
 ret 
 @LABEL endif00000004
-lea eax, print:i
-ld.w eax, [eax]
-lea ebx, print:message
-ld.d ebx, [ebx]
-iadd eax, ebx
-ld.b eax, [eax] # RHS array access, valueof: .b
-ld.w ebx, 0x20
-ineg ebx
-iadd eax, ebx
-lea ebx, print:charbyte
-st.w [ebx], eax
-lea eax, print:charbyte
-ld.w eax, [eax]
-ld.w ebx, 0x5
-bsr eax, ebx
-ld.w ebx, 0x8
-imul eax, ebx
-lea ebx, print:charrow
-st.w [ebx], eax
-lea eax, print:charbyte
-ld.w eax, [eax]
-ld.w ebx, 0x20
-imod eax, ebx
-ld.w ebx, 0x8
-imul eax, ebx
-lea ebx, print:charcol
-st.w [ebx], eax
-ld.w eax, 0x0
-lea ebx, print:y
-st.w [ebx], eax
+# line 1731
+lea r0, print:i
+ld.w r0, [r0]
+lea r1, print:message
+ld.d r1, [r1]
+iadd r0, r1
+ld.b r0, [r0] # RHS array access, valueof: .b
+ld.w r1, 0x20
+ineg r1
+iadd r0, r1
+lea r1, print:charbyte
+st.w [r1], r0
+# line 1732
+lea r0, print:charbyte
+ld.w r0, [r0]
+ld.w r1, 0x5
+bsr r0, r1
+ld.w r1, 0x8
+imul r0, r1
+lea r1, print:charrow
+st.w [r1], r0
+# line 1733
+lea r0, print:charbyte
+ld.w r0, [r0]
+ld.w r1, 0x20
+imod r0, r1
+ld.w r1, 0x8
+imul r0, r1
+lea r1, print:charcol
+st.w [r1], r0
+# line 1734
+ld.w r0, 0x0
+lea r1, print:y
+st.w [r1], r0
 @LABEL beginfor00000008
-lea eax, print:y
-ld.w eax, [eax]
-ld.w ebx, 0x8
-cmp eax, ebx
-test eax, less
-jmpifnot endfor00000009, eax
-ld.w eax, 0x0
-lea ebx, print:x
-st.w [ebx], eax
+lea r0, print:y
+ld.w r0, [r0]
+ld.w r1, 0x8
+cmp r0, r1
+test r0, less
+jmpifnot endfor00000009, r0
+# line 1736
+ld.w r0, 0x0
+lea r1, print:x
+st.w [r1], r0
 @LABEL beginfor00000006
-lea eax, print:x
-ld.w eax, [eax]
-ld.w ebx, 0x8
-cmp eax, ebx
-test eax, less
-jmpifnot endfor00000007, eax
-lea eax, print:charcol
-ld.w eax, [eax]
-lea ebx, print:x
-ld.w ebx, [ebx]
-iadd eax, ebx
-lea ebx, print:y
-ld.w ebx, [ebx]
-lea ecx, print:charrow
-ld.w ecx, [ecx]
-iadd ebx, ecx
-ld.w ecx, 0x8
-bsl ebx, ecx
-iadd eax, ebx
-lea ebx, :font
-iadd eax, ebx
-ld.b eax, [eax] # RHS array access, valueof: .b
-lea ebx, print:fontbyte
-st.w [ebx], eax
-lea eax, print:fontbyte
-ld.w eax, [eax]
-ld.w ebx, 0x0
-cmp eax, ebx
-test eax, equal
-jmpifnot endif00000005, eax
-lea eax, print:y
-ld.w eax, [eax]
-lea ebx, :frame
-ld.w ebx, [ebx]
-iadd eax, ebx
-lea ebx, print:i
-ld.w ebx, [ebx]
-ld.w ecx, 0x8
-imul ebx, ecx
-lea ecx, print:x
-ld.w ecx, [ecx]
-iadd ebx, ecx
-lea ecx, print:y
-ld.w ecx, [ecx]
-ld.w edx, 0x8
-bsl ecx, edx
-iadd ebx, ecx
-lea ecx, :VRAM
-ld.d ecx, [ecx]
-iadd ebx, ecx
-st.b [ebx], eax
+lea r0, print:x
+ld.w r0, [r0]
+ld.w r1, 0x8
+cmp r0, r1
+test r0, less
+jmpifnot endfor00000007, r0
+# line 1738
+lea r0, print:charcol
+ld.w r0, [r0]
+lea r1, print:x
+ld.w r1, [r1]
+iadd r0, r1
+lea r1, print:y
+ld.w r1, [r1]
+lea r2, print:charrow
+ld.w r2, [r2]
+iadd r1, r2
+ld.w r2, 0x8
+bsl r1, r2
+iadd r0, r1
+lea r1, :font
+iadd r0, r1
+ld.b r0, [r0] # RHS array access, valueof: .b
+lea r1, print:fontbyte
+st.w [r1], r0
+# line 1739
+lea r0, print:fontbyte
+ld.w r0, [r0]
+ld.w r1, 0x0
+cmp r0, r1
+test r0, equal
+jmpifnot endif00000005, r0
+# line 1740
+lea r0, print:y
+ld.w r0, [r0]
+lea r1, :frame
+ld.w r1, [r1]
+iadd r0, r1
+lea r1, print:i
+ld.w r1, [r1]
+ld.w r2, 0x8
+imul r1, r2
+lea r2, print:x
+ld.w r2, [r2]
+iadd r1, r2
+lea r2, print:y
+ld.w r2, [r2]
+ld.w r3, 0x8
+bsl r2, r3
+iadd r1, r2
+lea r2, :VRAM
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0
 @LABEL endif00000005
-lea eax, print:x
-ld.w eax, [eax]
-inc eax
-lea ebx, print:x
-st.w [ebx], eax
+# line 1736
+lea r0, print:x
+ld.w r0, [r0]
+inc r0
+lea r1, print:x
+st.w [r1], r0
 jmp beginfor00000006
 @LABEL endfor00000007
-lea ebx, print:y
-ld.w ebx, [ebx]
-inc ebx
-lea ecx, print:y
-st.w [ecx], ebx
+# line 1734
+lea r1, print:y
+ld.w r1, [r1]
+inc r1
+lea r2, print:y
+st.w [r2], r1
 jmp beginfor00000008
 @LABEL endfor00000009
-lea ecx, print:i
-ld.w ecx, [ecx]
-inc ecx
-lea edx, print:i
-st.w [edx], ecx
-ld.w edx, 0x1
-jmpifnot enddowhile0000000b, edx
+# line 1743
+lea r2, print:i
+ld.w r2, [r2]
+inc r2
+lea r3, print:i
+st.w [r3], r2
+# line 1744
+ld.w r3, 0x1
+jmpifnot enddowhile0000000b, r3
 jmp begindowhile0000000a
 @LABEL enddowhile0000000b
+# line 1745
 ret 
+# line 1746
 # End of function print
 
 @LABEL main
-lea eax, vblankhandler
-ld.w ebx, 0x0
-lea ecx, :VBLANKSERVICE
-ld.d ecx, [ecx]
-ld.w edx, 0x2
-bsl ebx, edx
-iadd ebx, ecx
-st.d [ebx], eax
-ld.w eax, 0x1
-ld.w ebx, 0x0
-lea ecx, :VBSENABLE
-ld.d ecx, [ecx]
-iadd ebx, ecx
-st.b [ebx], eax
-ld.w eax, 0x1
-ld.w ebx, 0x1
-asel eax, ebx
+# line 1760
+lea r0, vblankhandler
+ld.w r1, 0x0
+lea r2, :VBLANKSERVICE
+ld.d r2, [r2]
+ld.w r3, 0x2
+bsl r1, r3
+iadd r1, r2
+st.d [r1], r0
+# line 1762
+ld.w r0, 0x1
+ld.w r1, 0x0
+lea r2, :VBSENABLE
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0
+# line 1765
+ld.w r0, 0x1
+ld.w r1, 0x1
+asel r0, r1
 call squareWaveHarmonics
-pop eax
-lea ebx, main:samples
-st.w [ebx], eax
-ld.w eax, 0x0
-ld.w ebx, 0x1
-asel eax, ebx
+# line 1766
+pop r0
+lea r1, main:samples
+st.w [r1], r0
+# line 1767
+ld.w r0, 0x0
+ld.w r1, 0x1
+asel r0, r1
 call squareWaveHarmonics
-pop eax
-lea ebx, main:samples
-st.w [ebx], eax
-lea eax, :mysprites
-spritesheet eax
-ld.w eax, 0x1
-fsel eax
-ld.w eax, 0x5b
-ld.w ebx, 0x0
-lea ecx, :BORDERCOLOR
-ld.d ecx, [ecx]
-iadd ebx, ecx
-st.b [ebx], eax
-ld.w eax, 0x5b
-clf eax
-ld.w eax, 0x0
-fsel eax
-ld.w eax, 0x5b
-ld.w ebx, 0x0
-lea ecx, :BORDERCOLOR
-ld.d ecx, [ecx]
-iadd ebx, ecx
-st.b [ebx], eax
-ld.w eax, 0x5b
-clf eax
-ld.w eax, 0x0
-lea ebx, main:samples
-st.w [ebx], eax
+# line 1768
+pop r0
+lea r1, main:samples
+st.w [r1], r0
+# line 1772
+lea r0, :mysprites
+spritesheet r0
+# line 1775
+ld.w r0, 0x1
+fsel r0
+# line 1776
+ld.w r0, 0x5b
+ld.w r1, 0x0
+lea r2, :BORDERCOLOR
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0
+# line 1777
+ld.w r0, 0x5b
+clf r0
+# line 1778
+ld.w r0, 0x0
+fsel r0
+# line 1779
+ld.w r0, 0x5b
+ld.w r1, 0x0
+lea r2, :BORDERCOLOR
+ld.d r2, [r2]
+iadd r1, r2
+st.b [r1], r0
+# line 1780
+ld.w r0, 0x5b
+clf r0
+# line 1783
+ld.w r0, 0x0
+lea r1, main:samples
+st.w [r1], r0
 @LABEL beginwhile00000015
-ld.w eax, 0x1
-jmpifnot endwhile00000016, eax
-ld.w eax, 0x0
-lea ebx, main:i
-st.w [ebx], eax
+# line 1784
+ld.w r0, 0x1
+jmpifnot endwhile00000016, r0
+# line 1789
+ld.w r0, 0x0
+lea r1, main:i
+st.w [r1], r0
 @LABEL beginfor00000010
-lea eax, main:i
-ld.w eax, [eax]
-ld.w ebx, 0x8
-cmp eax, ebx
-test eax, less
-jmpifnot endfor00000011, eax
-ld.w eax, 0x0
-lea ebx, main:hit
-st.w [ebx], eax
-lea eax, main:i
-ld.w eax, [eax]
-lea ebx, main:posY
-ld.w ecx, 0x1
-bsl eax, ecx
-iadd eax, ebx
-ld.w eax, [eax] # RHS array access, valueof: .w
-lea ebx, main:i
-ld.w ebx, [ebx]
-lea ecx, main:dirY
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-ld.w ebx, [ebx] # RHS array access, valueof: .w
-iadd eax, ebx
-lea ebx, main:i
-ld.w ebx, [ebx]
-lea ecx, main:posY
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-st.w [ebx], eax
-lea eax, main:i
-ld.w eax, [eax]
-lea ebx, main:posY
-ld.w ecx, 0x1
-bsl eax, ecx
-iadd eax, ebx
-ld.w eax, [eax] # RHS array access, valueof: .w
-ld.w ebx, 0x9e
-cmp eax, ebx
-test eax, greater
-lea ebx, main:i
-ld.w ebx, [ebx]
-lea ecx, main:posY
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-ld.w ebx, [ebx] # RHS array access, valueof: .w
-ld.w ecx, 0x1
-cmp ebx, ecx
-test ebx, less
-or eax, ebx
-jmpifnot endif0000000c, eax
-lea eax, main:i
-ld.w eax, [eax]
-lea ebx, main:dirY
-ld.w ecx, 0x1
-bsl eax, ecx
-iadd eax, ebx
-ld.w eax, [eax] # RHS array access, valueof: .w
-ineg eax
-lea ebx, main:i
-ld.w ebx, [ebx]
-lea ecx, main:dirY
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-st.w [ebx], eax
-ld.w eax, 0x1
-lea ebx, main:hit
-st.w [ebx], eax
-ld.w eax, 0x0
-ld.w ebx, 0x1
-asel eax, ebx
+lea r0, main:i
+ld.w r0, [r0]
+ld.w r1, 0x8
+cmp r0, r1
+test r0, less
+jmpifnot endfor00000011, r0
+# line 1791
+ld.w r0, 0x0
+lea r1, main:hit
+st.w [r1], r0
+# line 1793
+lea r0, main:i
+ld.w r0, [r0]
+lea r1, main:posY
+ld.w r2, 0x1
+bsl r0, r2
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:dirY
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+iadd r0, r1
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:posY
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+st.w [r1], r0
+# line 1794
+lea r0, main:i
+ld.w r0, [r0]
+lea r1, main:posY
+ld.w r2, 0x1
+bsl r0, r2
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0x9e
+cmp r0, r1
+test r0, greater
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:posY
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+ld.w r2, 0x1
+cmp r1, r2
+test r1, less
+or r0, r1
+jmpifnot endif0000000c, r0
+# line 1796
+lea r0, main:i
+ld.w r0, [r0]
+lea r1, main:dirY
+ld.w r2, 0x1
+bsl r0, r2
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ineg r0
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:dirY
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+st.w [r1], r0
+# line 1797
+ld.w r0, 0x1
+lea r1, main:hit
+st.w [r1], r0
+# line 1798
+ld.w r0, 0x0
+ld.w r1, 0x1
+asel r0, r1
 @LABEL endif0000000c
-lea eax, main:i
-ld.w eax, [eax]
-lea ebx, main:posX
-ld.w ecx, 0x1
-bsl eax, ecx
-iadd eax, ebx
-ld.w eax, [eax] # RHS array access, valueof: .w
-lea ebx, main:i
-ld.w ebx, [ebx]
-lea ecx, main:dirX
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-ld.w ebx, [ebx] # RHS array access, valueof: .w
-iadd eax, ebx
-lea ebx, main:i
-ld.w ebx, [ebx]
-lea ecx, main:posX
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-st.w [ebx], eax
-lea eax, main:i
-ld.w eax, [eax]
-lea ebx, main:posX
-ld.w ecx, 0x1
-bsl eax, ecx
-iadd eax, ebx
-ld.w eax, [eax] # RHS array access, valueof: .w
-ld.w ebx, 0xf0
-cmp eax, ebx
-test eax, greater
-lea ebx, main:i
-ld.w ebx, [ebx]
-lea ecx, main:posX
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-ld.w ebx, [ebx] # RHS array access, valueof: .w
-ld.w ecx, 0x1
-cmp ebx, ecx
-test ebx, less
-or eax, ebx
-jmpifnot endif0000000d, eax
-lea eax, main:i
-ld.w eax, [eax]
-lea ebx, main:dirX
-ld.w ecx, 0x1
-bsl eax, ecx
-iadd eax, ebx
-ld.w eax, [eax] # RHS array access, valueof: .w
-ineg eax
-lea ebx, main:i
-ld.w ebx, [ebx]
-lea ecx, main:dirX
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-st.w [ebx], eax
-ld.w eax, 0x1
-lea ebx, main:hit
-st.w [ebx], eax
-ld.w eax, 0x0
-ld.w ebx, 0x1
-asel eax, ebx
+# line 1801
+lea r0, main:i
+ld.w r0, [r0]
+lea r1, main:posX
+ld.w r2, 0x1
+bsl r0, r2
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:dirX
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+iadd r0, r1
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:posX
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+st.w [r1], r0
+# line 1802
+lea r0, main:i
+ld.w r0, [r0]
+lea r1, main:posX
+ld.w r2, 0x1
+bsl r0, r2
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0xf0
+cmp r0, r1
+test r0, greater
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:posX
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+ld.w r1, [r1] # RHS array access, valueof: .w
+ld.w r2, 0x1
+cmp r1, r2
+test r1, less
+or r0, r1
+jmpifnot endif0000000d, r0
+# line 1804
+lea r0, main:i
+ld.w r0, [r0]
+lea r1, main:dirX
+ld.w r2, 0x1
+bsl r0, r2
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ineg r0
+lea r1, main:i
+ld.w r1, [r1]
+lea r2, main:dirX
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+st.w [r1], r0
+# line 1805
+ld.w r0, 0x1
+lea r1, main:hit
+st.w [r1], r0
+# line 1806
+ld.w r0, 0x0
+ld.w r1, 0x1
+asel r0, r1
 @LABEL endif0000000d
-lea eax, main:i
-ld.w eax, [eax]
-lea ebx, main:posY
-ld.w ecx, 0x1
-bsl eax, ecx
-iadd eax, ebx
-ld.w eax, [eax] # RHS array access, valueof: .w
-ld.w ebx, 0x252
-lea ecx, main:i
-ld.w ecx, [ecx]
-ld.w edx, 0x6
-imul ecx, edx
-iadd ebx, ecx
-ld.w ecx, 0x0
-iadd ebx, ecx
-lea ecx, :spritelist
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-st.w [ebx], eax
-lea eax, main:i
-ld.w eax, [eax]
-lea ebx, main:posX
-ld.w ecx, 0x1
-bsl eax, ecx
-iadd eax, ebx
-ld.w eax, [eax] # RHS array access, valueof: .w
-ld.w ebx, 0x252
-lea ecx, main:i
-ld.w ecx, [ecx]
-ld.w edx, 0x6
-imul ecx, edx
-iadd ebx, ecx
-ld.w ecx, 0x1
-iadd ebx, ecx
-lea ecx, :spritelist
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-st.w [ebx], eax
-lea eax, main:i
-ld.w eax, [eax]
-lea ebx, main:posY
-ld.w ecx, 0x1
-bsl eax, ecx
-iadd eax, ebx
-ld.w eax, [eax] # RHS array access, valueof: .w
-ld.w ebx, 0x10
-iadd eax, ebx
-ld.w ebx, 0x255
-lea ecx, main:i
-ld.w ecx, [ecx]
-ld.w edx, 0x6
-imul ecx, edx
-iadd ebx, ecx
-ld.w ecx, 0x0
-iadd ebx, ecx
-lea ecx, :spritelist
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-st.w [ebx], eax
-lea eax, main:i
-ld.w eax, [eax]
-lea ebx, main:posX
-ld.w ecx, 0x1
-bsl eax, ecx
-iadd eax, ebx
-ld.w eax, [eax] # RHS array access, valueof: .w
-ld.w ebx, 0x255
-lea ecx, main:i
-ld.w ecx, [ecx]
-ld.w edx, 0x6
-imul ecx, edx
-iadd ebx, ecx
-ld.w ecx, 0x1
-iadd ebx, ecx
-lea ecx, :spritelist
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-st.w [ebx], eax
-lea eax, main:i
-ld.w eax, [eax]
-lea ebx, main:dirX
-ld.w ecx, 0x1
-bsl eax, ecx
-iadd eax, ebx
-ld.w eax, [eax] # RHS array access, valueof: .w
-ld.w ebx, 0x8000
-and eax, ebx
-lea ebx, main:flipx
-st.w [ebx], eax
-lea eax, main:i
-ld.w eax, [eax]
-lea ebx, main:dirY
-ld.w ecx, 0x1
-bsl eax, ecx
-iadd eax, ebx
-ld.w eax, [eax] # RHS array access, valueof: .w
-ld.w ebx, 0x8000
-and eax, ebx
-ld.w ebx, 0x1
-bsr eax, ebx
-lea ebx, main:flipy
-st.w [ebx], eax
-lea eax, main:flipy
-ld.w eax, [eax]
-ld.w ebx, 0x0
-cmp eax, ebx
-test eax, notequal
-jmpifnot endif0000000e, eax
-lea eax, main:flipy
-ld.w eax, [eax]
-lea ebx, main:flipx
-ld.w ebx, [ebx]
-iadd eax, ebx
-ld.w ebx, 0x46
-iadd eax, ebx
-ld.w ebx, 0x2
-lea ecx, main:i
-ld.w ecx, [ecx]
-lea edx, :frame
-ld.w edx, [edx]
-ld.w r10, 0x4
-bsr edx, r10
-iadd ecx, edx
-ld.w edx, 0x4
-imod ecx, edx
-imul ebx, ecx
-iadd eax, ebx
-ld.w ebx, 0x255
-lea ecx, main:i
-ld.w ecx, [ecx]
-ld.w edx, 0x6
-imul ecx, edx
-iadd ebx, ecx
-ld.w ecx, 0x2
-iadd ebx, ecx
-lea ecx, :spritelist
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-st.w [ebx], eax
-lea eax, main:flipy
-ld.w eax, [eax]
-lea ebx, main:flipx
-ld.w ebx, [ebx]
-iadd eax, ebx
-ld.w ebx, 0x47
-iadd eax, ebx
-ld.w ebx, 0x2
-lea ecx, main:i
-ld.w ecx, [ecx]
-lea edx, :frame
-ld.w edx, [edx]
-ld.w r10, 0x4
-bsr edx, r10
-iadd ecx, edx
-ld.w edx, 0x4
-imod ecx, edx
-imul ebx, ecx
-iadd eax, ebx
-ld.w ebx, 0x252
-lea ecx, main:i
-ld.w ecx, [ecx]
-ld.w edx, 0x6
-imul ecx, edx
-iadd ebx, ecx
-ld.w ecx, 0x2
-iadd ebx, ecx
-lea ecx, :spritelist
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-st.w [ebx], eax
+# line 1810
+lea r0, main:i
+ld.w r0, [r0]
+lea r1, main:posY
+ld.w r2, 0x1
+bsl r0, r2
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0x252
+lea r2, main:i
+ld.w r2, [r2]
+ld.w r3, 0x6
+imul r2, r3
+iadd r1, r2
+ld.w r2, 0x0
+iadd r1, r2
+lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+st.w [r1], r0
+# line 1811
+lea r0, main:i
+ld.w r0, [r0]
+lea r1, main:posX
+ld.w r2, 0x1
+bsl r0, r2
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0x252
+lea r2, main:i
+ld.w r2, [r2]
+ld.w r3, 0x6
+imul r2, r3
+iadd r1, r2
+ld.w r2, 0x1
+iadd r1, r2
+lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+st.w [r1], r0
+# line 1812
+lea r0, main:i
+ld.w r0, [r0]
+lea r1, main:posY
+ld.w r2, 0x1
+bsl r0, r2
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0x10
+iadd r0, r1
+ld.w r1, 0x255
+lea r2, main:i
+ld.w r2, [r2]
+ld.w r3, 0x6
+imul r2, r3
+iadd r1, r2
+ld.w r2, 0x0
+iadd r1, r2
+lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+st.w [r1], r0
+# line 1813
+lea r0, main:i
+ld.w r0, [r0]
+lea r1, main:posX
+ld.w r2, 0x1
+bsl r0, r2
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0x255
+lea r2, main:i
+ld.w r2, [r2]
+ld.w r3, 0x6
+imul r2, r3
+iadd r1, r2
+ld.w r2, 0x1
+iadd r1, r2
+lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+st.w [r1], r0
+# line 1815
+lea r0, main:i
+ld.w r0, [r0]
+lea r1, main:dirX
+ld.w r2, 0x1
+bsl r0, r2
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0x8000
+and r0, r1
+lea r1, main:flipx
+st.w [r1], r0
+# line 1816
+lea r0, main:i
+ld.w r0, [r0]
+lea r1, main:dirY
+ld.w r2, 0x1
+bsl r0, r2
+iadd r0, r1
+ld.w r0, [r0] # RHS array access, valueof: .w
+ld.w r1, 0x8000
+and r0, r1
+ld.w r1, 0x1
+bsr r0, r1
+lea r1, main:flipy
+st.w [r1], r0
+# line 1818
+lea r0, main:flipy
+ld.w r0, [r0]
+ld.w r1, 0x0
+cmp r0, r1
+test r0, notequal
+jmpifnot endif0000000e, r0
+# line 1820
+lea r0, main:flipy
+ld.w r0, [r0]
+lea r1, main:flipx
+ld.w r1, [r1]
+iadd r0, r1
+ld.w r1, 0x46
+iadd r0, r1
+ld.w r1, 0x2
+lea r2, main:i
+ld.w r2, [r2]
+lea r3, :frame
+ld.w r3, [r3]
+ld.w r4, 0x4
+bsr r3, r4
+iadd r2, r3
+ld.w r3, 0x4
+imod r2, r3
+imul r1, r2
+iadd r0, r1
+ld.w r1, 0x255
+lea r2, main:i
+ld.w r2, [r2]
+ld.w r3, 0x6
+imul r2, r3
+iadd r1, r2
+ld.w r2, 0x2
+iadd r1, r2
+lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+st.w [r1], r0
+# line 1821
+lea r0, main:flipy
+ld.w r0, [r0]
+lea r1, main:flipx
+ld.w r1, [r1]
+iadd r0, r1
+ld.w r1, 0x47
+iadd r0, r1
+ld.w r1, 0x2
+lea r2, main:i
+ld.w r2, [r2]
+lea r3, :frame
+ld.w r3, [r3]
+ld.w r4, 0x4
+bsr r3, r4
+iadd r2, r3
+ld.w r3, 0x4
+imod r2, r3
+imul r1, r2
+iadd r0, r1
+ld.w r1, 0x252
+lea r2, main:i
+ld.w r2, [r2]
+ld.w r3, 0x6
+imul r2, r3
+iadd r1, r2
+ld.w r2, 0x2
+iadd r1, r2
+lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+st.w [r1], r0
 jmp exitif0000000f
 @LABEL endif0000000e
-lea eax, main:flipy
-ld.w eax, [eax]
-lea ebx, main:flipx
-ld.w ebx, [ebx]
-iadd eax, ebx
-ld.w ebx, 0x46
-iadd eax, ebx
-ld.w ebx, 0x2
-lea ecx, main:i
-ld.w ecx, [ecx]
-lea edx, :frame
-ld.w edx, [edx]
-ld.w r10, 0x4
-bsr edx, r10
-iadd ecx, edx
-ld.w edx, 0x4
-imod ecx, edx
-imul ebx, ecx
-iadd eax, ebx
-ld.w ebx, 0x252
-lea ecx, main:i
-ld.w ecx, [ecx]
-ld.w edx, 0x6
-imul ecx, edx
-iadd ebx, ecx
-ld.w ecx, 0x2
-iadd ebx, ecx
-lea ecx, :spritelist
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-st.w [ebx], eax
-lea eax, main:flipy
-ld.w eax, [eax]
-lea ebx, main:flipx
-ld.w ebx, [ebx]
-iadd eax, ebx
-ld.w ebx, 0x47
-iadd eax, ebx
-ld.w ebx, 0x2
-lea ecx, main:i
-ld.w ecx, [ecx]
-lea edx, :frame
-ld.w edx, [edx]
-ld.w r10, 0x4
-bsr edx, r10
-iadd ecx, edx
-ld.w edx, 0x4
-imod ecx, edx
-imul ebx, ecx
-iadd eax, ebx
-ld.w ebx, 0x255
-lea ecx, main:i
-ld.w ecx, [ecx]
-ld.w edx, 0x6
-imul ecx, edx
-iadd ebx, ecx
-ld.w ecx, 0x2
-iadd ebx, ecx
-lea ecx, :spritelist
-ld.w edx, 0x1
-bsl ebx, edx
-iadd ebx, ecx
-st.w [ebx], eax
+# line 1825
+lea r0, main:flipy
+ld.w r0, [r0]
+lea r1, main:flipx
+ld.w r1, [r1]
+iadd r0, r1
+ld.w r1, 0x46
+iadd r0, r1
+ld.w r1, 0x2
+lea r2, main:i
+ld.w r2, [r2]
+lea r3, :frame
+ld.w r3, [r3]
+ld.w r4, 0x4
+bsr r3, r4
+iadd r2, r3
+ld.w r3, 0x4
+imod r2, r3
+imul r1, r2
+iadd r0, r1
+ld.w r1, 0x252
+lea r2, main:i
+ld.w r2, [r2]
+ld.w r3, 0x6
+imul r2, r3
+iadd r1, r2
+ld.w r2, 0x2
+iadd r1, r2
+lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+st.w [r1], r0
+# line 1826
+lea r0, main:flipy
+ld.w r0, [r0]
+lea r1, main:flipx
+ld.w r1, [r1]
+iadd r0, r1
+ld.w r1, 0x47
+iadd r0, r1
+ld.w r1, 0x2
+lea r2, main:i
+ld.w r2, [r2]
+lea r3, :frame
+ld.w r3, [r3]
+ld.w r4, 0x4
+bsr r3, r4
+iadd r2, r3
+ld.w r3, 0x4
+imod r2, r3
+imul r1, r2
+iadd r0, r1
+ld.w r1, 0x255
+lea r2, main:i
+ld.w r2, [r2]
+ld.w r3, 0x6
+imul r2, r3
+iadd r1, r2
+ld.w r2, 0x2
+iadd r1, r2
+lea r2, :spritelist
+ld.w r3, 0x1
+bsl r1, r3
+iadd r1, r2
+st.w [r1], r0
 @LABEL exitif0000000f
-lea eax, main:i
-ld.w eax, [eax]
-inc eax
-lea ebx, main:i
-st.w [ebx], eax
+# line 1789
+lea r0, main:i
+ld.w r0, [r0]
+inc r0
+lea r1, main:i
+st.w [r1], r0
 jmp beginfor00000010
 @LABEL endfor00000011
-lea ebx, main:roll
-ld.w ebx, [ebx]
-ld.w ecx, 0x4
-imul ebx, ecx
-push ebx
+# line 1831
+lea r1, main:roll
+ld.w r1, [r1]
+ld.w r2, 0x4
+imul r1, r2
+push r1
 call cos
-pop ebx
-ld.w ecx, 0x200
-idiv ebx, ecx
-ld.w ecx, 0x0
-lea edx, main:posX
-ld.w r10, 0x1
-bsl ecx, r10
-iadd ecx, edx
-ld.w ecx, [ecx] # RHS array access, valueof: .w
-iadd ebx, ecx
-ld.w ecx, 0x24d
-lea edx, :spritelist
-ld.w r10, 0x1
-bsl ecx, r10
-iadd ecx, edx
-st.w [ecx], ebx
-lea ebx, main:roll
-ld.w ebx, [ebx]
-ld.w ecx, 0x4
-imul ebx, ecx
-push ebx
+pop r1
+ld.w r2, 0x200
+idiv r1, r2
+ld.w r2, 0x0
+lea r3, main:posX
+ld.w r4, 0x1
+bsl r2, r4
+iadd r2, r3
+ld.w r2, [r2] # RHS array access, valueof: .w
+iadd r1, r2
+ld.w r2, 0x24d
+lea r3, :spritelist
+ld.w r4, 0x1
+bsl r2, r4
+iadd r2, r3
+st.w [r2], r1
+# line 1832
+lea r1, main:roll
+ld.w r1, [r1]
+ld.w r2, 0x4
+imul r1, r2
+push r1
 call sin
-pop ebx
-ld.w ecx, 0x200
-idiv ebx, ecx
-ld.w ecx, 0x0
-lea edx, main:posY
-ld.w r10, 0x1
-bsl ecx, r10
-iadd ecx, edx
-ld.w ecx, [ecx] # RHS array access, valueof: .w
-iadd ebx, ecx
-ld.w ecx, 0x24c
-lea edx, :spritelist
-ld.w r10, 0x1
-bsl ecx, r10
-iadd ecx, edx
-st.w [ecx], ebx
-ld.w ebx, 0xe0
-clf ebx
-lea ebx, main:scrollx
-ld.w ebx, [ebx]
-lea ecx, main:scrolly
-ld.w ecx, [ecx]
-spriteorigin ebx, ecx
-ld.w ebx, 0x80
-ld.w ecx, 0x0
-lea edx, main:posX
-ld.w r10, 0x1
-bsl ecx, r10
-iadd ecx, edx
-ld.w ecx, [ecx] # RHS array access, valueof: .w
-ineg ecx
-iadd ebx, ecx
-lea ecx, main:scrollx
-st.w [ecx], ebx
-ld.w ebx, 0x20
-ld.w ecx, 0x0
-lea edx, main:posY
-ld.w r10, 0x1
-bsl ecx, r10
-iadd ecx, edx
-ld.w ecx, [ecx] # RHS array access, valueof: .w
-ineg ecx
-iadd ebx, ecx
-lea ecx, main:scrolly
-st.w [ecx], ebx
-lea ebx, :spritelist
-ld.w ecx, 0xd6
-sprite ebx, ecx
-lea ebx, :testmessage
-ld.d ebx, [ebx]
-push ebx
+pop r1
+ld.w r2, 0x200
+idiv r1, r2
+ld.w r2, 0x0
+lea r3, main:posY
+ld.w r4, 0x1
+bsl r2, r4
+iadd r2, r3
+ld.w r2, [r2] # RHS array access, valueof: .w
+iadd r1, r2
+ld.w r2, 0x24c
+lea r3, :spritelist
+ld.w r4, 0x1
+bsl r2, r4
+iadd r2, r3
+st.w [r2], r1
+# line 1835
+ld.w r1, 0xe0
+clf r1
+# line 1838
+lea r1, main:scrollx
+ld.w r1, [r1]
+lea r2, main:scrolly
+ld.w r2, [r2]
+spriteorigin r1, r2
+# line 1839
+ld.w r1, 0x80
+ld.w r2, 0x0
+lea r3, main:posX
+ld.w r4, 0x1
+bsl r2, r4
+iadd r2, r3
+ld.w r2, [r2] # RHS array access, valueof: .w
+ineg r2
+iadd r1, r2
+lea r2, main:scrollx
+st.w [r2], r1
+# line 1840
+ld.w r1, 0x20
+ld.w r2, 0x0
+lea r3, main:posY
+ld.w r4, 0x1
+bsl r2, r4
+iadd r2, r3
+ld.w r2, [r2] # RHS array access, valueof: .w
+ineg r2
+iadd r1, r2
+lea r2, main:scrolly
+st.w [r2], r1
+# line 1843
+lea r1, :spritelist
+ld.w r2, 0xd6
+sprite r1, r2
+# line 1845
+lea r1, :testmessage
+ld.d r1, [r1]
+push r1
 call print
-lea ebx, :frame
-ld.w ebx, [ebx]
-ld.w ecx, 0x1
-iadd ebx, ecx
-ld.w ecx, 0x100
-imod ebx, ecx
-lea ecx, :frame
-st.w [ecx], ebx
-lea ebx, main:roll
-ld.w ebx, [ebx]
-inc ebx
-lea ecx, main:roll
-st.w [ecx], ebx
-ld.w ecx, 0x800
-imod ebx, ecx
-lea ecx, main:roll
-st.w [ecx], ebx
+# line 1850
+lea r1, :frame
+ld.w r1, [r1]
+ld.w r2, 0x1
+iadd r1, r2
+ld.w r2, 0x100
+imod r1, r2
+lea r2, :frame
+st.w [r2], r1
+# line 1851
+lea r1, main:roll
+ld.w r1, [r1]
+inc r1
+lea r2, main:roll
+st.w [r2], r1
+ld.w r2, 0x800
+imod r1, r2
+lea r2, main:roll
+st.w [r2], r1
+# line 1852
 vsync 
-ld.w ebx, 0x0
-ld.w ecx, 0x0
-asel ebx, ecx
-lea ebx, main:portcheck
-ld.w ecx, 0x0
-in ebx, ecx
-lea ebx, main:portcheck
-ld.w ebx, [ebx]
-jmpifnot endif00000012, ebx
-lea ebx, main:roll
-ld.w ebx, [ebx]
-ld.w ecx, 0x3
-bsr ebx, ecx
-ld.w ecx, 0x0
-lea edx, :BORDERCOLOR
-ld.d edx, [edx]
-iadd ecx, edx
-st.b [ecx], ebx
+# line 1853
+ld.w r1, 0x0
+ld.w r2, 0x0
+asel r1, r2
+# line 1858
+lea r1, main:portcheck
+ld.w r2, 0x0
+in r1, r2
+# line 1859
+lea r1, main:portcheck
+ld.w r1, [r1]
+jmpifnot endif00000012, r1
+# line 1860
+lea r1, main:roll
+ld.w r1, [r1]
+ld.w r2, 0x3
+bsr r1, r2
+ld.w r2, 0x0
+lea r3, :BORDERCOLOR
+ld.d r3, [r3]
+iadd r2, r3
+st.b [r2], r1
 @LABEL endif00000012
 @LABEL begindowhile00000013
-lea ebx, main:portcheck
-ld.w ecx, 0x1
-in ebx, ecx
-lea ebx, main:portcheck
-ld.w ebx, [ebx]
-jmpifnot enddowhile00000014, ebx
+# line 1864
+lea r1, main:portcheck
+ld.w r2, 0x1
+in r1, r2
+# line 1865
+lea r1, main:portcheck
+ld.w r1, [r1]
+jmpifnot enddowhile00000014, r1
 jmp begindowhile00000013
 @LABEL enddowhile00000014
-lea ebx, :frame
-ld.w ebx, [ebx]
-fsel ebx
+# line 1867
+lea r1, :frame
+ld.w r1, [r1]
+fsel r1
 jmp beginwhile00000015
 @LABEL endwhile00000016
+# line 1871
 ret 
+# line 1872
 # End of function main
 
-.data
+@DATA
+
+# --------------------------------------
+#               Constructs              
+# --------------------------------------
 
 @LABEL TestConstruct
 @LABEL TestConstruct:spritePosX
@@ -959,48 +1081,58 @@ ret
 @DW 0x0
 @LABEL TestConstruct:spriteID
 @DW 0x0
+
+# --------------------------------------
+#               String Table             
+# --------------------------------------
+
 @LABEL string_e84ead66
 # 'Hello, world! '
 @DW 0x4865 0x6C6C 0x6F2C 0x2077 0x6F72 0x6C64 0x2100 
+
+# --------------------------------------
+#              Symbol Table             
+# --------------------------------------
+
 # variable 'VRAM', dim:1 typename:byteptr refcount:1
-:VRAM:
+@LABEL :VRAM
 @DW 0x8000 0x0000
 # variable 'ARAM', dim:1 typename:wordptr refcount:2
-:ARAM:
+@LABEL :ARAM
 @DW 0x4000 0x0000
 # variable 'BORDERCOLOR', dim:1 typename:byteptr refcount:3
-:BORDERCOLOR:
+@LABEL :BORDERCOLOR
 @DW 0x8000 0xC000
 # variable 'VBSENABLE', dim:1 typename:byteptr refcount:1
-:VBSENABLE:
+@LABEL :VBSENABLE
 @DW 0x8000 0xC001
 # variable 'VBLANKSERVICE', dim:1 typename:dwordptr refcount:1
-:VBLANKSERVICE:
+@LABEL :VBLANKSERVICE
 @DW 0x8000 0xC004
 # variable 'seed', dim:1 typename:word refcount:10
-:seed:
+@LABEL :seed
 @DW 0x0007 
 # variable 'ac', dim:1 typename:word refcount:5
-:ac:
+@LABEL :ac
 @DW 0x0000 
 # variable 'frame', dim:1 typename:word refcount:8
-:frame:
+@LABEL :frame
 @DW 0x0000 
 # variable 'spritePosX', dim:1 typename:word refcount:1
-TestConstruct:spritePosX:
+@LABEL TestConstruct:spritePosX
 @DW 0x0000 
 # variable 'spritePosY', dim:1 typename:word refcount:1
-TestConstruct:spritePosY:
+@LABEL TestConstruct:spritePosY
 @DW 0x0000 
 # variable 'spriteID', dim:1 typename:word refcount:1
-TestConstruct:spriteID:
+@LABEL TestConstruct:spriteID
 @DW 0x0000 
 # variable 'testmessage', dim:1 typename:byteptr refcount:1
-:testmessage:
+@LABEL :testmessage
 @DW 0x0000 0x0000
 # variable 'someSprites', dim:8 typename:construct refcount:0
 # variable 'sinewave', dim:1024 typename:word refcount:2
-:sinewave:
+@LABEL :sinewave
 @DW 0x4000 0x4065 0x40C9 0x412E 0x4192 0x41F7 0x425B 0x42C0 
 @DW 0x4324 0x4388 0x43ED 0x4451 0x44B5 0x451A 0x457E 0x45E2 
 @DW 0x4646 0x46AA 0x470E 0x4772 0x47D6 0x4839 0x489D 0x4901 
@@ -1130,7 +1262,7 @@ TestConstruct:spriteID:
 @DW 0x39BA 0x3A1E 0x3A82 0x3AE6 0x3B4B 0x3BAF 0x3C13 0x3C78 
 @DW 0x3CDC 0x3D40 0x3DA5 0x3E09 0x3E6E 0x3ED2 0x3F37 0x3F9B 
 # variable 'spritelist', dim:642 typename:word refcount:12
-:spritelist:
+@LABEL :spritelist
 @DW 0x0000 0x0000 0x0030 0x0000 0x0010 0x0030 0x0000 0x0020 
 @DW 0x0030 0x0000 0x0030 0x0030 0x0000 0x0040 0x0030 0x0000 
 @DW 0x0050 0x0030 0x0000 0x0060 0x0030 0x0000 0x0070 0x0030 
@@ -1213,7 +1345,7 @@ TestConstruct:spriteID:
 @DW 0x0046 0x0040 0x0045 0x0047 0x0050 0x0075 0x0046 0x0060 
 @DW 0x0075 0x0047 
 # variable 'mysprites', dim:9984 typename:word refcount:2
-:mysprites:
+@LABEL :mysprites
 @DW 0xFF08 0x0808 0x0808 0x0808 0x0808 0x0808 0x0808 0x0808 
 @DW 0x0873 0x7373 0x7373 0x7373 0x7373 0x7373 0x7373 0x7373 
 @DW 0x0873 0x7361 0x6161 0x6161 0x6161 0x6161 0x6161 0x6161 
@@ -2463,7 +2595,7 @@ TestConstruct:spriteID:
 @DW 0xFFFF 0x09D1 0xE109 0xFFFF 0xFF09 0xD1E1 0x09FF 0xFFFF 
 @DW 0xFFFF 0x0913 0x5D09 0xFFFF 0xFF09 0x135D 0x09FF 0xFFFF 
 # variable 'font', dim:6144 typename:byte refcount:1
-:font:
+@LABEL :font
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFF00 0xFFFF 0xFFFF 
 @DW 0xFFFF 0x00FF 0xFF00 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
 @DW 0xFFFF 0xFF00 0xFFFF 0xFFFF 0xFF00 0xFFFF 0xFF00 0xFFFF 
@@ -2849,101 +2981,101 @@ TestConstruct:spriteID:
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
 @DW 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 0xFFFF 
 # variable 'x', dim:1 typename:word refcount:1
-numSquareRoot:x:
+@LABEL numSquareRoot:x
 @DW 0xCDCD 
 # variable 's', dim:1 typename:word refcount:1
-sin:s:
+@LABEL sin:s
 @DW 0xCDCD 
 # variable 'c', dim:1 typename:word refcount:1
-cos:c:
+@LABEL cos:c
 @DW 0xCDCD 
 # variable 'cnt', dim:1 typename:word refcount:5
-squareWaveHarmonics:cnt:
+@LABEL squareWaveHarmonics:cnt
 @DW 0x0000 
 # variable 'harmonics', dim:1 typename:word refcount:4
-squareWaveHarmonics:harmonics:
+@LABEL squareWaveHarmonics:harmonics
 @DW 0x0000 
 # variable 'a', dim:1 typename:word refcount:5
-squareWaveHarmonics:a:
+@LABEL squareWaveHarmonics:a
 @DW 0x0000 
 # variable 'b', dim:1 typename:word refcount:5
-squareWaveHarmonics:b:
+@LABEL squareWaveHarmonics:b
 @DW 0x0000 
 # variable 'c', dim:1 typename:word refcount:3
-squareWaveHarmonics:c:
+@LABEL squareWaveHarmonics:c
 @DW 0x0000 
 # variable 'p', dim:1 typename:word refcount:2
-squareWaveHarmonics:p:
+@LABEL squareWaveHarmonics:p
 @DW 0x0000 
 # variable 't', dim:1 typename:word refcount:0
 # variable 'dutycycle', dim:1 typename:word refcount:2
-squareWaveHarmonics:dutycycle:
+@LABEL squareWaveHarmonics:dutycycle
 @DW 0x0000 
 # variable 'f', dim:1 typename:word refcount:2
-squareWaveHarmonics:f:
+@LABEL squareWaveHarmonics:f
 @DW 0x0000 
 # variable 'fontbyte', dim:1 typename:word refcount:2
-print:fontbyte:
+@LABEL print:fontbyte
 @DW 0x0000 
 # variable 'charbyte', dim:1 typename:word refcount:3
-print:charbyte:
+@LABEL print:charbyte
 @DW 0x0000 
 # variable 'charrow', dim:1 typename:word refcount:2
-print:charrow:
+@LABEL print:charrow
 @DW 0x0000 
 # variable 'charcol', dim:1 typename:word refcount:2
-print:charcol:
+@LABEL print:charcol
 @DW 0x0000 
 # variable 'i', dim:1 typename:word refcount:5
-print:i:
+@LABEL print:i
 @DW 0x0000 
 # variable 'x', dim:1 typename:word refcount:5
-print:x:
+@LABEL print:x
 @DW 0x0000 
 # variable 'y', dim:1 typename:word refcount:6
-print:y:
+@LABEL print:y
 @DW 0x0000 
 # variable 'message', dim:1 typename:byteptr refcount:2
-print:message:
+@LABEL print:message
 @DW 0xCDCD 0xCDCD 
 # variable 'i', dim:1 typename:word refcount:35
-main:i:
+@LABEL main:i
 @DW 0x0000 
 # variable 'samples', dim:1 typename:word refcount:3
-main:samples:
+@LABEL main:samples
 @DW 0x0000 
 # variable 'posX', dim:8 typename:word refcount:8
-main:posX:
+@LABEL main:posX
 @DW 0x0000 0x005C 0x003F 0x0012 0x006C 0x000C 0x002B 0x001F 
 # variable 'dirX', dim:8 typename:word refcount:4
-main:dirX:
+@LABEL main:dirX
 @DW 0x0001 0x0002 0x0001 0x0002 0x0002 0x0004 0x0003 0x0003 
 # variable 'posY', dim:8 typename:word refcount:8
-main:posY:
+@LABEL main:posY
 @DW 0x0010 0x002C 0x0020 0x0018 0x0033 0x004C 0x005E 0x0029 
 # variable 'dirY', dim:8 typename:word refcount:4
-main:dirY:
+@LABEL main:dirY
 @DW 0x0000 0x0001 0x0001 0x0003 0x0002 0x0002 0x0003 0x0004 
 # variable 'scrollx', dim:1 typename:word refcount:2
-main:scrollx:
+@LABEL main:scrollx
 @DW 0x0032 
 # variable 'scrolly', dim:1 typename:word refcount:2
-main:scrolly:
+@LABEL main:scrolly
 @DW 0xFFFFFFE2 
 # variable 'scrolldirx', dim:1 typename:word refcount:0
 # variable 'scrolldiry', dim:1 typename:word refcount:0
 # variable 'flipx', dim:1 typename:word refcount:5
-main:flipx:
+@LABEL main:flipx
 @DW 0x0000 
 # variable 'flipy', dim:1 typename:word refcount:6
-main:flipy:
+@LABEL main:flipy
 @DW 0x0000 
 # variable 'roll', dim:1 typename:word refcount:5
-main:roll:
+@LABEL main:roll
 @DW 0x0000 
 # variable 'portcheck', dim:1 typename:word refcount:6
-main:portcheck:
+@LABEL main:portcheck
 @DW 0x0000 
 # variable 'hit', dim:1 typename:word refcount:3
-main:hit:
+@LABEL main:hit
 @DW 0x0000 
