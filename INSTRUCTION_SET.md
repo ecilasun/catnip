@@ -33,9 +33,9 @@ Here is a brief list of the architecture details of Neko V3
     * There is a somewhat wide border at the edges of the screen
       * This keeps VRAM addresses in the 0x8000:0000-0x8000:C000 range so access fits into a single WORD
       * Border color can be changed by setting byte at 0x8000:C000 to a 2:3:3 color
-    * There is currently no hardware unit drawing onto the screen except the CPU
-      * A 2D SRAM->VRAM DMA is being planned (sprites/bitmaps/text output)
-      * In addition, a BVH8 voxel rasterization unit is being planned
+    * There is currently some hardware units drawing onto the screen as well as the CPU
+      * A 2D sprite blitter has been implemented
+      * A voxel rasterization unit is being planned
 
 # Memory layout
 
