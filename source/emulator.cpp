@@ -9,7 +9,11 @@
 #include "emulator.h"
 
 #include <xmmintrin.h>
+#if defined(CAT_LINUX) || defined(CAT_MACOSX)
+	// 
+#else
 #include <intrin.h>
+#endif
 
 #if !defined(__clang__)
 #pragma intrinsic(_mm_pause)
