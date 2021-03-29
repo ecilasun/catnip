@@ -2,7 +2,7 @@
 
 CatNip is a compiler/assembler/emulator triplet that generates code for a custom CPU used in Project Neko, and can emulate the generated binary as close to hardware as possible. It can either accept asm input or input in the form of the language GrimR.
 
-## Building the assembler/emulator
+## Building the compiler/assembler/emulator
 
 ### Visual Studio Code
 If you're using Visual Studio Code, this folder contains a .vscode directory with necessary setup files that will allow you to build and run CatNip. Simply follow these steps:
