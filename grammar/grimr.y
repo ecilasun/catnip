@@ -2262,8 +2262,8 @@ void DumpCode(FILE *_fp, SASTNode *node, bool _forX64)
 	{
 		if (node->m_LineNumber!=0xFFFFFFFF && node->m_LineNumber!=s_prevLineNo)
 		{
-			if (!_forX64)
-				fprintf(_fp, "# line %d\n", node->m_LineNumber);
+			//if (!_forX64)
+				//fprintf(_fp, "# code_line_%d\n", node->m_LineNumber);
 			s_prevLineNo = node->m_LineNumber;
 		}
 		fprintf(_fp, "%s\n", node->m_Instructions.c_str());
@@ -2773,7 +2773,7 @@ void AssignRegistersAndGenerateCode(FILE *_fp, SASTNode *node)
 		case OP_RESETREGISTERS:
 		{
 			g_ASC.m_CurrentRegister = 0;
-			node->m_Instructions = "# End of function " + g_ASC.m_CurrentFunctionName + "\n";
+			node->m_Instructions = "# end_" + g_ASC.m_CurrentFunctionName + "\n";
 		}
 		break;
 
@@ -2895,6 +2895,7 @@ bool GenerateASM(const char *_filename, bool _forX64)
 		}
 	}
 
+	// TODO: FUTURE: Keep function even if not used when the function is marked as 'export'
 	for (uint32_t i=0;i<g_ASC.m_Functions.size();++i)
 		if (g_ASC.m_Functions[i]->m_RefCount == 0)
 			printf("WARNING: Function '%s %s' not referenced in code, removing code.\n", TypeNames[g_ASC.m_Functions[i]->m_ReturnType], g_ASC.m_Functions[i]->m_Name.c_str());
