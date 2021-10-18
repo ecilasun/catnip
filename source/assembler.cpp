@@ -1405,7 +1405,7 @@ int AssembleBinaryX64(const char *_inputname, const char *_outputname)
 
 int AssembleBinary(const char *_inputname, const char *_outputname)
 {
-	printf("Parsing: %s\n", _inputname);
+	printf("Assembling binary %s -> %s\n", _inputname, _outputname);
 
 	// Try to open input file
 	FILE *inputfile = fopen(_inputname, "rb");
@@ -1447,7 +1447,6 @@ int AssembleBinary(const char *_inputname, const char *_outputname)
 	// Dump binary blob
 	if (strstr(_outputname,".mif"))
 	{
-		printf("Generating memory initialization file: %s\n", _outputname);
 		FILE *outputfile = fopen(_outputname, "wb");
 		if (outputfile == nullptr)
 		{
@@ -1484,7 +1483,6 @@ int AssembleBinary(const char *_inputname, const char *_outputname)
 	}
 	else if (strstr(_outputname,".rom"))
 	{
-		printf("Generating ROM file: %s\n", _outputname);
 		FILE *outputfile = fopen(_outputname, "wb");
 		if (outputfile == nullptr)
 		{

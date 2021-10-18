@@ -13,7 +13,7 @@ int CompileGrimR(char *_inputname, const char *_outputname, bool _forX64)
 	int result = yyparse();
 	fclose(yyin);
 
-	printf("Compiling: %s\n", _inputname);
+	printf("Compiling: %s -> %s\n", _inputname,  _outputname);
 	bool failed = GenerateASM(_outputname, _forX64);
 
 	return failed ? -1 : 0;

@@ -1864,9 +1864,11 @@ int EmulateROMImage(const char *_romname)
 	FILE *inputfile = fopen(_romname, "rb");
 	if (inputfile == nullptr)
 	{
-		printf("ERROR: Cannot find ROM file\n");
+		printf("ERROR: Cannot find ROM file %s\n", _romname);
 		return -1;
 	}
+
+	printf("Running ROM file %s\n", _romname);
 
 	unsigned int filebytesize = 0;
 	fpos_t pos, endpos;

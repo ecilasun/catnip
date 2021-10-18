@@ -48,26 +48,29 @@ int main(int _argc, char **_argv)
 		{
 			const char *tmpfile1 = tmpnam(nullptr);
 			const char *tmpfile2 = tmpnam(nullptr);
+			char asmfilename[512] = "";
+			strcat(asmfilename, tmpfile1);
+			strcat(asmfilename, ".asm");
 			char romfilename[512] = "";
 			strcat(romfilename, tmpfile2);
 			strcat(romfilename, ".rom");
-			retVal = CompileGrimR(_argv[argindex], tmpfile1, forX64);		// .GrimR -> .ROM/.MIF
+			retVal = CompileGrimR(_argv[argindex], asmfilename, forX64);		// .GrimR -> .ROM/.MIF
 			if (retVal==0)
 			{
 				if (forX64)
 				{
-					retVal = AssembleBinary(tmpfile1, romfilename);
+					retVal = AssembleBinaryX64(asmfilename, romfilename);
 					// TODO: Run the .exe
 				}
 				else
 				{
-					retVal = AssembleBinaryX64(tmpfile1, romfilename);
-					if (retVal==0)
+					retVal = AssembleBinary(asmfilename, romfilename);
+					//if (retVal==0)
 						retVal = EmulateROMImage(romfilename);
 				}
 			}
 			// Remove the temporary files
-			remove(tmpfile1);
+			remove(asmfilename);
 			remove(romfilename);
 		}
 	}
