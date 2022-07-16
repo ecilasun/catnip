@@ -120,7 +120,8 @@ def build(bld):
         #compile_flags = ['/permissive-', '/std:c++17', '/arch:AVX',
         #                 '/GL', '/WX', '/Od', '/DDEBUG', '/fp:fast',
         #                 '/Qfast_transcendentals', '/Zi', '/Gs',
-        #                 '/EHsc', '/FS']
+        #                 '/EHsc', '/FS', '/D_SECURE_SCL 0',
+        #                 '/D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS']
         #linker_flags = ['/DEBUG']
 
         # RELEASE - clang
