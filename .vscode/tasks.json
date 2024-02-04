@@ -6,17 +6,17 @@
         {
             "label": "configure",
             "type": "shell",
-            "command": "python waf --out='build/release' configure",
+            "command": "python3 waf --out='build/release' configure",
             "group": {
                 "kind": "build",
-                "isDefault": false
+                "isDefault": true
             },
             "problemMatcher": []
         },
         {
             "label": "build",
             "type": "shell",
-            "command": "python waf build -v",
+            "command": "python3 waf build -v",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -26,7 +26,7 @@
         {
             "label": "clean",
             "type": "shell",
-            "command": "python waf clean",
+            "command": "python3 waf clean",
             "group": {
                 "kind": "build",
                 "isDefault": true
